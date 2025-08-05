@@ -1,0 +1,285 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Performance-optimized touch styles for 60fps drag and drop */
+.touch-draggable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: none;
+  /* Hardware acceleration */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.touch-drop-zone {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Hardware acceleration */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Performance-optimized touch feedback animations */
+.touch-feedback-start {
+  animation: touchPulse 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.touch-feedback-move {
+  animation: touchGlow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: box-shadow;
+}
+
+.touch-feedback-end {
+  animation: touchRelease 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+@keyframes touchPulse {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes touchGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0);
+  }
+}
+
+@keyframes touchRelease {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Performance-optimized touch drag preview styles */
+.touch-drag-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.9;
+  transform: translate3d(0, 0, 0) rotate(2deg) scale(1.05);
+  max-width: 250px;
+  background-color: white;
+  border: 2px solid #3B82F6;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
+  font-weight: 500;
+  /* Hardware acceleration */
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Performance-optimized touch drop target styles */
+.touch-drop-target-valid {
+  background-color: rgba(34, 197, 94, 0.15);
+  border: 3px dashed #22C55E;
+  border-radius: 8px;
+  transform: translate3d(0, 0, 0) scale(1.02);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, background-color, border-color;
+}
+
+.touch-drop-target-invalid {
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 3px dashed #EF4444;
+  border-radius: 8px;
+  transform: translate3d(0, 0, 0) scale(1.02);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, background-color, border-color;
+}
+
+/* Performance-optimized mobile-specific optimizations */
+@media (max-width: 768px) {
+  .touch-draggable {
+    min-height: 44px; /* Minimum touch target size */
+    min-width: 44px;
+    /* Optimize for mobile performance */
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  
+  .touch-drop-zone {
+    min-height: 44px;
+    min-width: 44px;
+    /* Optimize for mobile performance */
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  
+  /* Larger touch targets on mobile with performance optimization */
+  .calendar-day {
+    min-height: 80px;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  
+  .calendar-event {
+    min-height: 32px;
+    font-size: 12px;
+    padding: 4px 6px;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+}
+
+/* Performance-optimized prevent text selection during drag */
+.dragging {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Hardware acceleration during drag */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Performance-optimized smooth transitions for touch interactions */
+.touch-transition {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity, background-color;
+}
+
+/* Performance-optimized touch ripple effect */
+.touch-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(59, 130, 246, 0.6);
+  transform: translate3d(0, 0, 0) scale(0);
+  animation: ripple 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@keyframes ripple {
+  to {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Performance optimizations for high-DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .touch-draggable,
+  .touch-drop-zone,
+  .calendar-day,
+  .calendar-event {
+    /* Optimize for high-DPI displays */
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+}
+
+/* Performance optimizations for reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .touch-feedback-start,
+  .touch-feedback-move,
+  .touch-feedback-end,
+  .touch-transition,
+  .touch-ripple,
+  .touch-drop-target-valid,
+  .touch-drop-target-invalid {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Performance optimizations for low-end devices */
+@media (max-width: 480px) {
+  .touch-draggable,
+  .touch-drop-zone {
+    /* Reduce complexity for low-end devices */
+    transform: translate3d(0, 0, 0);
+    will-change: auto;
+  }
+  
+  .touch-feedback-start,
+  .touch-feedback-move,
+  .touch-feedback-end {
+    animation-duration: 0.1s;
+  }
+}
+
+/* Performance monitoring styles */
+.performance-metrics {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.performance-metrics.fps-good {
+  background: rgba(34, 197, 94, 0.8);
+}
+
+.performance-metrics.fps-warning {
+  background: rgba(245, 158, 11, 0.8);
+}
+
+.performance-metrics.fps-poor {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+/* Optimized scroll performance */
+.calendar-container {
+  /* Optimize scroll performance */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+}
+
+/* Optimized layout performance */
+.calendar-grid {
+  /* Optimize layout performance */
+  contain: layout style paint;
+  will-change: contents;
+}
+
+/* Optimized paint performance */
+.calendar-event {
+  /* Optimize paint performance */
+  contain: layout style;
+  will-change: transform, opacity;
+}
+
+/* Optimized composite performance */
+.calendar-day {
+  /* Optimize composite performance */
+  contain: layout style paint;
+  will-change: transform;
+} 

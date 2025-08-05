@@ -1,0 +1,21 @@
+{
+  "name": "@kp5-academy/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for KP5 Academy sports management system",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.84.1",
+    "firebase": "^11.10.0",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

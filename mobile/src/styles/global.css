@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for React Native */
+@layer components {
+  .btn {
+    @apply flex-row items-center justify-center rounded-lg font-medium transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary-200;
+  }
+
+  .btn-outline {
+    @apply btn border border-gray-300 bg-white;
+  }
+
+  .btn-ghost {
+    @apply btn;
+  }
+
+  .btn-destructive {
+    @apply btn bg-error-600;
+  }
+
+  .btn-success {
+    @apply btn bg-success-600;
+  }
+
+  .btn-warning {
+    @apply btn bg-warning-600;
+  }
+
+  .btn-sm {
+    @apply h-8 px-3;
+  }
+
+  .btn-md {
+    @apply h-10 px-4;
+  }
+
+  .btn-lg {
+    @apply h-12 px-6;
+  }
+
+  .card {
+    @apply rounded-lg border bg-white shadow-sm;
+  }
+
+  .card-header {
+    @apply flex flex-col space-y-1.5 p-6;
+  }
+
+  .card-title {
+    @apply text-2xl font-semibold leading-none tracking-tight;
+  }
+
+  .card-description {
+    @apply text-sm text-gray-600;
+  }
+
+  .card-content {
+    @apply p-6 pt-0;
+  }
+
+  .card-footer {
+    @apply flex items-center p-6 pt-0;
+  }
+
+  .badge {
+    @apply flex-row items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .badge-default {
+    @apply badge border-transparent bg-primary-600;
+  }
+
+  .badge-secondary {
+    @apply badge border-transparent bg-secondary-200;
+  }
+
+  .badge-destructive {
+    @apply badge border-transparent bg-error-600;
+  }
+
+  .badge-outline {
+    @apply badge;
+  }
+
+  .sports-badge {
+    @apply badge font-medium;
+  }
+
+  .sports-badge-soccer {
+    @apply sports-badge bg-green-100 border-green-200;
+  }
+
+  .sports-badge-basketball {
+    @apply sports-badge bg-orange-100 border-orange-200;
+  }
+
+  .sports-badge-baseball {
+    @apply sports-badge bg-blue-100 border-blue-200;
+  }
+
+  .sports-badge-football {
+    @apply sports-badge bg-purple-100 border-purple-200;
+  }
+
+  .sports-badge-volleyball {
+    @apply sports-badge bg-pink-100 border-pink-200;
+  }
+
+  .sports-badge-tennis {
+    @apply sports-badge bg-emerald-100 border-emerald-200;
+  }
+
+  .sports-badge-swimming {
+    @apply sports-badge bg-cyan-100 border-cyan-200;
+  }
+
+  .sports-badge-track {
+    @apply sports-badge bg-orange-100 border-orange-200;
+  }
+
+  .status-badge {
+    @apply badge font-medium;
+  }
+
+  .status-badge-pending {
+    @apply status-badge bg-yellow-100 border-yellow-200;
+  }
+
+  .status-badge-approved {
+    @apply status-badge bg-green-100 border-green-200;
+  }
+
+  .status-badge-rejected {
+    @apply status-badge bg-red-100 border-red-200;
+  }
+
+  .status-badge-cancelled {
+    @apply status-badge bg-gray-100 border-gray-200;
+  }
+
+  .status-badge-completed {
+    @apply status-badge bg-blue-100 border-blue-200;
+  }
+
+  .status-badge-in-progress {
+    @apply status-badge bg-purple-100 border-purple-200;
+  }
+
+  .input {
+    @apply h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm;
+  }
+
+  .input-focus {
+    @apply border-primary-500 ring-2 ring-primary-200;
+  }
+
+  .input-error {
+    @apply border-error-500 ring-2 ring-error-200;
+  }
+
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary-50 via-white to-secondary-50;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-primary-400;
+  }
+} 
