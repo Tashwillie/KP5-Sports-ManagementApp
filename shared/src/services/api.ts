@@ -45,9 +45,9 @@ import {
   Club, 
   Team, 
   Player, 
-  Event, 
-  Tournament, 
-  Match,
+    Event,
+  Tournament,
+  LiveMatch as Match,
   Message,
   Registration,
   Payment,
@@ -94,7 +94,7 @@ export class BaseAPI {
     limitCount?: number
   ): Promise<T[]> {
     try {
-      let q = collection(this.db, collectionName);
+      let q: any = collection(this.db, collectionName);
       
       // Apply where constraints
       constraints.forEach(constraint => {
@@ -177,14 +177,14 @@ export class BaseAPI {
     constraints: Array<{ field: string; operator: any; value: any }> = [],
     callback: (data: T[]) => void
   ): () => void {
-    let q = collection(this.db, collectionName);
+    let q: any = collection(this.db, collectionName);
     
     constraints.forEach(constraint => {
       q = query(q, where(constraint.field, constraint.operator, constraint.value));
     });
     
-    return onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map(doc => this.convertFirestoreDoc<T>(doc));
+    return onSnapshot(q, (querySnapshot: any) => {
+      const data = querySnapshot.docs.map((doc: any) => this.convertFirestoreDoc<T>(doc));
       callback(data);
     });
   }
@@ -222,8 +222,8 @@ export class BaseAPI {
   ): Promise<T> {
     try {
       const callable = httpsCallable(this.functions, functionName);
-      const result: HttpsCallableResult<T> = await callable(data);
-      return result.data;
+      const result = await callable(data);
+      return result.data as T;
     } catch (error) {
       console.error(`Error calling function ${functionName}:`, error);
       throw new Error(`Failed to call ${functionName}`);
@@ -329,11 +329,11 @@ export class UserAPI extends BaseAPI {
     return this.deleteDocument('users', userId);
   }
 
-  async subscribeToUser(userId: string, callback: (user: User | null) => void): () => void {
+  subscribeToUser(userId: string, callback: (user: User | null) => void): () => void {
     return this.subscribeToDocument<User>('users', userId, callback);
   }
 
-  async subscribeToUsers(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (users: User[]) => void): () => void {
+  subscribeToUsers(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (users: User[]) => void): () => void {
     return this.subscribeToCollection<User>('users', constraints, callback);
   }
 }
@@ -365,11 +365,11 @@ export class ClubAPI extends BaseAPI {
     return this.uploadFile(path, file);
   }
 
-  async subscribeToClub(clubId: string, callback: (club: Club | null) => void): () => void {
+  subscribeToClub(clubId: string, callback: (club: Club | null) => void): () => void {
     return this.subscribeToDocument<Club>('clubs', clubId, callback);
   }
 
-  async subscribeToClubs(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (clubs: Club[]) => void): () => void {
+  subscribeToClubs(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (clubs: Club[]) => void): () => void {
     return this.subscribeToCollection<Club>('clubs', constraints, callback);
   }
 }
@@ -420,11 +420,11 @@ export class TeamAPI extends BaseAPI {
     await this.updateTeam(teamId, { roster: updatedRoster });
   }
 
-  async subscribeToTeam(teamId: string, callback: (team: Team | null) => void): () => void {
+  subscribeToTeam(teamId: string, callback: (team: Team | null) => void): () => void {
     return this.subscribeToDocument<Team>('teams', teamId, callback);
   }
 
-  async subscribeToTeams(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (teams: Team[]) => void): () => void {
+  subscribeToTeams(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (teams: Team[]) => void): () => void {
     return this.subscribeToCollection<Team>('teams', constraints, callback);
   }
 }
@@ -451,11 +451,11 @@ export class EventAPI extends BaseAPI {
     return this.deleteDocument('events', eventId);
   }
 
-  async subscribeToEvent(eventId: string, callback: (event: Event | null) => void): () => void {
+  subscribeToEvent(eventId: string, callback: (event: Event | null) => void): () => void {
     return this.subscribeToDocument<Event>('events', eventId, callback);
   }
 
-  async subscribeToEvents(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (events: Event[]) => void): () => void {
+  subscribeToEvents(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (events: Event[]) => void): () => void {
     return this.subscribeToCollection<Event>('events', constraints, callback);
   }
 }
@@ -487,11 +487,11 @@ export class MatchAPI extends BaseAPI {
     await this.callFunction('onMatchEventAdded', { matchId, eventData });
   }
 
-  async subscribeToMatch(matchId: string, callback: (match: Match | null) => void): () => void {
+  subscribeToMatch(matchId: string, callback: (match: Match | null) => void): () => void {
     return this.subscribeToDocument<Match>('matches', matchId, callback);
   }
 
-  async subscribeToMatches(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (matches: Match[]) => void): () => void {
+  subscribeToMatches(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (matches: Match[]) => void): () => void {
     return this.subscribeToCollection<Match>('matches', constraints, callback);
   }
 }
@@ -522,11 +522,11 @@ export class TournamentAPI extends BaseAPI {
     await this.callFunction('generateTournamentBrackets', { tournamentId });
   }
 
-  async subscribeToTournament(tournamentId: string, callback: (tournament: Tournament | null) => void): () => void {
+  subscribeToTournament(tournamentId: string, callback: (tournament: Tournament | null) => void): () => void {
     return this.subscribeToDocument<Tournament>('tournaments', tournamentId, callback);
   }
 
-  async subscribeToTournaments(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (tournaments: Tournament[]) => void): () => void {
+  subscribeToTournaments(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (tournaments: Tournament[]) => void): () => void {
     return this.subscribeToCollection<Tournament>('tournaments', constraints, callback);
   }
 }
@@ -561,7 +561,7 @@ export class MessageAPI extends BaseAPI {
     await this.updateMessage(messageId, { readBy: updatedReadBy });
   }
 
-  async subscribeToMessages(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (messages: Message[]) => void): () => void {
+  subscribeToMessages(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (messages: Message[]) => void): () => void {
     return this.subscribeToCollection<Message>('messages', constraints, callback);
   }
 }
@@ -592,7 +592,7 @@ export class PaymentAPI extends BaseAPI {
     return this.callFunction('confirmPayment', { paymentIntentId });
   }
 
-  async subscribeToPayments(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (payments: Payment[]) => void): () => void {
+  subscribeToPayments(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (payments: Payment[]) => void): () => void {
     return this.subscribeToCollection<Payment>('payments', constraints, callback);
   }
 }
@@ -623,7 +623,7 @@ export class NotificationAPI extends BaseAPI {
     await this.callFunction('markAllNotificationsAsRead', { userId });
   }
 
-  async subscribeToNotifications(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (notifications: Notification[]) => void): () => void {
+  subscribeToNotifications(constraints: Array<{ field: string; operator: any; value: any }> = [], callback: (notifications: Notification[]) => void): () => void {
     return this.subscribeToCollection<Notification>('notifications', constraints, callback);
   }
 }

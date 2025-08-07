@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
-import { ApiProvider } from '@/providers/ApiProvider';
+import { Providers } from '@/components/providers/Providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'),
   openGraph: {
     title: 'KP5 Academy - Elite Sports Management Platform',
     description: 'Professional sports management platform for elite clubs, teams, and athletes.',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003',
     siteName: 'KP5 Academy',
     images: [
       {
@@ -76,12 +76,9 @@ export default function RootLayout({
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://firestore.googleapis.com" />
-        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
-        <link rel="preconnect" href="https://securetoken.googleapis.com" />
       </head>
       <body className={`${inter.className} bg-white`}>
-        <ApiProvider>
+        <Providers>
           {children}
           <Toaster 
             position="top-right"
@@ -89,7 +86,15 @@ export default function RootLayout({
             closeButton
             duration={4000}
           />
-        </ApiProvider>
+        </Providers>
+        
+        {/* Bootstrap JavaScript */}
+        <script 
+          src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+        />
+        <script 
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.min.js"
+        />
       </body>
     </html>
   );

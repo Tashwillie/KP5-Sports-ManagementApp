@@ -9,6 +9,7 @@ import { authFunctions } from './auth';
 import { paymentFunctions } from './payments';
 import { notificationFunctions } from './notifications';
 import { matchFunctions } from './matches';
+import { realTimeMatchStats } from './realTimeMatchStats';
 import { tournamentFunctions } from './tournaments';
 import { userFunctions } from './users';
 import { clubFunctions } from './clubs';
@@ -60,6 +61,10 @@ export const {
   updateTeamStandings,
   generateMatchReport
 } = matchFunctions;
+
+export const {
+  updateRealTimeMatchStats
+} = realTimeMatchStats;
 
 export const {
   onTournamentCreated,

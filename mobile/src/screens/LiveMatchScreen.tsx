@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
-  SafeAreaView,
+  Animated,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useAuth } from '../providers/AuthProvider';
+import { useApi } from '../providers/ApiProvider';
 import { LiveMatch, LiveMatchEvent, LiveMatchEventType } from '../../../shared/src/types';
-import { useMobileLiveMatch } from '../hooks/useMobileApi';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,39 +25,48 @@ interface RouteParams {
 export default function LiveMatchScreen() {
   const route = useRoute();
   const navigation = useNavigation();
+  const { user } = useAuth();
+  const { api } = useApi();
+  
   const { matchId } = route.params as RouteParams;
 
-  const [currentMinute, setCurrentMinute] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<'home' | 'away'>('home');
-  const [selectedPlayer, setSelectedPlayer] = useState<string>('');
-  const [eventType, setEventType] = useState<LiveMatchEventType>('goal');
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [eventData, setEventData] = useState<any>({});
+  // State
+  const [match, setMatch] = useState<LiveMatch | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isReferee, setIsReferee] = useState(false);
+  const [matchTime, setMatchTime] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [eventType, setEventType] = useState<LiveMatchEventType | null>(null);
 
+  // Animation refs
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // Timer ref
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<Date | null>(null);
 
-  // Use shared API hook with real-time updates
-  const { 
-    match, 
-    loading, 
-    error, 
-    startMatch, 
-    endMatch, 
-    addEvent
-  } = useMobileLiveMatch({ matchId, enableOffline: true });
-
-  // Timer logic
+  // Load match data
   useEffect(() => {
-    if (isTimerRunning) {
+    loadMatch();
+  }, [matchId]);
+
+  // Check if user is referee
+  useEffect(() => {
+    if (match && user) {
+      setIsReferee(match.refereeId === user.id || user.role === 'referee');
+    }
+  }, [match, user]);
+
+  // Timer effect
+  useEffect(() => {
+    if (isRunning) {
       timerRef.current = setInterval(() => {
-        setCurrentMinute(prev => prev + 1);
-      }, 60000); // 1 minute intervals
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+        setMatchTime(prev => prev + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
 
     return () => {
@@ -63,29 +74,85 @@ export default function LiveMatchScreen() {
         clearInterval(timerRef.current);
       }
     };
-  }, [isTimerRunning]);
+  }, [isRunning]);
 
-  const handleStartMatch = async () => {
-    if (!match) return;
-    
-    const success = await startMatch();
-    if (success) {
-      setIsTimerRunning(true);
-      startTimeRef.current = new Date();
+  // Pulse animation for live indicator
+  useEffect(() => {
+    if (match?.status === 'in_progress') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [match?.status]);
+
+  const loadMatch = async () => {
+    try {
+      setLoading(true);
+      const matchData = await api.getLiveMatch(matchId);
+      setMatch(matchData);
+      
+      if (matchData.status === 'in_progress') {
+        setIsRunning(true);
+        // Calculate elapsed time
+        const startTime = new Date(matchData.startTime).getTime();
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        setMatchTime(elapsed);
+      }
+    } catch (error) {
+      console.error('Error loading match:', error);
+      Alert.alert('Error', 'Failed to load match data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const pauseMatch = () => {
-    setIsTimerRunning(false);
+  const startMatch = async () => {
+    try {
+      await api.startLiveMatch(matchId);
+      setIsRunning(true);
+      setMatchTime(0);
+      Alert.alert('Success', 'Match started!');
+    } catch (error) {
+      console.error('Error starting match:', error);
+      Alert.alert('Error', 'Failed to start match');
+    }
   };
 
-  const resumeMatch = () => {
-    setIsTimerRunning(true);
+  const pauseMatch = async () => {
+    try {
+      await api.pauseLiveMatch(matchId);
+      setIsRunning(false);
+      Alert.alert('Success', 'Match paused');
+    } catch (error) {
+      console.error('Error pausing match:', error);
+      Alert.alert('Error', 'Failed to pause match');
+    }
   };
 
-  const handleEndMatch = async () => {
-    if (!match) return;
-    
+  const resumeMatch = async () => {
+    try {
+      await api.resumeLiveMatch(matchId);
+      setIsRunning(true);
+      Alert.alert('Success', 'Match resumed');
+    } catch (error) {
+      console.error('Error resuming match:', error);
+      Alert.alert('Error', 'Failed to resume match');
+    }
+  };
+
+  const endMatch = async () => {
     Alert.alert(
       'End Match',
       'Are you sure you want to end this match?',
@@ -95,10 +162,13 @@ export default function LiveMatchScreen() {
           text: 'End Match',
           style: 'destructive',
           onPress: async () => {
-            const success = await endMatch();
-            if (success) {
-              setIsTimerRunning(false);
-              navigation.goBack();
+            try {
+              await api.endLiveMatch(matchId);
+              setIsRunning(false);
+              Alert.alert('Success', 'Match ended');
+            } catch (error) {
+              console.error('Error ending match:', error);
+              Alert.alert('Error', 'Failed to end match');
             }
           },
         },
@@ -106,321 +176,267 @@ export default function LiveMatchScreen() {
     );
   };
 
-  const handleAddEvent = async () => {
-    if (!selectedPlayer || !eventData) return;
-
-    const eventPayload = {
-      type: eventType,
-      minute: currentMinute,
-      team: selectedTeam,
-      playerId: selectedPlayer,
-      ...eventData,
-      timestamp: new Date(),
-    };
-
-    const success = await addEvent(eventPayload);
-    if (success) {
-      setShowEventForm(false);
-      setEventData({});
-      setSelectedPlayer('');
+  const addEvent = async (eventData: Partial<LiveMatchEvent>) => {
+    try {
+      await api.addMatchEvent(matchId, eventData);
+      setShowEventModal(false);
+      setEventType(null);
+      setSelectedPlayer(null);
+    } catch (error) {
+      console.error('Error adding event:', error);
+      Alert.alert('Error', 'Failed to add event');
     }
   };
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getEventIcon = (eventType: LiveMatchEventType) => {
-    switch (eventType) {
-      case 'goal':
-        return 'football';
-      case 'yellow_card':
-        return 'warning';
-      case 'red_card':
-        return 'close-circle';
-      case 'substitution_in':
-        return 'arrow-up';
-      case 'substitution_out':
-        return 'arrow-down';
-      case 'injury':
-        return 'medical';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled':
+        return '#FFA500';
+      case 'in_progress':
+        return '#00FF00';
+      case 'paused':
+        return '#FFFF00';
+      case 'completed':
+        return '#FF0000';
       default:
-        return 'help-circle';
-    }
-  };
-
-  const getEventColor = (eventType: LiveMatchEventType) => {
-    switch (eventType) {
-      case 'goal':
-        return '#10B981';
-      case 'yellow_card':
-        return '#F59E0B';
-      case 'red_card':
-        return '#EF4444';
-      case 'substitution_in':
-        return '#3B82F6';
-      case 'substitution_out':
-        return '#6B7280';
-      case 'injury':
-        return '#8B5CF6';
-      default:
-        return '#6B7280';
+        return '#808080';
     }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading match data...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading match...</Text>
+      </View>
     );
   }
 
-  if (error || !match) {
+  if (!match) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {error?.message || 'Failed to load match data'}
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.retryButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Match not found</Text>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Match</Text>
-        <View style={styles.headerSpacer} />
+        
+        <View style={styles.headerContent}>
+          <Text style={styles.matchTitle}>
+            {match.homeTeamId} vs {match.awayTeamId}
+          </Text>
+          <View style={styles.statusContainer}>
+            <Animated.View
+              style={[
+                styles.liveIndicator,
+                {
+                  transform: [{ scale: pulseAnim }],
+                  backgroundColor: getStatusColor(match.status),
+                },
+              ]}
+            />
+            <Text style={styles.statusText}>
+              {match.status.replace('_', ' ').toUpperCase()}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Match Info */}
-        <View style={styles.matchInfo}>
-          <Text style={styles.matchTitle}>
-            Home Team vs Away Team
-          </Text>
-          <Text style={styles.matchStatus}>
-            {match.status === 'scheduled' ? 'Not Started' : 
-             match.status === 'in_progress' ? 'In Progress' : 'Completed'}
-          </Text>
+      {/* Score Display */}
+      <View style={styles.scoreContainer}>
+        <View style={styles.teamScore}>
+          <Text style={styles.teamName}>{match.homeTeamId}</Text>
+          <Text style={styles.score}>{match.homeScore}</Text>
         </View>
+        
+        <View style={styles.vsContainer}>
+          <Text style={styles.vsText}>VS</Text>
+          <Text style={styles.matchTime}>{formatTime(matchTime)}</Text>
+        </View>
+        
+        <View style={styles.teamScore}>
+          <Text style={styles.teamName}>{match.awayTeamId}</Text>
+          <Text style={styles.score}>{match.awayScore}</Text>
+        </View>
+      </View>
 
-        {/* Timer */}
-        <View style={styles.timerContainer}>
-          <Text style={styles.timerText}>{formatTime(currentMinute)}</Text>
-          <View style={styles.timerControls}>
-            {!isTimerRunning ? (
-              <TouchableOpacity 
-                style={[styles.timerButton, styles.startButton]} 
-                onPress={handleStartMatch}
-              >
-                <Ionicons name="play" size={20} color="#fff" />
-                <Text style={styles.timerButtonText}>Start</Text>
+      {/* Match Controls (Referee Only) */}
+      {isReferee && (
+        <View style={styles.controlsContainer}>
+          <Text style={styles.controlsTitle}>Match Controls</Text>
+          <View style={styles.controlsRow}>
+            {match.status === 'scheduled' && (
+              <TouchableOpacity style={styles.controlButton} onPress={startMatch}>
+                <Ionicons name="play" size={24} color="white" />
+                <Text style={styles.controlText}>Start</Text>
               </TouchableOpacity>
-            ) : (
+            )}
+            
+            {match.status === 'in_progress' && (
               <>
-                <TouchableOpacity 
-                  style={[styles.timerButton, styles.pauseButton]} 
-                  onPress={pauseMatch}
-                >
-                  <Ionicons name="pause" size={20} color="#fff" />
-                  <Text style={styles.timerButtonText}>Pause</Text>
+                <TouchableOpacity style={styles.controlButton} onPress={pauseMatch}>
+                  <Ionicons name="pause" size={24} color="white" />
+                  <Text style={styles.controlText}>Pause</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.timerButton, styles.endButton]} 
-                  onPress={handleEndMatch}
-                >
-                  <Ionicons name="stop" size={20} color="#fff" />
-                  <Text style={styles.timerButtonText}>End</Text>
+                <TouchableOpacity style={styles.controlButton} onPress={endMatch}>
+                  <Ionicons name="stop" size={24} color="white" />
+                  <Text style={styles.controlText}>End</Text>
                 </TouchableOpacity>
               </>
             )}
-          </View>
-        </View>
-
-        {/* Score */}
-        <View style={styles.scoreContainer}>
-          <View style={styles.teamScore}>
-            <Text style={styles.teamName}>Home</Text>
-            <Text style={styles.scoreText}>{match.homeScore || 0}</Text>
-          </View>
-          <Text style={styles.vsText}>vs</Text>
-          <View style={styles.teamScore}>
-            <Text style={styles.teamName}>Away</Text>
-            <Text style={styles.scoreText}>{match.awayScore || 0}</Text>
-          </View>
-        </View>
-
-        {/* Event Form */}
-        {showEventForm && (
-          <View style={styles.eventForm}>
-            <Text style={styles.eventFormTitle}>Add Event</Text>
             
-            {/* Event Type Selection */}
-            <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Event Type</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {(['goal', 'yellow_card', 'red_card', 'substitution_in', 'injury'] as LiveMatchEventType[]).map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.eventTypeButton,
-                      eventType === type && styles.eventTypeButtonActive
-                    ]}
-                    onPress={() => setEventType(type)}
-                  >
-                    <Ionicons 
-                      name={getEventIcon(type) as any} 
-                      size={16} 
-                      color={eventType === type ? '#fff' : getEventColor(type)} 
-                    />
-                    <Text style={[
-                      styles.eventTypeText,
-                      eventType === type && styles.eventTypeTextActive
-                    ]}>
-                      {type.replace('_', ' ')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+            {match.status === 'paused' && (
+              <TouchableOpacity style={styles.controlButton} onPress={resumeMatch}>
+                <Ionicons name="play" size={24} color="white" />
+                <Text style={styles.controlText}>Resume</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
-            {/* Team Selection */}
-            <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Team</Text>
-              <View style={styles.teamSelection}>
-                <TouchableOpacity
-                  style={[
-                    styles.teamButton,
-                    selectedTeam === 'home' && styles.teamButtonActive
-                  ]}
-                  onPress={() => setSelectedTeam('home')}
-                >
-                  <Text style={[
-                    styles.teamButtonText,
-                    selectedTeam === 'home' && styles.teamButtonTextActive
-                  ]}>
-                    Home
+      {/* Quick Actions */}
+      {isReferee && match.status === 'in_progress' && (
+        <View style={styles.quickActionsContainer}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsGrid}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => {
+                setEventType('goal');
+                setShowEventModal(true);
+              }}
+            >
+              <Ionicons name="football" size={24} color="#FF6B6B" />
+              <Text style={styles.quickActionText}>Goal</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => {
+                setEventType('yellow_card');
+                setShowEventModal(true);
+              }}
+            >
+              <Ionicons name="warning" size={24} color="#FFD93D" />
+              <Text style={styles.quickActionText}>Yellow Card</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => {
+                setEventType('red_card');
+                setShowEventModal(true);
+              }}
+            >
+              <Ionicons name="close-circle" size={24} color="#FF0000" />
+              <Text style={styles.quickActionText}>Red Card</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => {
+                setEventType('substitution');
+                setShowEventModal(true);
+              }}
+            >
+              <Ionicons name="swap-horizontal" size={24} color="#4ECDC4" />
+              <Text style={styles.quickActionText}>Substitution</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Match Statistics */}
+      <View style={styles.statsContainer}>
+        <Text style={styles.sectionTitle}>Match Statistics</Text>
+        <View style={styles.statsGrid}>
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Possession</Text>
+            <Text style={styles.statValue}>
+              {match.stats.possession.home}% - {match.stats.possession.away}%
+            </Text>
+          </View>
+          
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Shots</Text>
+            <Text style={styles.statValue}>
+              {match.stats.shots.home} - {match.stats.shots.away}
+            </Text>
+          </View>
+          
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Corners</Text>
+            <Text style={styles.statValue}>
+              {match.stats.corners.home} - {match.stats.corners.away}
+            </Text>
+          </View>
+          
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Fouls</Text>
+            <Text style={styles.statValue}>
+              {match.stats.fouls.home} - {match.stats.fouls.away}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Match Events */}
+      <View style={styles.eventsContainer}>
+        <Text style={styles.sectionTitle}>Match Events</Text>
+        {match.events.length === 0 ? (
+          <Text style={styles.noEventsText}>No events yet</Text>
+        ) : (
+          <View style={styles.eventsList}>
+            {match.events.map((event, index) => (
+              <View key={index} style={styles.eventItem}>
+                <View style={styles.eventTime}>
+                  <Text style={styles.eventTimeText}>{formatTime(event.timestamp)}</Text>
+                </View>
+                <View style={styles.eventContent}>
+                  <Text style={styles.eventText}>
+                    {event.type.replace('_', ' ').toUpperCase()}
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.teamButton,
-                    selectedTeam === 'away' && styles.teamButtonActive
-                  ]}
-                  onPress={() => setSelectedTeam('away')}
-                >
-                  <Text style={[
-                    styles.teamButtonText,
-                    selectedTeam === 'away' && styles.teamButtonTextActive
-                  ]}>
-                    Away
-                  </Text>
-                </TouchableOpacity>
+                  {event.playerId && (
+                    <Text style={styles.eventPlayer}>Player: {event.playerId}</Text>
+                  )}
+                </View>
               </View>
-            </View>
-
-            {/* Player Selection */}
-            <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Player</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {['Player 1', 'Player 2', 'Player 3', 'Player 4'].map((player, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.playerButton,
-                      selectedPlayer === `player${index + 1}` && styles.playerButtonActive
-                    ]}
-                    onPress={() => setSelectedPlayer(`player${index + 1}`)}
-                  >
-                    <Text style={[
-                      styles.playerButtonText,
-                      selectedPlayer === `player${index + 1}` && styles.playerButtonTextActive
-                    ]}>
-                      {player}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.formActions}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={() => setShowEventForm(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.addButton} 
-                onPress={handleAddEvent}
-                disabled={!selectedPlayer}
-              >
-                <Text style={styles.addButtonText}>Add Event</Text>
-              </TouchableOpacity>
-            </View>
+            ))}
           </View>
         )}
+      </View>
 
-        {/* Add Event Button */}
-        {!showEventForm && (
-          <TouchableOpacity 
-            style={styles.addEventButton} 
-            onPress={() => setShowEventForm(true)}
-          >
-            <Ionicons name="add" size={24} color="#fff" />
-            <Text style={styles.addEventButtonText}>Add Event</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Events Timeline */}
-        <View style={styles.eventsContainer}>
-          <Text style={styles.eventsTitle}>Match Events</Text>
-          {match.events && match.events.length > 0 ? (
-            match.events.map((event, index) => (
-              <View key={index} style={styles.eventItem}>
-                <View style={styles.eventIcon}>
-                  <Ionicons 
-                    name={getEventIcon(event.type)} 
-                    size={20} 
-                    color={getEventColor(event.type)} 
-                  />
-                </View>
-                <View style={styles.eventDetails}>
-                  <Text style={styles.eventText}>
-                    {event.type.replace('_', ' ')} - Player
-                  </Text>
-                  <Text style={styles.eventTime}>{event.minute}'</Text>
-                </View>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.noEventsText}>No events recorded yet</Text>
-          )}
+      {/* Match Notes */}
+      {match.notes && (
+        <View style={styles.notesContainer}>
+          <Text style={styles.sectionTitle}>Notes</Text>
+          <Text style={styles.notesText}>{match.notes}</Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F5F5F5',
   },
   loadingContainer: {
     flex: 1,
@@ -429,145 +445,59 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#666',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   errorText: {
     fontSize: 16,
-    color: '#EF4444',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#FF0000',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    padding: 16,
+    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#E0E0E0',
   },
   backButton: {
-    padding: 8,
+    marginRight: 16,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  headerSpacer: {
-    width: 40, // Adjust as needed for spacing
-  },
-  content: {
+  headerContent: {
     flex: 1,
   },
-  matchInfo: {
-    backgroundColor: '#FFFFFF',
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   matchTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  matchStatus: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  timerContainer: {
-    backgroundColor: '#FFFFFF',
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  timerText: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#111827',
-    fontFamily: 'monospace',
-    marginBottom: 20,
-  },
-  timerControls: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  timerButton: {
+  statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    marginTop: 4,
   },
-  timerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+  liveIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
   },
-  startButton: {
-    backgroundColor: '#3B82F6',
-  },
-  startButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  pauseButton: {
-    backgroundColor: '#F59E0B',
-  },
-  pauseButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  endButton: {
-    backgroundColor: '#EF4444',
-  },
-  endButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  statusText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   scoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 20,
+    justifyContent: 'space-between',
+    padding: 24,
+    backgroundColor: 'white',
+    margin: 16,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -577,183 +507,38 @@ const styles = StyleSheet.create({
   },
   teamScore: {
     alignItems: 'center',
+    flex: 1,
   },
   teamName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  scoreText: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  vsText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginHorizontal: 10,
-  },
-  eventForm: {
-    backgroundColor: '#FFFFFF',
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  eventFormTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  formSection: {
-    marginBottom: 16,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    color: '#333',
     marginBottom: 8,
   },
-  teamSelection: {
-    flexDirection: 'row',
-    gap: 10,
+  score: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
-  teamButton: {
-    flex: 1,
-    paddingVertical: 12,
+  vsContainer: {
+    alignItems: 'center',
     paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
   },
-  teamButtonActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  teamButtonText: {
+  vsText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  teamButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  eventTypeSelector: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  eventTypeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    gap: 4,
-  },
-  eventTypeButtonActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  eventTypeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  eventTypeTextActive: {
-    color: '#FFFFFF',
-  },
-  playerSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  playerButton: {
-    flex: 1,
-    minWidth: '45%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-  },
-  playerButtonActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  playerButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  playerButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  cancelButton: {
-    backgroundColor: '#EF4444',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  cancelButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
   },
-  addButton: {
-    backgroundColor: '#10B981',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+  matchTime: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addEventButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#3B82F6',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  addEventButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  eventsContainer: {
-    backgroundColor: '#FFFFFF',
+  controlsContainer: {
+    backgroundColor: 'white',
     margin: 16,
-    padding: 20,
+    padding: 16,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -761,47 +546,156 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  eventsTitle: {
-    fontSize: 18,
+  controlsTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 16,
+    color: '#333',
+    marginBottom: 12,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  controlButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  controlText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  quickActionsContainer: {
+    backgroundColor: 'white',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  quickActionButton: {
+    backgroundColor: '#F8F9FA',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: (width - 80) / 2,
+    marginBottom: 12,
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#333',
+    marginTop: 4,
+  },
+  statsContainer: {
+    backgroundColor: 'white',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  statItem: {
+    width: '50%',
+    paddingVertical: 8,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  eventsContainer: {
+    backgroundColor: 'white',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   noEventsText: {
-    fontSize: 14,
-    color: '#6B7280',
     textAlign: 'center',
+    color: '#666',
     fontStyle: 'italic',
   },
   eventsList: {
-    gap: 8,
+    maxHeight: 200,
   },
   eventItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  eventIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  eventTime: {
+    width: 60,
     marginRight: 12,
   },
-  eventDetails: {
+  eventTimeText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  eventContent: {
     flex: 1,
   },
   eventText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: '#333',
   },
-  eventTime: {
+  eventPlayer: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#666',
+    marginTop: 2,
+  },
+  notesContainer: {
+    backgroundColor: 'white',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
   },
 }); 

@@ -1,418 +1,537 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card } from '@/components/ui/card';
+import { LiveMatchService, TeamService, PlayerStatsService } from '@/services/firebaseService';
+import LiveMatchControl from '@/components/LiveMatchControl';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { LiveMatch, LiveMatchEvent, LiveMatchEventType, LiveMatchStatus } from '../../../../../../shared/src/types';
-import { useLiveMatch } from '../../../../../../shared/src/hooks/useLiveMatch';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { LiveMatch, LiveMatchEvent, LiveMatchEventType, LiveMatchEventData } from '../../../../../shared/src/types';
+import { 
+  ArrowLeft, 
+  Users, 
+  Clock, 
+  MapPin, 
+  Trophy,
+  Target,
+  AlertTriangle,
+  UserCheck,
+  Activity,
+  BarChart3
+} from 'lucide-react';
 
 export default function LiveMatchPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const matchId = params.id as string;
-  
+
+  const [match, setMatch] = useState<LiveMatch | null>(null);
+  const [homeTeam, setHomeTeam] = useState<any>(null);
+  const [awayTeam, setAwayTeam] = useState<any>(null);
   const [currentMinute, setCurrentMinute] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<'home' | 'away'>('home');
-  const [selectedPlayer, setSelectedPlayer] = useState<string>('');
-  const [eventType, setEventType] = useState<LiveMatchEventType>('goal');
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [eventData, setEventData] = useState<any>({});
-  
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<Date | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Use Firebase service with real-time updates
-  const { 
-    match, 
-    events, 
-    loading, 
-    error, 
-    startMatch, 
-    endMatch, 
-    addEvent 
-  } = useLiveMatch({ matchId });
-
-  // Timer logic
   useEffect(() => {
-    if (isTimerRunning) {
-      timerRef.current = setInterval(() => {
-        setCurrentMinute(prev => prev + 1);
-      }, 60000); // 1 minute intervals
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+    if (matchId) {
+      loadMatchData();
+      const unsubscribe = LiveMatchService.subscribeToLiveMatch(matchId, (matchData) => {
+        if (matchData) {
+          setMatch(matchData);
+          // Calculate current minute based on start time
+          if (matchData.startTime && matchData.status === 'in_progress') {
+            const startTime = new Date(matchData.startTime);
+            const now = new Date();
+            const diffInMinutes = Math.floor((now.getTime() - startTime.getTime()) / (1000 * 60));
+            setCurrentMinute(Math.max(0, diffInMinutes));
+          }
+        }
+      });
+
+      return () => unsubscribe();
     }
+  }, [matchId]);
 
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+  const loadMatchData = async () => {
+    try {
+      setLoading(true);
+      const [matchData, homeTeamData, awayTeamData] = await Promise.all([
+        LiveMatchService.getLiveMatch(matchId),
+        TeamService.getTeam(match?.homeTeamId || ''),
+        TeamService.getTeam(match?.awayTeamId || ''),
+      ]);
+
+      if (!matchData) {
+        setError('Match not found');
+        return;
       }
-    };
-  }, [isTimerRunning]);
 
-  const handleStartMatch = async () => {
-    if (!match) return;
-    
-    const success = await startMatch();
-    if (success) {
+      setMatch(matchData);
+      setHomeTeam(homeTeamData);
+      setAwayTeam(awayTeamData);
+
+      // Load team players
+      if (homeTeamData) {
+        const homePlayers = await loadTeamPlayers(homeTeamData.players);
+        setHomeTeam({ ...homeTeamData, players: homePlayers });
+      }
+
+      if (awayTeamData) {
+        const awayPlayers = await loadTeamPlayers(awayTeamData.players);
+        setAwayTeam({ ...awayTeamData, players: awayPlayers });
+      }
+
+    } catch (error) {
+      console.error('Error loading match data:', error);
+      setError('Failed to load match data');
+      toast({
+        title: "Error",
+        description: "Failed to load match data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTeamPlayers = async (playerIds: string[]) => {
+    // In a real implementation, you would load player details from the database
+    // For now, we'll create mock player data
+    return playerIds.map((playerId, index) => ({
+      id: playerId,
+      name: `Player ${index + 1}`,
+      number: index + 1,
+      position: ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'][index % 4],
+    }));
+  };
+
+  const handleStartMatch = async (): Promise<boolean> => {
+    try {
+      await LiveMatchService.updateLiveMatchStatus(matchId, 'in_progress');
       setIsTimerRunning(true);
-      startTimeRef.current = new Date();
+      toast({
+        title: "Match Started",
+        description: "The match is now live!",
+      });
+      return true;
+    } catch (error) {
+      console.error('Error starting match:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start match",
+        variant: "destructive",
+      });
+      return false;
     }
   };
 
-  const pauseMatch = () => {
+  const handlePauseMatch = () => {
     setIsTimerRunning(false);
-  };
-
-  const resumeMatch = () => {
-    setIsTimerRunning(true);
-  };
-
-  const handleEndMatch = async () => {
-    if (!match) return;
-    
-    const success = await endMatch();
-    if (success) {
-      setIsTimerRunning(false);
-    }
-  };
-
-  const handleAddEvent = async () => {
-    if (!match || !selectedPlayer) return;
-
-    const success = await addEvent({
-      type: eventType,
-      minute: currentMinute,
-      playerId: selectedPlayer,
-      teamId: selectedTeam === 'home' ? match.homeTeamId : match.awayTeamId,
-      data: eventData,
+    toast({
+      title: "Match Paused",
+      description: "Match timer has been paused",
     });
+  };
 
-    if (success) {
-      // Reset form
-      setShowEventForm(false);
-      setSelectedPlayer('');
-      setEventData({});
+  const handleResumeMatch = () => {
+    setIsTimerRunning(true);
+    toast({
+      title: "Match Resumed",
+      description: "Match timer has been resumed",
+    });
+  };
+
+  const handleEndMatch = async (): Promise<boolean> => {
+    try {
+      await LiveMatchService.updateLiveMatchStatus(matchId, 'completed');
+      setIsTimerRunning(false);
+      toast({
+        title: "Match Ended",
+        description: "Match has been completed and statistics updated",
+      });
+      return true;
+    } catch (error) {
+      console.error('Error ending match:', error);
+      toast({
+        title: "Error",
+        description: "Failed to end match",
+        variant: "destructive",
+      });
+      return false;
     }
   };
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  const handleAddEvent = async (event: {
+    type: LiveMatchEventType;
+    minute: number;
+    playerId: string;
+    teamId: string;
+    data: LiveMatchEventData;
+  }): Promise<boolean> => {
+    try {
+      await LiveMatchService.addMatchEvent(matchId, event);
+      
+      // Update player stats
+      await PlayerStatsService.updatePlayerMatchStats(event.playerId, matchId, {
+        playerId: event.playerId,
+        matchId: matchId,
+        teamId: event.teamId,
+        minutesPlayed: currentMinute,
+        goals: event.type === 'goal' ? 1 : 0,
+        assists: event.type === 'assist' ? 1 : 0,
+        yellowCards: event.type === 'yellow_card' ? 1 : 0,
+        redCards: event.type === 'red_card' ? 1 : 0,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error adding event:', error);
+      return false;
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading match...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading match data...</p>
         </div>
       </div>
     );
   }
 
-  if (!match) {
+  if (error || !match) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Match not found</h2>
-          <Button variant="default" onClick={() => router.push('/matches')}>
-            Back to Matches
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Match Not Found</h1>
+          <p className="text-gray-600 mb-4">{error || 'The requested match could not be found.'}</p>
+          <Button onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
           </Button>
         </div>
       </div>
     );
   }
 
+  const matchStats = {
+    homeTeam: {
+      goals: match.homeScore,
+      yellowCards: match.stats?.homeTeam?.yellowCards || 0,
+      redCards: match.stats?.homeTeam?.redCards || 0,
+    },
+    awayTeam: {
+      goals: match.awayScore,
+      yellowCards: match.stats?.awayTeam?.yellowCards || 0,
+      redCards: match.stats?.awayTeam?.redCards || 0,
+    },
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-4">
-              <Button variant="outline" onClick={() => router.push('/matches')}>
-                ← Back
+              <Button
+                variant="ghost"
+                onClick={() => router.back()}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back</span>
               </Button>
-              <h1 className="text-2xl font-bold text-gray-900">Live Match Control</h1>
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={homeTeam?.logoURL} />
+                    <AvatarFallback>{homeTeam?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold">{homeTeam?.name || 'Home Team'}</span>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {match.homeScore} - {match.awayScore}
+                  </div>
+                  <Badge variant={match.status === 'in_progress' ? 'default' : 'secondary'}>
+                    {match.status === 'in_progress' ? 'LIVE' : match.status.toUpperCase()}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">{awayTeam?.name || 'Away Team'}</span>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={awayTeam?.logoURL} />
+                    <AvatarFallback>{awayTeam?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                match.status === 'in_progress' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-              }`}>
-                {match.status === 'in_progress' ? 'LIVE' : match.status.toUpperCase()}
-              </span>
+            
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <div className="flex items-center space-x-1">
+                <Clock className="h-4 w-4" />
+                <span>{new Date(match.startTime).toLocaleTimeString()}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <MapPin className="h-4 w-4" />
+                <span>{match.location?.name || 'TBD'}</span>
+              </div>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Match Timer and Control */}
-          <div className="lg:col-span-1">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Match Timer</h3>
-              
-              {/* Timer Display */}
-              <div className="text-center mb-6">
-                <div className="text-4xl font-mono font-bold text-gray-900 mb-2">
-                  {formatTime(currentMinute)}
-                </div>
-                <p className="text-sm text-gray-600">Match Time</p>
-              </div>
+        <Tabs defaultValue="control" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="control" className="flex items-center space-x-2">
+              <Activity className="h-4 w-4" />
+              <span>Match Control</span>
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Statistics</span>
+            </TabsTrigger>
+            <TabsTrigger value="events" className="flex items-center space-x-2">
+              <Target className="h-4 w-4" />
+              <span>Events</span>
+            </TabsTrigger>
+            <TabsTrigger value="teams" className="flex items-center space-x-2">
+              <Users className="h-4 w-4" />
+              <span>Teams</span>
+            </TabsTrigger>
+          </TabsList>
 
-              {/* Timer Controls */}
-              <div className="space-y-3 mb-6">
-                {match.status === 'scheduled' && (
-                                     <Button 
-                     variant="default" 
-                     className="w-full"
-                     onClick={handleStartMatch}
-                   >
-                     Start Match
-                   </Button>
-                )}
-                
-                {match.status === 'in_progress' && (
-                  <>
-                    {isTimerRunning ? (
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={pauseMatch}
-                      >
-                        Pause Match
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="default" 
-                        className="w-full"
-                        onClick={resumeMatch}
-                      >
-                        Resume Match
-                      </Button>
-                    )}
+          <TabsContent value="control" className="space-y-6">
+            <LiveMatchControl
+              matchId={matchId}
+              currentMinute={currentMinute}
+              isTimerRunning={isTimerRunning}
+              onStartMatch={handleStartMatch}
+              onPauseMatch={handlePauseMatch}
+              onResumeMatch={handleResumeMatch}
+              onEndMatch={handleEndMatch}
+              onAddEvent={handleAddEvent}
+              homeTeam={{
+                id: match.homeTeamId,
+                name: homeTeam?.name || 'Home Team',
+                logo: homeTeam?.logoURL,
+                players: homeTeam?.players || [],
+              }}
+              awayTeam={{
+                id: match.awayTeamId,
+                name: awayTeam?.name || 'Away Team',
+                logo: awayTeam?.logoURL,
+                players: awayTeam?.players || [],
+              }}
+              matchStatus={match.status}
+              matchStats={matchStats}
+            />
+          </TabsContent>
+
+          <TabsContent value="stats" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Match Statistics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5" />
+                    <span>Match Statistics</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-blue-600">{match.stats?.homeTeam?.goals || 0}</div>
+                        <div className="text-sm text-gray-600">Goals</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-yellow-600">{match.stats?.homeTeam?.yellowCards || 0}</div>
+                        <div className="text-sm text-gray-600">Yellow Cards</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-red-600">{match.stats?.homeTeam?.redCards || 0}</div>
+                        <div className="text-sm text-gray-600">Red Cards</div>
+                      </div>
+                    </div>
                     
-                                         <Button 
-                       variant="destructive" 
-                       className="w-full"
-                       onClick={handleEndMatch}
-                     >
-                       End Match
-                     </Button>
-                  </>
-                )}
-              </div>
-
-              {/* Quick Stats */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Stats</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Home Goals:</span>
-                    <span className="font-medium">{match.stats.homeTeam.goals}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Away Goals:</span>
-                    <span className="font-medium">{match.stats.awayTeam.goals}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Yellow Cards:</span>
-                    <span className="font-medium">{match.stats.yellowCards.home + match.stats.yellowCards.away}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Red Cards:</span>
-                    <span className="font-medium">{match.stats.redCards.home + match.stats.redCards.away}</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Event Entry */}
-          <div className="lg:col-span-2">
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Event Entry</h3>
-                <Button 
-                  variant="default"
-                  onClick={() => setShowEventForm(!showEventForm)}
-                >
-                  {showEventForm ? 'Cancel' : 'Add Event'}
-                </Button>
-              </div>
-
-              {showEventForm && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Team Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Team
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={selectedTeam}
-                        onChange={(e) => setSelectedTeam(e.target.value as 'home' | 'away')}
-                      >
-                        <option value="home">Home Team</option>
-                        <option value="away">Away Team</option>
-                      </select>
-                    </div>
-
-                    {/* Event Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Event Type
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={eventType}
-                        onChange={(e) => setEventType(e.target.value as LiveMatchEventType)}
-                      >
-                        <option value="goal">Goal</option>
-                        <option value="assist">Assist</option>
-                        <option value="yellow_card">Yellow Card</option>
-                        <option value="red_card">Red Card</option>
-                        <option value="substitution_in">Substitution In</option>
-                        <option value="substitution_out">Substitution Out</option>
-                        <option value="injury">Injury</option>
-                        <option value="penalty_goal">Penalty Goal</option>
-                        <option value="penalty_miss">Penalty Miss</option>
-                        <option value="own_goal">Own Goal</option>
-                      </select>
-                    </div>
-
-                    {/* Player Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Player
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={selectedPlayer}
-                        onChange={(e) => setSelectedPlayer(e.target.value)}
-                      >
-                        <option value="">Select Player</option>
-                        <option value="player1">Player 1</option>
-                        <option value="player2">Player 2</option>
-                        <option value="player3">Player 3</option>
-                        <option value="player4">Player 4</option>
-                      </select>
-                    </div>
-
-                    {/* Minute */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Minute
-                      </label>
-                      <Input
-                        type="number"
-                        value={currentMinute}
-                        onChange={(e) => setCurrentMinute(parseInt(e.target.value) || 0)}
-                        min="0"
-                        max="120"
-                      />
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-blue-600">{match.stats?.awayTeam?.goals || 0}</div>
+                        <div className="text-sm text-gray-600">Goals</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-yellow-600">{match.stats?.awayTeam?.yellowCards || 0}</div>
+                        <div className="text-sm text-gray-600">Yellow Cards</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-red-600">{match.stats?.awayTeam?.redCards || 0}</div>
+                        <div className="text-sm text-gray-600">Red Cards</div>
+                      </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  {/* Additional Event Data */}
-                  {eventType === 'goal' && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Goal Type
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={eventData.goalType || ''}
-                        onChange={(e) => setEventData({ ...eventData, goalType: e.target.value })}
-                      >
-                        <option value="">Select Goal Type</option>
-                        <option value="open_play">Open Play</option>
-                        <option value="penalty">Penalty</option>
-                        <option value="free_kick">Free Kick</option>
-                        <option value="corner">Corner</option>
-                        <option value="own_goal">Own Goal</option>
-                      </select>
+              {/* Possession Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Possession</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>{homeTeam?.name || 'Home'}</span>
+                        <span>{match.stats?.possession?.home || 50}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${match.stats?.possession?.home || 50}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  )}
-
-                  {(eventType === 'yellow_card' || eventType === 'red_card') && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Reason
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="Enter card reason..."
-                        value={eventData.cardReason || ''}
-                        onChange={(e) => setEventData({ ...eventData, cardReason: e.target.value })}
-                      />
+                    
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>{awayTeam?.name || 'Away'}</span>
+                        <span>{match.stats?.possession?.away || 50}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-red-600 h-2 rounded-full" 
+                          style={{ width: `${match.stats?.possession?.away || 50}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  )}
-
-                  <div className="mt-6 flex space-x-3">
-                                         <Button 
-                       variant="default"
-                       onClick={handleAddEvent}
-                       disabled={!selectedPlayer}
-                       className="flex-1"
-                     >
-                       Add Event
-                     </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        setShowEventForm(false);
-                        setSelectedPlayer('');
-                        setEventData({});
-                      }}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
                   </div>
-                </div>
-              )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-              {/* Recent Events */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Recent Events</h4>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                   {events.length === 0 ? (
-                   <p className="text-gray-500 text-sm">No events recorded yet.</p>
-                 ) : (
-                   events.map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+          <TabsContent value="events" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Target className="h-5 w-5" />
+                  <span>Match Events</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {match.events && match.events.length > 0 ? (
+                  <div className="space-y-4">
+                    {match.events.map((event) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {event.minute}'
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {event.type.replace('_', ' ').toUpperCase()}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Player {event.playerId}
+                          <div className={`w-3 h-3 rounded-full ${
+                            event.type === 'goal' ? 'bg-green-500' :
+                            event.type === 'yellow_card' ? 'bg-yellow-500' :
+                            event.type === 'red_card' ? 'bg-red-500' :
+                            'bg-blue-500'
+                          }`}></div>
+                          <div>
+                            <div className="font-medium">{event.type.replace('_', ' ').toUpperCase()}</div>
+                            <div className="text-sm text-gray-600">
+                              {event.playerId} - {event.minute}'
+                            </div>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {event.timestamp.toLocaleTimeString()}
+                        <div className="text-sm text-gray-500">
+                          {new Date(event.timestamp).toLocaleTimeString()}
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No events recorded yet</p>
+                    <p className="text-sm">Events will appear here as they are added</p>
+                  </div>
+                )}
+              </CardContent>
             </Card>
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="teams" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Home Team */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={homeTeam?.logoURL} />
+                      <AvatarFallback>{homeTeam?.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span>{homeTeam?.name || 'Home Team'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {homeTeam?.players?.map((player: any) => (
+                      <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold">
+                            {player.number}
+                          </div>
+                          <div>
+                            <div className="font-medium">{player.name}</div>
+                            <div className="text-sm text-gray-600">{player.position}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Away Team */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={awayTeam?.logoURL} />
+                      <AvatarFallback>{awayTeam?.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span>{awayTeam?.name || 'Away Team'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {awayTeam?.players?.map((player: any) => (
+                      <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-sm font-bold">
+                            {player.number}
+                          </div>
+                          <div>
+                            <div className="font-medium">{player.name}</div>
+                            <div className="text-sm text-gray-600">{player.position}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

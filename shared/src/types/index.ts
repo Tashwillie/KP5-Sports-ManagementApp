@@ -533,5 +533,4 @@ export * from './public';
 export * from './admin';
 export * from './match';
 
-// Alias for backward compatibility
-export type Match = LiveMatch; 
+ 
