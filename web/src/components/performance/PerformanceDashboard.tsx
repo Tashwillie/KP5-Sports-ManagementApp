@@ -529,7 +529,7 @@ export function PerformanceDashboard({
                         <div className="space-y-2 text-sm">
                           {Object.entries(CrossDeviceLearningService.getLearningModelStatus()).map(([key, value]) => (
                             <div key={key} className="flex justify-between">
-                              <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                              <span className="capitalize">{key.split(/(?=[A-Z])/).join(' ').toLowerCase()}:</span>
                               <span className="font-medium">
                                 {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
                               </span>

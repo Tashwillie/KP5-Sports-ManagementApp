@@ -1,10 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Building2, 
   Users, 
@@ -38,49 +34,49 @@ export default function DemoPage() {
       icon: <Database className="h-6 w-6" />,
       title: 'Real-time Database',
       description: 'Firestore with live updates and offline support',
-      color: 'text-blue-600'
+      color: 'text-primary'
     },
     {
       icon: <Cloud className="h-6 w-6" />,
       title: 'Cloud Functions',
       description: 'Serverless backend with automatic scaling',
-      color: 'text-green-600'
+      color: 'text-success'
     },
     {
       icon: <Shield className="h-6 w-6" />,
       title: 'Security Rules',
       description: 'Role-based access control and data validation',
-      color: 'text-red-600'
+      color: 'text-danger'
     },
     {
       icon: <Bell className="h-6 w-6" />,
       title: 'Push Notifications',
       description: 'Real-time notifications across web and mobile',
-      color: 'text-purple-600'
+      color: 'text-info'
     },
     {
       icon: <MessageSquare className="h-6 w-6" />,
       title: 'Real-time Chat',
       description: 'Team communication with live messaging',
-      color: 'text-orange-600'
+      color: 'text-warning'
     },
     {
       icon: <CreditCard className="h-6 w-6" />,
       title: 'Payment Processing',
       description: 'Stripe integration for registrations and subscriptions',
-      color: 'text-indigo-600'
+      color: 'text-primary'
     },
     {
       icon: <FileText className="h-6 w-6" />,
       title: 'File Management',
       description: 'Secure file uploads and media management',
-      color: 'text-pink-600'
+      color: 'text-success'
     },
     {
       icon: <BarChart3 className="h-6 w-6" />,
       title: 'Analytics',
       description: 'Comprehensive reporting and insights',
-      color: 'text-teal-600'
+      color: 'text-info'
     }
   ];
 
@@ -90,8 +86,7 @@ export default function DemoPage() {
       technologies: [
         { name: 'Next.js 14', description: 'React framework with App Router' },
         { name: 'TypeScript', description: 'Type-safe JavaScript' },
-        { name: 'Tailwind CSS', description: 'Utility-first CSS framework' },
-        { name: 'shadcn/ui', description: 'Modern component library' },
+        { name: 'Bootstrap', description: 'CSS framework for responsive design' },
         { name: 'React Query', description: 'Server state management' }
       ]
     },
@@ -117,224 +112,254 @@ export default function DemoPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-vh-100 bg-light">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold">KP5 Academy</span>
+      <div className="bg-white border-bottom">
+        <div className="container">
+          <div className="d-flex align-items-center justify-content-between py-3">
+            <div className="d-flex align-items-center gap-3">
+              <div className="d-flex align-items-center gap-2">
+                <Building2 className="h-6 w-6 text-primary" />
+                <span className="h5 fw-bold mb-0">KP5 Academy</span>
               </div>
-              <Badge variant="outline" className="ml-4">
-                Demo Mode
-              </Badge>
+              <span className="badge bg-light text-dark">Demo Mode</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Code className="mr-2 h-4 w-4" />
+            <div className="d-flex align-items-center gap-2">
+              <button className="btn btn-outline-secondary btn-sm">
+                <Code className="h-4 w-4 me-2" />
                 View Source
-              </Button>
-              <Button size="sm">
-                <Settings className="mr-2 h-4 w-4" />
+              </button>
+              <button className="btn btn-primary btn-sm">
+                <Settings className="h-4 w-4 me-2" />
                 Settings
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="club-dashboard">Club Management</TabsTrigger>
-            <TabsTrigger value="live-match">Live Match</TabsTrigger>
-            <TabsTrigger value="tech-stack">Tech Stack</TabsTrigger>
-          </TabsList>
+      <div className="container py-5">
+        {/* Tabs */}
+        <ul className="nav nav-tabs mb-4" id="demoTab" role="tablist">
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              Overview
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'club-dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('club-dashboard')}
+            >
+              Club Management
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'live-match' ? 'active' : ''}`}
+              onClick={() => setActiveTab('live-match')}
+            >
+              Live Match
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'tech-stack' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tech-stack')}
+            >
+              Tech Stack
+            </button>
+          </li>
+        </ul>
 
+        {/* Tab Content */}
+        <div className="tab-content" id="demoTabContent">
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold tracking-tight">
+          <div className={`tab-pane fade ${activeTab === 'overview' ? 'show active' : ''}`}>
+            <div className="text-center mb-5">
+              <h1 className="display-4 fw-bold mb-3">
                 Sports Management Platform
               </h1>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              <p className="lead text-muted mx-auto" style={{maxWidth: '600px'}}>
                 A comprehensive, full-featured sports management system built with modern technologies.
                 Experience real-time data synchronization, role-based access control, and seamless user experience.
               </p>
             </div>
 
             {/* Features Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="row g-4 mb-5">
               {features.map((feature, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className={`${feature.color} mb-2`}>
-                      {feature.icon}
+                <div key={index} className="col-md-6 col-lg-3">
+                  <div className="card border-0 shadow-sm h-100">
+                    <div className="card-body">
+                      <div className={`${feature.color} mb-3`}>
+                        {feature.icon}
+                      </div>
+                      <h5 className="card-title">{feature.title}</h5>
+                      <p className="card-text small text-muted">
+                        {feature.description}
+                      </p>
                     </div>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
 
             {/* Quick Stats */}
-            <div className="grid gap-6 md:grid-cols-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    <span className="text-2xl font-bold">1,234</span>
+            <div className="row g-4">
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body text-center">
+                    <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      <span className="h3 fw-bold mb-0">1,234</span>
+                    </div>
+                    <p className="small text-muted mb-0">Active Users</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Active Users</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-2">
-                    <Building2 className="h-5 w-5 text-green-600" />
-                    <span className="text-2xl font-bold">56</span>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body text-center">
+                    <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                      <Building2 className="h-5 w-5 text-success" />
+                      <span className="h3 fw-bold mb-0">56</span>
+                    </div>
+                    <p className="small text-muted mb-0">Sports Clubs</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Sports Clubs</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-2">
-                    <Trophy className="h-5 w-5 text-yellow-600" />
-                    <span className="text-2xl font-bold">89</span>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body text-center">
+                    <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                      <Trophy className="h-5 w-5 text-warning" />
+                      <span className="h3 fw-bold mb-0">89</span>
+                    </div>
+                    <p className="small text-muted mb-0">Active Teams</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Active Teams</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-5 w-5 text-purple-600" />
-                    <span className="text-2xl font-bold">234</span>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body text-center">
+                    <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                      <Calendar className="h-5 w-5 text-info" />
+                      <span className="h3 fw-bold mb-0">234</span>
+                    </div>
+                    <p className="small text-muted mb-0">Events This Month</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Events This Month</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
-          </TabsContent>
+          </div>
 
           {/* Club Dashboard Tab */}
-          <TabsContent value="club-dashboard" className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">Club Management Dashboard</h2>
-                <p className="text-muted-foreground">
-                  Experience the full club management interface with real-time data and CRUD operations.
-                </p>
-              </div>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 text-blue-800">
-                  <Zap className="h-4 w-4" />
-                  <span className="font-medium">Live Demo Features:</span>
-                </div>
-                <ul className="mt-2 text-sm text-blue-700 space-y-1">
-                  <li>• Real-time club data synchronization</li>
-                  <li>• Create, edit, and delete clubs</li>
-                  <li>• Team and player management</li>
-                  <li>• Statistics and analytics</li>
-                  <li>• Role-based access control</li>
-                </ul>
-              </div>
-
-              <ClubDashboard userId={demoUserId} />
+          <div className={`tab-pane fade ${activeTab === 'club-dashboard' ? 'show active' : ''}`}>
+            <div className="mb-4">
+              <h2 className="h3 fw-bold mb-2">Club Management Dashboard</h2>
+              <p className="text-muted">
+                Experience the full club management interface with real-time data and CRUD operations.
+              </p>
             </div>
-          </TabsContent>
+            
+            <div className="alert alert-info mb-4">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <Zap className="h-4 w-4" />
+                <span className="fw-medium">Live Demo Features:</span>
+              </div>
+              <ul className="mb-0 small">
+                <li>Real-time club data synchronization</li>
+                <li>Create, edit, and delete clubs</li>
+                <li>Team and player management</li>
+                <li>Statistics and analytics</li>
+                <li>Role-based access control</li>
+              </ul>
+            </div>
+
+            <ClubDashboard userId={demoUserId} />
+          </div>
 
           {/* Live Match Tab */}
-          <TabsContent value="live-match" className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">Live Match Tracker</h2>
-                <p className="text-muted-foreground">
-                  Experience real-time match data entry with live updates and event tracking.
-                </p>
-              </div>
-              
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 text-green-800">
-                  <Play className="h-4 w-4" />
-                  <span className="font-medium">Live Match Features:</span>
-                </div>
-                <ul className="mt-2 text-sm text-green-700 space-y-1">
-                  <li>• Real-time match timer and controls</li>
-                  <li>• Live event recording (goals, cards, substitutions)</li>
-                  <li>• Instant score updates</li>
-                  <li>• Team statistics tracking</li>
-                  <li>• Referee controls and permissions</li>
-                </ul>
-              </div>
-
-              <LiveMatchTracker matchId={demoMatchId} isReferee={true} />
+          <div className={`tab-pane fade ${activeTab === 'live-match' ? 'show active' : ''}`}>
+            <div className="mb-4">
+              <h2 className="h3 fw-bold mb-2">Live Match Tracker</h2>
+              <p className="text-muted">
+                Experience real-time match data entry with live updates and event tracking.
+              </p>
             </div>
-          </TabsContent>
+            
+            <div className="alert alert-success mb-4">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <Play className="h-4 w-4" />
+                <span className="fw-medium">Live Match Features:</span>
+              </div>
+              <ul className="mb-0 small">
+                <li>Real-time match timer and controls</li>
+                <li>Live event recording (goals, cards, substitutions)</li>
+                <li>Instant score updates</li>
+                <li>Team statistics tracking</li>
+                <li>Referee controls and permissions</li>
+              </ul>
+            </div>
+
+            <LiveMatchTracker matchId={demoMatchId} isReferee={true} />
+          </div>
 
           {/* Tech Stack Tab */}
-          <TabsContent value="tech-stack" className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">Technology Stack</h2>
-                <p className="text-muted-foreground">
-                  Built with modern, scalable technologies for optimal performance and developer experience.
-                </p>
-              </div>
+          <div className={`tab-pane fade ${activeTab === 'tech-stack' ? 'show active' : ''}`}>
+            <div className="mb-4">
+              <h2 className="h3 fw-bold mb-2">Technology Stack</h2>
+              <p className="text-muted">
+                Built with modern, scalable technologies for optimal performance and developer experience.
+              </p>
+            </div>
 
-              <div className="grid gap-6 md:grid-cols-3">
-                {techStack.map((category, index) => (
-                  <Card key={index}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">{category.category}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
+            <div className="row g-4 mb-5">
+              {techStack.map((category, index) => (
+                <div key={index} className="col-md-4">
+                  <div className="card border-0 shadow-sm h-100">
+                    <div className="card-header bg-white">
+                      <h5 className="mb-0">{category.category}</h5>
+                    </div>
+                    <div className="card-body">
+                      <div className="d-flex flex-column gap-3">
                         {category.technologies.map((tech, techIndex) => (
-                          <div key={techIndex} className="space-y-1">
-                            <div className="font-medium text-sm">{tech.name}</div>
-                            <div className="text-xs text-muted-foreground">{tech.description}</div>
+                          <div key={techIndex}>
+                            <div className="fw-medium small">{tech.name}</div>
+                            <div className="small text-muted">{tech.description}</div>
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Architecture Diagram */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Architecture</CardTitle>
-                  <CardDescription>
-                    High-level overview of the system architecture and data flow
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-gray-100 rounded-lg p-6 text-center">
-                    <div className="text-muted-foreground">
-                      <Database className="h-12 w-12 mx-auto mb-4 text-blue-600" />
-                      <p className="font-medium">Architecture Diagram</p>
-                      <p className="text-sm mt-2">
-                        Frontend (Next.js) → API Layer → Firebase Services → Real-time Updates
-                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              ))}
             </div>
-          </TabsContent>
-        </Tabs>
+
+            {/* Architecture Diagram */}
+            <div className="card border-0 shadow-sm">
+              <div className="card-header bg-white">
+                <h5 className="mb-0">System Architecture</h5>
+                <p className="text-muted mb-0">High-level overview of the system architecture and data flow</p>
+              </div>
+              <div className="card-body">
+                <div className="bg-light rounded p-4 text-center">
+                  <div className="text-muted">
+                    <Database className="h-12 w-12 mx-auto mb-3 text-primary" />
+                    <p className="fw-medium">Architecture Diagram</p>
+                    <p className="small mt-2">
+                      Frontend (Next.js) → API Layer → Firebase Services → Real-time Updates
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

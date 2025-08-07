@@ -666,4 +666,6 @@ export function PaymentSystem({
       </Dialog>
     </div>
   );
-} 
+}
+
+export default PaymentSystem;

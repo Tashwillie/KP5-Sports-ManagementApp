@@ -1,13 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import { TournamentBracket } from '@/components/tournament/TournamentBracket';
-import { LiveMatchTracker } from '@/components/match/LiveMatchTracker';
-import { PaymentSystem } from '@/components/payments/PaymentSystem';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TournamentBracket from '@/components/tournament/TournamentBracket';
+import LiveMatchTracker from '@/components/match/LiveMatchTracker';
+import PaymentSystem from '@/components/payments/PaymentSystem';
 import { 
   Trophy, 
   Target, 
@@ -189,15 +185,15 @@ export default function AdvancedFeaturesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-vh-100 bg-light">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-white border-bottom">
+        <div className="container py-5">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="display-4 fw-bold text-dark mb-3">
               Advanced Features Demo
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="lead text-muted mx-auto" style={{maxWidth: '600px'}}>
               Explore the comprehensive sports management features including tournament brackets, 
               live match tracking, and integrated payment systems.
             </p>
@@ -206,221 +202,257 @@ export default function AdvancedFeaturesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="tournaments" className="flex items-center space-x-2">
-              <Trophy className="w-4 h-4" />
+      <div className="container py-5">
+        {/* Tabs */}
+        <ul className="nav nav-tabs mb-4" id="featuresTab" role="tablist">
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'tournaments' ? 'active' : ''} d-flex align-items-center gap-2`}
+              onClick={() => setActiveTab('tournaments')}
+            >
+              <Trophy className="h-4 w-4" />
               <span>Tournament Brackets</span>
-            </TabsTrigger>
-            <TabsTrigger value="live-tracking" className="flex items-center space-x-2">
-              <Target className="w-4 h-4" />
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'live-tracking' ? 'active' : ''} d-flex align-items-center gap-2`}
+              onClick={() => setActiveTab('live-tracking')}
+            >
+              <Target className="h-4 w-4" />
               <span>Live Match Tracking</span>
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center space-x-2">
-              <DollarSign className="w-4 h-4" />
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link ${activeTab === 'payments' ? 'active' : ''} d-flex align-items-center gap-2`}
+              onClick={() => setActiveTab('payments')}
+            >
+              <DollarSign className="h-4 w-4" />
               <span>Payment System</span>
-            </TabsTrigger>
-          </TabsList>
+            </button>
+          </li>
+        </ul>
 
-          <TabsContent value="tournaments" className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Tournament Bracket System
-                </h2>
-                <p className="text-gray-600">
-                  Manage tournament brackets with automatic progression, real-time score updates, 
-                  and comprehensive match scheduling.
-                </p>
+        {/* Tab Content */}
+        <div className="tab-content" id="featuresTabContent">
+          {/* Tournament Brackets Tab */}
+          <div className={`tab-pane fade ${activeTab === 'tournaments' ? 'show active' : ''}`}>
+            <div className="card border-0 shadow-sm">
+              <div className="card-body p-4">
+                <div className="mb-4">
+                  <h2 className="h3 fw-bold text-dark mb-2">
+                    Tournament Bracket System
+                  </h2>
+                  <p className="text-muted">
+                    Manage tournament brackets with automatic progression, real-time score updates, 
+                    and comprehensive match scheduling.
+                  </p>
+                </div>
+                
+                <TournamentBracket
+                  tournamentId="demo-tournament"
+                  teams={sampleTeams}
+                  matches={sampleMatches}
+                  bracketType="single_elimination"
+                  onMatchUpdate={handleMatchUpdate}
+                  onTeamAdvance={handleTeamAdvance}
+                />
               </div>
-              
-              <TournamentBracket
-                tournamentId="demo-tournament"
-                teams={sampleTeams}
-                matches={sampleMatches}
-                bracketType="single_elimination"
-                onMatchUpdate={handleMatchUpdate}
-                onTeamAdvance={handleTeamAdvance}
-              />
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="live-tracking" className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Live Match Tracking
-                </h2>
-                <p className="text-gray-600">
-                  Real-time match data entry for referees and administrators with comprehensive 
-                  event tracking and statistics.
-                </p>
+          {/* Live Match Tracking Tab */}
+          <div className={`tab-pane fade ${activeTab === 'live-tracking' ? 'show active' : ''}`}>
+            <div className="card border-0 shadow-sm">
+              <div className="card-body p-4">
+                <div className="mb-4">
+                  <h2 className="h3 fw-bold text-dark mb-2">
+                    Live Match Tracking
+                  </h2>
+                  <p className="text-muted">
+                    Real-time match data entry for referees and administrators with comprehensive 
+                    event tracking and statistics.
+                  </p>
+                </div>
+                
+                <LiveMatchTracker
+                  matchId="demo-match"
+                  team1={{
+                    id: '1',
+                    name: 'Red Dragons',
+                    logo: '/images/teams/red-dragons.png',
+                    players: samplePlayers.filter(p => p.teamId === '1')
+                  }}
+                  team2={{
+                    id: '2',
+                    name: 'Blue Eagles',
+                    logo: '/images/teams/blue-eagles.png',
+                    players: samplePlayers.filter(p => p.teamId === '2')
+                  }}
+                  onEventAdd={handleEventAdd}
+                  onEventUpdate={handleEventUpdate}
+                  onEventDelete={handleEventDelete}
+                  onMatchStateChange={handleMatchStateChange}
+                  onScoreUpdate={handleScoreUpdate}
+                />
               </div>
-              
-              <LiveMatchTracker
-                matchId="demo-match"
-                team1={{
-                  id: '1',
-                  name: 'Red Dragons',
-                  logo: '/images/teams/red-dragons.png',
-                  players: samplePlayers.filter(p => p.teamId === '1')
-                }}
-                team2={{
-                  id: '2',
-                  name: 'Blue Eagles',
-                  logo: '/images/teams/blue-eagles.png',
-                  players: samplePlayers.filter(p => p.teamId === '2')
-                }}
-                onEventAdd={handleEventAdd}
-                onEventUpdate={handleEventUpdate}
-                onEventDelete={handleEventDelete}
-                onMatchStateChange={handleMatchStateChange}
-                onScoreUpdate={handleScoreUpdate}
-              />
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="payments" className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Payment Management System
-                </h2>
-                <p className="text-gray-600">
-                  Comprehensive payment processing with Stripe integration, supporting one-time 
-                  and recurring payments for tournaments, memberships, and training programs.
-                </p>
+          {/* Payment System Tab */}
+          <div className={`tab-pane fade ${activeTab === 'payments' ? 'show active' : ''}`}>
+            <div className="card border-0 shadow-sm">
+              <div className="card-body p-4">
+                <div className="mb-4">
+                  <h2 className="h3 fw-bold text-dark mb-2">
+                    Payment Management System
+                  </h2>
+                  <p className="text-muted">
+                    Comprehensive payment processing with Stripe integration, supporting one-time 
+                    and recurring payments for tournaments, memberships, and training programs.
+                  </p>
+                </div>
+                
+                <PaymentSystem
+                  paymentItems={samplePaymentItems}
+                  transactions={sampleTransactions}
+                  onPaymentItemCreate={handlePaymentItemCreate}
+                  onPaymentItemUpdate={handlePaymentItemUpdate}
+                  onPaymentItemDelete={handlePaymentItemDelete}
+                  onPaymentProcess={handlePaymentProcess}
+                  onPaymentRefund={handlePaymentRefund}
+                />
               </div>
-              
-              <PaymentSystem
-                paymentItems={samplePaymentItems}
-                transactions={sampleTransactions}
-                onPaymentItemCreate={handlePaymentItemCreate}
-                onPaymentItemUpdate={handlePaymentItemUpdate}
-                onPaymentItemDelete={handlePaymentItemDelete}
-                onPaymentProcess={handlePaymentProcess}
-                onPaymentRefund={handlePaymentRefund}
-              />
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         {/* Feature Highlights */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-blue-600" />
+        <div className="row g-4 mt-5">
+          <div className="col-md-4">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-3">
+                  <div className="bg-primary bg-opacity-10 rounded p-2 me-3">
+                    <Trophy className="h-5 w-5 text-primary" />
+                  </div>
+                  <h5 className="card-title mb-0">Tournament Management</h5>
                 </div>
-                <CardTitle className="text-lg">Tournament Management</CardTitle>
+                <ul className="list-unstyled">
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Automatic bracket generation</small>
+                  </li>
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Real-time score updates</small>
+                  </li>
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Team progression tracking</small>
+                  </li>
+                  <li className="d-flex align-items-center">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Match scheduling & venues</small>
+                  </li>
+                </ul>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Automatic bracket generation</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Real-time score updates</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Team progression tracking</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Match scheduling & venues</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-green-600" />
+          <div className="col-md-4">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-3">
+                  <div className="bg-success bg-opacity-10 rounded p-2 me-3">
+                    <Target className="h-5 w-5 text-success" />
+                  </div>
+                  <h5 className="card-title mb-0">Live Match Tracking</h5>
                 </div>
-                <CardTitle className="text-lg">Live Match Tracking</CardTitle>
+                <ul className="list-unstyled">
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Real-time event recording</small>
+                  </li>
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Goals, cards & substitutions</small>
+                  </li>
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Match timer & controls</small>
+                  </li>
+                  <li className="d-flex align-items-center">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Player statistics tracking</small>
+                  </li>
+                </ul>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Real-time event recording</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Goals, cards & substitutions</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Match timer & controls</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Player statistics tracking</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-purple-600" />
+          <div className="col-md-4">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-3">
+                  <div className="bg-info bg-opacity-10 rounded p-2 me-3">
+                    <DollarSign className="h-5 w-5 text-info" />
+                  </div>
+                  <h5 className="card-title mb-0">Payment Processing</h5>
                 </div>
-                <CardTitle className="text-lg">Payment Processing</CardTitle>
+                <ul className="list-unstyled">
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Stripe integration</small>
+                  </li>
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">One-time & recurring payments</small>
+                  </li>
+                  <li className="d-flex align-items-center mb-2">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Transaction management</small>
+                  </li>
+                  <li className="d-flex align-items-center">
+                    <Star className="h-3 w-3 text-warning me-2" />
+                    <small className="text-muted">Revenue analytics</small>
+                  </li>
+                </ul>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Stripe integration</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>One-time & recurring payments</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Transaction management</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3 text-yellow-500" />
-                  <span>Revenue analytics</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Technical Features */}
-        <div className="mt-12 bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Technical Features</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center space-x-2">
-              <Zap className="w-4 h-4 text-blue-600" />
-              <span className="text-sm">Real-time updates</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Shield className="w-4 h-4 text-green-600" />
-              <span className="text-sm">Secure payments</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-purple-600" />
-              <span className="text-sm">Multi-user support</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-orange-600" />
-              <span className="text-sm">Live synchronization</span>
+        <div className="card border-0 shadow-sm mt-5">
+          <div className="card-body p-4">
+            <h3 className="h4 fw-bold text-dark mb-4">Technical Features</h3>
+            <div className="row g-3">
+              <div className="col-md-3 col-6">
+                <div className="d-flex align-items-center">
+                  <Zap className="h-4 w-4 text-primary me-2" />
+                  <small>Real-time updates</small>
+                </div>
+              </div>
+              <div className="col-md-3 col-6">
+                <div className="d-flex align-items-center">
+                  <Shield className="h-4 w-4 text-success me-2" />
+                  <small>Secure payments</small>
+                </div>
+              </div>
+              <div className="col-md-3 col-6">
+                <div className="d-flex align-items-center">
+                  <Users className="h-4 w-4 text-info me-2" />
+                  <small>Multi-user support</small>
+                </div>
+              </div>
+              <div className="col-md-3 col-6">
+                <div className="d-flex align-items-center">
+                  <Clock className="h-4 w-4 text-warning me-2" />
+                  <small>Live synchronization</small>
+                </div>
+              </div>
             </div>
           </div>
         </div>

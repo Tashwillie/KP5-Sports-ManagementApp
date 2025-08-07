@@ -287,4 +287,6 @@ export function TournamentBracket({
       </Dialog>
     </div>
   );
-} 
+}
+
+export default TournamentBracket;

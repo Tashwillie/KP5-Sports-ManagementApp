@@ -1,285 +1,101 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'bootstrap/dist/css/bootstrap.min.css';
 
-/* Performance-optimized touch styles for 60fps drag and drop */
-.touch-draggable {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  touch-action: none;
-  /* Hardware acceleration */
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  backface-visibility: hidden;
-  perspective: 1000px;
+/* Custom CSS Variables */
+:root {
+  --primary-color: #9333ea;
+  --secondary-color: #7c3aed;
+  --background-color: #f8f7fa;
+  --text-color: #333;
+  --border-color: #e9ecef;
 }
 
-.touch-drop-zone {
-  touch-action: none;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  /* Hardware acceleration */
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  backface-visibility: hidden;
-  perspective: 1000px;
+/* Global Styles */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
-/* Performance-optimized touch feedback animations */
-.touch-feedback-start {
-  animation: touchPulse 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.touch-feedback-move {
-  animation: touchGlow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: box-shadow;
+body {
+  color: var(--text-color);
+  background: var(--background-color);
 }
 
-.touch-feedback-end {
-  animation: touchRelease 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-@keyframes touchPulse {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
+/* Custom Utility Classes */
+.bg-gradient {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animation Classes */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
   }
-  50% {
-    transform: translate3d(0, 0, 0) scale(1.05);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes touchGlow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-  }
-  100% {
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0);
-  }
-}
-
-@keyframes touchRelease {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1.02);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-/* Performance-optimized touch drag preview styles */
-.touch-drag-preview {
-  position: fixed;
-  pointer-events: none;
-  z-index: 1000;
-  opacity: 0.9;
-  transform: translate3d(0, 0, 0) rotate(2deg) scale(1.05);
-  max-width: 250px;
-  background-color: white;
-  border: 2px solid #3B82F6;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2);
-  font-size: 14px;
-  font-weight: 500;
-  /* Hardware acceleration */
-  will-change: transform, opacity;
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-/* Performance-optimized touch drop target styles */
-.touch-drop-target-valid {
-  background-color: rgba(34, 197, 94, 0.15);
-  border: 3px dashed #22C55E;
-  border-radius: 8px;
-  transform: translate3d(0, 0, 0) scale(1.02);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, background-color, border-color;
-}
-
-.touch-drop-target-invalid {
-  background-color: rgba(239, 68, 68, 0.15);
-  border: 3px dashed #EF4444;
-  border-radius: 8px;
-  transform: translate3d(0, 0, 0) scale(1.02);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, background-color, border-color;
-}
-
-/* Performance-optimized mobile-specific optimizations */
-@media (max-width: 768px) {
-  .touch-draggable {
-    min-height: 44px; /* Minimum touch target size */
-    min-width: 44px;
-    /* Optimize for mobile performance */
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-  
-  .touch-drop-zone {
-    min-height: 44px;
-    min-width: 44px;
-    /* Optimize for mobile performance */
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-  
-  /* Larger touch targets on mobile with performance optimization */
-  .calendar-day {
-    min-height: 80px;
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-  
-  .calendar-event {
-    min-height: 32px;
-    font-size: 12px;
-    padding: 4px 6px;
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-}
-
-/* Performance-optimized prevent text selection during drag */
-.dragging {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  /* Hardware acceleration during drag */
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-/* Performance-optimized smooth transitions for touch interactions */
-.touch-transition {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, opacity, background-color;
-}
-
-/* Performance-optimized touch ripple effect */
-.touch-ripple {
-  position: absolute;
-  border-radius: 50%;
-  background-color: rgba(59, 130, 246, 0.6);
-  transform: translate3d(0, 0, 0) scale(0);
-  animation: ripple 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-@keyframes ripple {
   to {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0;
+    transform: rotate(360deg);
   }
 }
 
-/* Performance optimizations for high-DPI displays */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .touch-draggable,
-  .touch-drop-zone,
-  .calendar-day,
-  .calendar-event {
-    /* Optimize for high-DPI displays */
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
+/* Custom Form Styles */
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(147, 51, 234, 0.25);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+/* Custom Card Styles */
+.card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Custom Alert Styles */
+.alert {
+  border-radius: 8px;
+  border: none;
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
-}
-
-/* Performance optimizations for reduced motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  .touch-feedback-start,
-  .touch-feedback-move,
-  .touch-feedback-end,
-  .touch-transition,
-  .touch-ripple,
-  .touch-drop-target-valid,
-  .touch-drop-target-invalid {
-    animation: none;
-    transition: none;
-  }
-}
-
-/* Performance optimizations for low-end devices */
-@media (max-width: 480px) {
-  .touch-draggable,
-  .touch-drop-zone {
-    /* Reduce complexity for low-end devices */
-    transform: translate3d(0, 0, 0);
-    will-change: auto;
-  }
-  
-  .touch-feedback-start,
-  .touch-feedback-move,
-  .touch-feedback-end {
-    animation-duration: 0.1s;
-  }
-}
-
-/* Performance monitoring styles */
-.performance-metrics {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: monospace;
-  z-index: 10000;
-  pointer-events: none;
-}
-
-.performance-metrics.fps-good {
-  background: rgba(34, 197, 94, 0.8);
-}
-
-.performance-metrics.fps-warning {
-  background: rgba(245, 158, 11, 0.8);
-}
-
-.performance-metrics.fps-poor {
-  background: rgba(239, 68, 68, 0.8);
-}
-
-/* Optimized scroll performance */
-.calendar-container {
-  /* Optimize scroll performance */
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  will-change: scroll-position;
-}
-
-/* Optimized layout performance */
-.calendar-grid {
-  /* Optimize layout performance */
-  contain: layout style paint;
-  will-change: contents;
-}
-
-/* Optimized paint performance */
-.calendar-event {
-  /* Optimize paint performance */
-  contain: layout style;
-  will-change: transform, opacity;
-}
-
-/* Optimized composite performance */
-.calendar-day {
-  /* Optimize composite performance */
-  contain: layout style paint;
-  will-change: transform;
 } 

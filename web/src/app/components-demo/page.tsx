@@ -1,22 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, User, Search, Calendar as CalendarIcon, Trophy, Users, Settings, Plus, Edit, Trash, MoreHorizontal, CircleDot } from 'lucide-react';
 
 export default function ComponentsDemoPage() {
@@ -26,7 +10,6 @@ export default function ComponentsDemoPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [progress, setProgress] = useState(65);
   const [checked, setChecked] = useState(false);
-  const { toast } = useToast();
 
   const players = [
     { id: 1, name: 'Lionel Messi', position: 'Forward', team: 'Inter Miami', goals: 15, assists: 8, sport: 'soccer' },
@@ -36,452 +19,501 @@ export default function ComponentsDemoPage() {
   ];
 
   const handleToast = () => {
-    toast({
-      title: "Success!",
-      description: "This is a toast notification example.",
-    });
+    // Bootstrap toast implementation would go here
+    console.log('Toast notification');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            KP5 Academy - shadcn/ui Component Library
+    <div className="min-vh-100 bg-light">
+      <div className="container py-5">
+        <div className="mb-5">
+          <h1 className="display-4 fw-bold text-dark mb-3">
+            KP5 Academy - Bootstrap Component Library
           </h1>
-          <p className="text-xl text-gray-600">
-            A comprehensive showcase of our enhanced shadcn/ui components for sports management
+          <p className="lead text-muted">
+            A comprehensive showcase of our Bootstrap components for sports management
           </p>
         </div>
 
         {/* Buttons Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0 d-flex align-items-center gap-2">
               <Trophy className="h-5 w-5" />
               Buttons
-            </CardTitle>
-            <CardDescription>Various button styles and variants</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-4">
-              <Button>Default Button</Button>
-              <Button variant="secondary">Secondary</Button>
-              <Button variant="outline">Outline</Button>
-              <Button variant="ghost">Ghost</Button>
-              <Button variant="destructive">Destructive</Button>
-              <Button variant="success">Success</Button>
-              <Button variant="warning">Warning</Button>
-              <Button variant="gradient">Gradient</Button>
-              <Button variant="sports">Sports</Button>
+            </h5>
+            <p className="text-muted mb-0">Various button styles and variants</p>
+          </div>
+          <div className="card-body">
+            <div className="d-flex flex-wrap gap-3 mb-3">
+              <button className="btn btn-primary">Primary Button</button>
+              <button className="btn btn-secondary">Secondary</button>
+              <button className="btn btn-outline-primary">Outline</button>
+              <button className="btn btn-outline-secondary">Ghost</button>
+              <button className="btn btn-danger">Danger</button>
+              <button className="btn btn-success">Success</button>
+              <button className="btn btn-warning">Warning</button>
+              <button className="btn btn-info">Info</button>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <Button size="sm">Small</Button>
-              <Button size="md">Medium</Button>
-              <Button size="lg">Large</Button>
-              <Button size="xl">Extra Large</Button>
+            <div className="d-flex flex-wrap gap-3 mb-3">
+              <button className="btn btn-primary btn-sm">Small</button>
+              <button className="btn btn-primary">Medium</button>
+              <button className="btn btn-primary btn-lg">Large</button>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <Button leftIcon={<Mail />}>With Left Icon</Button>
-              <Button rightIcon={<Settings />}>With Right Icon</Button>
-              <Button loading>Loading</Button>
+            <div className="d-flex flex-wrap gap-3">
+              <button className="btn btn-primary">
+                <Mail className="h-4 w-4 me-2" />
+                With Left Icon
+              </button>
+              <button className="btn btn-outline-primary">
+                With Right Icon
+                <Settings className="h-4 w-4 ms-2" />
+              </button>
+              <button className="btn btn-primary" disabled>
+                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                Loading
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Cards Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0 d-flex align-items-center gap-2">
               <Users className="h-5 w-5" />
               Cards
-            </CardTitle>
-            <CardDescription>Card components with different variants</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card variant="default">
-                <CardHeader>
-                  <CardTitle>Default Card</CardTitle>
-                  <CardDescription>Standard card variant</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>This is a default card with standard styling.</p>
-                </CardContent>
-                <CardFooter>
-                  <Button size="sm">Action</Button>
-                </CardFooter>
-              </Card>
+            </h5>
+            <p className="text-muted mb-0">Card components with different variants</p>
+          </div>
+          <div className="card-body">
+            <div className="row g-4">
+              <div className="col-md-4">
+                <div className="card h-100">
+                  <div className="card-header">
+                    <h6 className="mb-0">Default Card</h6>
+                    <small className="text-muted">Standard card variant</small>
+                  </div>
+                  <div className="card-body">
+                    <p>This is a default card with standard styling.</p>
+                  </div>
+                  <div className="card-footer">
+                    <button className="btn btn-primary btn-sm">Action</button>
+                  </div>
+                </div>
+              </div>
 
-              <Card variant="elevated">
-                <CardHeader>
-                  <CardTitle>Elevated Card</CardTitle>
-                  <CardDescription>Card with enhanced shadow</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>This card has an elevated appearance.</p>
-                </CardContent>
-                <CardFooter>
-                  <Button size="sm" variant="outline">Action</Button>
-                </CardFooter>
-              </Card>
+              <div className="col-md-4">
+                <div className="card h-100 shadow">
+                  <div className="card-header">
+                    <h6 className="mb-0">Elevated Card</h6>
+                    <small className="text-muted">Card with enhanced shadow</small>
+                  </div>
+                  <div className="card-body">
+                    <p>This card has an elevated appearance.</p>
+                  </div>
+                  <div className="card-footer">
+                    <button className="btn btn-outline-primary btn-sm">Action</button>
+                  </div>
+                </div>
+              </div>
 
-              <Card variant="sports">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CircleDot className="h-4 w-4" />
-                    Sports Card
-                  </CardTitle>
-                  <CardDescription>Sports-themed card variant</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>This card has sports-themed styling.</p>
-                </CardContent>
-                <CardFooter>
-                  <Button size="sm" variant="sports">View Stats</Button>
-                </CardFooter>
-              </Card>
+              <div className="col-md-4">
+                <div className="card h-100 border-primary">
+                  <div className="card-header">
+                    <h6 className="mb-0 d-flex align-items-center gap-2">
+                      <CircleDot className="h-4 w-4" />
+                      Sports Card
+                    </h6>
+                    <small className="text-muted">Sports-themed card variant</small>
+                  </div>
+                  <div className="card-body">
+                    <p>This card has sports-themed styling.</p>
+                  </div>
+                  <div className="card-footer">
+                    <button className="btn btn-primary btn-sm">View Stats</button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Form Elements Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0 d-flex align-items-center gap-2">
               <User className="h-5 w-5" />
               Form Elements
-            </CardTitle>
-            <CardDescription>Input fields and form components</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="Enter your email"
-                leftIcon={<Mail />}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <Input
-                label="Password"
-                type="password"
-                placeholder="Enter your password"
-                leftIcon={<Lock />}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Search Players"
-                placeholder="Search by name or team"
-                leftIcon={<Search />}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Sport</label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a sport" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="soccer">Soccer</SelectItem>
-                    <SelectItem value="basketball">Basketball</SelectItem>
-                    <SelectItem value="football">Football</SelectItem>
-                    <SelectItem value="baseball">Baseball</SelectItem>
-                  </SelectContent>
-                </Select>
+            </h5>
+            <p className="text-muted mb-0">Input fields and form components</p>
+          </div>
+          <div className="card-body">
+            <div className="row g-4 mb-4">
+              <div className="col-md-6">
+                <label className="form-label">Email Address</label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <Mail className="h-4 w-4" />
+                  </span>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Password</label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <Lock className="h-4 w-4" />
+                  </span>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Match Date</label>
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-md border"
+            <div className="row g-4 mb-4">
+              <div className="col-md-6">
+                <label className="form-label">Search Players</label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <Search className="h-4 w-4" />
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by name or team"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Select Sport</label>
+                <select className="form-select">
+                  <option value="">Choose a sport</option>
+                  <option value="soccer">Soccer</option>
+                  <option value="basketball">Basketball</option>
+                  <option value="football">Football</option>
+                  <option value="baseball">Baseball</option>
+                </select>
+              </div>
+            </div>
+            <div className="row g-4">
+              <div className="col-md-6">
+                <label className="form-label">Match Date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={date?.toISOString().split('T')[0]}
+                  onChange={(e) => setDate(new Date(e.target.value))}
                 />
               </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Progress: {progress}%</label>
-                  <Progress value={progress} className="w-full" />
+              <div className="col-md-6">
+                <div className="mb-3">
+                  <label className="form-label">Progress: {progress}%</label>
+                  <div className="progress">
+                    <div 
+                      className="progress-bar" 
+                      style={{width: `${progress}%`}}
+                    ></div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
+                <div className="form-check form-switch">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
                     checked={checked}
-                    onCheckedChange={setChecked}
+                    onChange={(e) => setChecked(e.target.checked)}
                   />
-                  <label className="text-sm font-medium">Enable notifications</label>
+                  <label className="form-check-label">Enable notifications</label>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Badges Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Badges</CardTitle>
-            <CardDescription>Status indicators and labels</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <Badge>Default</Badge>
-              <Badge variant="secondary">Secondary</Badge>
-              <Badge variant="destructive">Destructive</Badge>
-              <Badge variant="outline">Outline</Badge>
-              <Badge variant="success">Success</Badge>
-              <Badge variant="warning">Warning</Badge>
-              <Badge variant="info">Info</Badge>
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0">Badges</h5>
+            <p className="text-muted mb-0">Status indicators and labels</p>
+          </div>
+          <div className="card-body">
+            <div className="d-flex flex-wrap gap-2 mb-3">
+              <span className="badge bg-primary">Primary</span>
+              <span className="badge bg-secondary">Secondary</span>
+              <span className="badge bg-danger">Danger</span>
+              <span className="badge bg-success">Success</span>
+              <span className="badge bg-warning">Warning</span>
+              <span className="badge bg-info">Info</span>
+              <span className="badge bg-light text-dark">Light</span>
             </div>
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Sports Badges</h4>
-              <div className="flex flex-wrap gap-4">
-                <Badge sport="soccer">Soccer</Badge>
-                <Badge sport="basketball">Basketball</Badge>
-                <Badge sport="football">Football</Badge>
-                <Badge sport="baseball">Baseball</Badge>
-                <Badge sport="volleyball">Volleyball</Badge>
-                <Badge sport="tennis">Tennis</Badge>
+            <div>
+              <h6 className="mb-2">Sports Badges</h6>
+              <div className="d-flex flex-wrap gap-2">
+                <span className="badge bg-success">Soccer</span>
+                <span className="badge bg-primary">Basketball</span>
+                <span className="badge bg-warning">Football</span>
+                <span className="badge bg-info">Baseball</span>
+                <span className="badge bg-secondary">Volleyball</span>
+                <span className="badge bg-danger">Tennis</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Table Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Player Statistics Table</CardTitle>
-            <CardDescription>Data table with player information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Player</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Team</TableHead>
-                  <TableHead>Sport</TableHead>
-                  <TableHead>Stats</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {players.map((player) => (
-                  <TableRow key={player.id}>
-                    <TableCell className="font-medium">{player.name}</TableCell>
-                    <TableCell>{player.position}</TableCell>
-                    <TableCell>{player.team}</TableCell>
-                    <TableCell>
-                      <Badge sport={player.sport as any}>
-                        {player.sport}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {player.sport === 'soccer' 
-                        ? `${player.goals}G ${player.assists}A`
-                        : `${player.points}P ${player.rebounds || player.assists}R`
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0">Player Statistics Table</h5>
+            <p className="text-muted mb-0">Data table with player information</p>
+          </div>
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Position</th>
+                    <th>Team</th>
+                    <th>Sport</th>
+                    <th>Stats</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {players.map((player) => (
+                    <tr key={player.id}>
+                      <td className="fw-medium">{player.name}</td>
+                      <td>{player.position}</td>
+                      <td>{player.team}</td>
+                      <td>
+                        <span className={`badge ${player.sport === 'soccer' ? 'bg-success' : 'bg-primary'}`}>
+                          {player.sport}
+                        </span>
+                      </td>
+                      <td>
+                        {player.sport === 'soccer' 
+                          ? `${player.goals}G ${player.assists}A`
+                          : `${player.points}P ${player.rebounds || player.assists}R`
+                        }
+                      </td>
+                      <td>
+                        <div className="dropdown">
+                          <button className="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                             <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                          </button>
+                          <ul className="dropdown-menu">
+                            <li><a className="dropdown-item" href="#">
+                              <Edit className="h-4 w-4 me-2" />
+                              Edit
+                            </a></li>
+                            <li><a className="dropdown-item" href="#">
+                              <Trash className="h-4 w-4 me-2" />
+                              Delete
+                            </a></li>
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
         {/* Interactive Components Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Interactive Components</CardTitle>
-            <CardDescription>Dialogs, sheets, and other interactive elements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-4">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>Open Dialog</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Player Details</DialogTitle>
-                    <DialogDescription>
-                      View detailed information about the selected player.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarImage src="/placeholder-avatar.jpg" />
-                        <AvatarFallback>JD</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h4 className="font-medium">John Doe</h4>
-                        <p className="text-sm text-muted-foreground">Forward • Team Alpha</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium">Goals</p>
-                        <p className="text-2xl font-bold">15</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Assists</p>
-                        <p className="text-2xl font-bold">8</p>
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline">Open Sheet</Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Quick Actions</SheetTitle>
-                    <SheetDescription>
-                      Perform quick actions from this side panel.
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="space-y-4 mt-6">
-                    <Button className="w-full" leftIcon={<Plus />}>
-                      Add New Player
-                    </Button>
-                    <Button variant="outline" className="w-full" leftIcon={<CalendarIcon />}>
-                      Schedule Match
-                    </Button>
-                    <Button variant="outline" className="w-full" leftIcon={<Trophy />}>
-                      View Tournament
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
-
-              <Button onClick={handleToast}>Show Toast</Button>
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0">Interactive Components</h5>
+            <p className="text-muted mb-0">Modals, toasts, and other interactive elements</p>
+          </div>
+          <div className="card-body">
+            <div className="d-flex flex-wrap gap-3">
+              <button className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#playerModal">
+                Open Modal
+              </button>
+              <button className="btn btn-outline-primary" onClick={handleToast}>
+                Show Toast
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Tabs Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Tabs</CardTitle>
-            <CardDescription>Organized content with tabs</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="stats">Stats</TabsTrigger>
-                <TabsTrigger value="matches">Matches</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-              </TabsList>
-              <TabsContent value="overview" className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold">24</div>
-                      <p className="text-xs text-muted-foreground">Total Players</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold">8</div>
-                      <p className="text-xs text-muted-foreground">Active Teams</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-2xl font-bold">156</div>
-                      <p className="text-xs text-muted-foreground">Matches Played</p>
-                    </CardContent>
-                  </Card>
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0">Tabs</h5>
+            <p className="text-muted mb-0">Organized content with tabs</p>
+          </div>
+          <div className="card-body">
+            <ul className="nav nav-tabs" id="myTab" role="tablist">
+              <li className="nav-item" role="presentation">
+                <button className="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                  Overview
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button className="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab">
+                  Stats
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button className="nav-link" id="matches-tab" data-bs-toggle="tab" data-bs-target="#matches" type="button" role="tab">
+                  Matches
+                </button>
+              </li>
+              <li className="nav-item" role="presentation">
+                <button className="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                  Settings
+                </button>
+              </li>
+            </ul>
+            <div className="tab-content" id="myTabContent">
+              <div className="tab-pane fade show active" id="overview" role="tabpanel">
+                <div className="row g-4 mt-3">
+                  <div className="col-md-4">
+                    <div className="card text-center">
+                      <div className="card-body">
+                        <h3 className="fw-bold">24</h3>
+                        <p className="small text-muted">Total Players</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="card text-center">
+                      <div className="card-body">
+                        <h3 className="fw-bold">8</h3>
+                        <p className="small text-muted">Active Teams</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="card text-center">
+                      <div className="card-body">
+                        <h3 className="fw-bold">156</h3>
+                        <p className="small text-muted">Matches Played</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </TabsContent>
-              <TabsContent value="stats" className="space-y-4">
-                <p>Detailed statistics and analytics will be displayed here.</p>
-              </TabsContent>
-              <TabsContent value="matches" className="space-y-4">
-                <p>Recent and upcoming matches will be listed here.</p>
-              </TabsContent>
-              <TabsContent value="settings" className="space-y-4">
-                <p>Configuration and settings options will be available here.</p>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+              </div>
+              <div className="tab-pane fade" id="stats" role="tabpanel">
+                <p className="mt-3">Detailed statistics and analytics will be displayed here.</p>
+              </div>
+              <div className="tab-pane fade" id="matches" role="tabpanel">
+                <p className="mt-3">Recent and upcoming matches will be listed here.</p>
+              </div>
+              <div className="tab-pane fade" id="settings" role="tabpanel">
+                <p className="mt-3">Configuration and settings options will be available here.</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Accordion Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Accordion</CardTitle>
-            <CardDescription>Collapsible content sections</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="item-1">
-                <AccordionTrigger>Team Information</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2">
+        <div className="card border-0 shadow-sm mb-5">
+          <div className="card-header bg-white">
+            <h5 className="mb-0">Accordion</h5>
+            <p className="text-muted mb-0">Collapsible content sections</p>
+          </div>
+          <div className="card-body">
+            <div className="accordion" id="accordionExample">
+              <div className="accordion-item">
+                <h2 className="accordion-header">
+                  <button className="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                    Team Information
+                  </button>
+                </h2>
+                <div id="collapseOne" className="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+                  <div className="accordion-body">
                     <p><strong>Founded:</strong> 2020</p>
                     <p><strong>Home Stadium:</strong> Central Arena</p>
                     <p><strong>Head Coach:</strong> Mike Johnson</p>
                     <p><strong>League:</strong> Premier Division</p>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="item-2">
-                <AccordionTrigger>Recent Performance</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2">
+                </div>
+              </div>
+              <div className="accordion-item">
+                <h2 className="accordion-header">
+                  <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                    Recent Performance
+                  </button>
+                </h2>
+                <div id="collapseTwo" className="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                  <div className="accordion-body">
                     <p><strong>Last 5 Matches:</strong> W-W-L-W-D</p>
                     <p><strong>Goals Scored:</strong> 12</p>
                     <p><strong>Goals Conceded:</strong> 6</p>
                     <p><strong>Current Position:</strong> 3rd</p>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="item-3">
-                <AccordionTrigger>Upcoming Matches</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2">
+                </div>
+              </div>
+              <div className="accordion-item">
+                <h2 className="accordion-header">
+                  <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                    Upcoming Matches
+                  </button>
+                </h2>
+                <div id="collapseThree" className="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                  <div className="accordion-body">
                     <p><strong>vs Team Alpha:</strong> March 15, 2024</p>
                     <p><strong>vs Team Beta:</strong> March 22, 2024</p>
                     <p><strong>vs Team Gamma:</strong> March 29, 2024</p>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Player Modal */}
+      <div className="modal fade" id="playerModal" tabIndex={-1}>
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Player Details</h5>
+              <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div className="modal-body">
+              <div className="d-flex align-items-center mb-3">
+                <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style={{width: '48px', height: '48px'}}>
+                  <User className="h-4 w-4 text-muted" />
+                </div>
+                <div>
+                  <h6 className="mb-0">John Doe</h6>
+                  <p className="small text-muted mb-0">Forward • Team Alpha</p>
+                </div>
+              </div>
+              <div className="row text-center">
+                <div className="col-6">
+                  <p className="small text-muted mb-1">Goals</p>
+                  <h4 className="fw-bold">15</h4>
+                </div>
+                <div className="col-6">
+                  <p className="small text-muted mb-1">Assists</p>
+                  <h4 className="fw-bold">8</h4>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" className="btn btn-primary">Edit Player</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
