@@ -251,12 +251,35 @@ export default function AdvancedFeaturesPage() {
                 </div>
                 
                 <TournamentBracket
-                  tournamentId="demo-tournament"
-                  teams={sampleTeams}
-                  matches={sampleMatches}
-                  bracketType="single_elimination"
-                  onMatchUpdate={handleMatchUpdate}
-                  onTeamAdvance={handleTeamAdvance}
+                  tournament={{
+                    id: "demo-tournament",
+                    name: "Demo Tournament",
+                    format: "single_elimination",
+                    status: "in_progress",
+                    startDate: new Date('2024-01-15'),
+                    endDate: new Date('2024-01-25'),
+                    location: "Main Stadium",
+                    teams: sampleTeams.map(team => ({
+                      id: team.id,
+                      name: team.name,
+                      logo: team.logo,
+                      seed: team.seed
+                    })),
+                    matches: sampleMatches.map(match => ({
+                      id: match.id,
+                      homeTeam: { id: match.team1Id, name: sampleTeams.find(t => t.id === match.team1Id)?.name || 'Unknown' },
+                      awayTeam: { id: match.team2Id, name: sampleTeams.find(t => t.id === match.team2Id)?.name || 'TBD' },
+                      homeScore: match.team1Score,
+                      awayScore: match.team2Score,
+                      status: match.status,
+                      startTime: match.scheduledTime,
+                      location: match.venue,
+                      round: match.round,
+                      matchNumber: match.matchNumber,
+                      winner: match.winnerId ? { id: match.winnerId, name: sampleTeams.find(t => t.id === match.winnerId)?.name || 'Unknown' } : undefined
+                    }))
+                  }}
+                  onMatchClick={(match) => console.log('Match clicked:', match)}
                 />
               </div>
             </div>

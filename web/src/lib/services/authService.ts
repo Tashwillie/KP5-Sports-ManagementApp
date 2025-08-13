@@ -1,362 +1,149 @@
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-  updateProfile as firebaseUpdateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  PhoneAuthProvider,
-  RecaptchaVerifier,
-  updateEmail,
-  updatePassword,
-  deleteUser,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-} from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-import { User, UserRole } from '../../../../shared/src/types';
-import { getAuthErrorMessage } from '../../../../shared/src/utils/firebase';
+// Authentication service using API calls instead of Firebase
+// This service handles user authentication through the backend API
+
+import { User, LoginCredentials, RegisterCredentials, AuthError } from '../../../../shared/src/types/auth';
 
 export class AuthService {
-  private static googleProvider = new GoogleAuthProvider();
-  private static phoneProvider = new PhoneAuthProvider(auth);
+  private static baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-  // Email/Password Authentication
-  static async signInWithEmail(email: string, password: string): Promise<User> {
+  // Sign in with email and password
+  static async signIn(email: string, password: string): Promise<User> {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userData = await this.getUserProfile(userCredential.user.uid);
-      
-      if (!userData) {
-        throw new Error('User profile not found');
-      }
-
-      return userData;
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  static async signUpWithEmail(
-    email: string, 
-    password: string, 
-    displayName: string,
-    role: UserRole = 'player'
-  ): Promise<User> {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update Firebase Auth profile
-      await firebaseUpdateProfile(userCredential.user, { displayName });
-      
-      // Create user profile in Firestore
-      const userProfile: User = {
-        id: userCredential.user.uid,
-        email,
-        displayName,
-        photoURL: userCredential.user.photoURL || '',
-        phoneNumber: userCredential.user.phoneNumber || '',
-        role,
-        clubId: '',
-        teamIds: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isActive: true,
-        preferences: {
-          notifications: {
-            email: true,
-            push: true,
-            sms: false,
-          },
-          language: 'en',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      const response = await fetch(`${this.baseUrl}/auth/signin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      };
-
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        ...userProfile,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
 
-      return userProfile;
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
+      const data = await response.json();
 
-  // Google Authentication
-  static async signInWithGoogle(): Promise<User> {
-    try {
-      const result = await signInWithPopup(auth, this.googleProvider);
-      const userData = await this.getUserProfile(result.user.uid);
-      
-      if (!userData) {
-        // Create user profile if it doesn't exist
-        return await this.createUserProfileFromGoogle(result.user);
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
       }
 
-      return userData;
+      return data.user;
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
+      throw new Error(error.message || 'Authentication failed');
     }
   }
 
-  static async signInWithGoogleRedirect(): Promise<void> {
+  // Sign up with email and password
+  static async signUp(email: string, password: string, userData?: any): Promise<User> {
     try {
-      await signInWithRedirect(auth, this.googleProvider);
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  static async getGoogleRedirectResult(): Promise<User | null> {
-    try {
-      const result = await getRedirectResult(auth);
-      if (result) {
-        const userData = await this.getUserProfile(result.user.uid);
-        if (!userData) {
-          return await this.createUserProfileFromGoogle(result.user);
-        }
-        return userData;
-      }
-      return null;
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  // Phone Authentication
-  static async signInWithPhone(phoneNumber: string): Promise<string> {
-    try {
-      const appVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
+      const response = await fetch(`${this.baseUrl}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          displayName: userData?.displayName || '',
+          role: userData?.role || 'player',
+        }),
+        credentials: 'include',
       });
 
-      const confirmationResult = await this.phoneProvider.verifyPhoneNumber(
-        phoneNumber,
-        appVerifier
-      );
+      const data = await response.json();
 
-      return confirmationResult;
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  static async verifyPhoneOTP(verificationId: string, code: string): Promise<User> {
-    try {
-      const credential = PhoneAuthProvider.credential(verificationId, code);
-      const userCredential = await signInWithPopup(auth, this.phoneProvider);
-      const userData = await this.getUserProfile(userCredential.user.uid);
-      
-      if (!userData) {
-        return await this.createUserProfileFromPhone(userCredential.user);
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
       }
 
-      return userData;
+      return data.user;
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
+      throw new Error(error.message || 'Registration failed');
     }
   }
 
-  // Password Reset
-  static async resetPassword(email: string): Promise<void> {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  // Sign Out
+  // Sign out
   static async signOut(): Promise<void> {
     try {
-      await firebaseSignOut(auth);
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  // Profile Management
-  static async updateProfile(updates: Partial<User>): Promise<void> {
-    if (!auth.currentUser) {
-      throw new Error('No user logged in');
-    }
-
-    try {
-      // Update Firebase Auth profile
-      const authUpdates: any = {};
-      if (updates.displayName) authUpdates.displayName = updates.displayName;
-      if (updates.photoURL) authUpdates.photoURL = updates.photoURL;
-
-      if (Object.keys(authUpdates).length > 0) {
-        await firebaseUpdateProfile(auth.currentUser, authUpdates);
-      }
-
-      // Update Firestore profile
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        ...updates,
-        updatedAt: serverTimestamp(),
+      await fetch(`${this.baseUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
       });
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
+      console.error('Sign out error:', error);
     }
   }
 
-  static async updateEmail(newEmail: string): Promise<void> {
-    if (!auth.currentUser) {
-      throw new Error('No user logged in');
-    }
-
+  // Get current user
+  static async getCurrentUser(): Promise<User | null> {
     try {
-      await updateEmail(auth.currentUser, newEmail);
-      
-      // Update Firestore profile
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        email: newEmail,
-        updatedAt: serverTimestamp(),
+      const response = await fetch(`${this.baseUrl}/auth/me`, {
+        credentials: 'include',
       });
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
 
-  static async updatePassword(newPassword: string): Promise<void> {
-    if (!auth.currentUser) {
-      throw new Error('No user logged in');
-    }
-
-    try {
-      await updatePassword(auth.currentUser, newPassword);
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  static async deleteAccount(password: string): Promise<void> {
-    if (!auth.currentUser) {
-      throw new Error('No user logged in');
-    }
-
-    try {
-      // Re-authenticate before deleting
-      const credential = EmailAuthProvider.credential(
-        auth.currentUser.email!,
-        password
-      );
-      await reauthenticateWithCredential(auth.currentUser, credential);
-      
-      // Delete user
-      await deleteUser(auth.currentUser);
-    } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      throw new Error(errorMessage);
-    }
-  }
-
-  // User Profile Management
-  static async getUserProfile(userId: string): Promise<User | null> {
-    try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (userDoc.exists()) {
-        return userDoc.data() as User;
+      if (!response.ok) {
+        return null;
       }
-      return null;
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
+
+      const data = await response.json();
+      return data.user;
+    } catch (error: any) {
+      console.error('Get current user error:', error);
       return null;
     }
   }
 
-  private static async createUserProfileFromGoogle(firebaseUser: any): Promise<User> {
-    const userProfile: User = {
-      id: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      displayName: firebaseUser.displayName || '',
-      photoURL: firebaseUser.photoURL || '',
-      phoneNumber: firebaseUser.phoneNumber || '',
-      role: 'player',
-      clubId: '',
-      teamIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true,
-      preferences: {
-        notifications: {
-          email: true,
-          push: true,
-          sms: false,
+  // Update user profile
+  static async updateProfile(userId: string, updates: Partial<User>): Promise<User> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        language: 'en',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-    };
+        body: JSON.stringify(updates),
+        credentials: 'include',
+      });
 
-    await setDoc(doc(db, 'users', firebaseUser.uid), {
-      ...userProfile,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      const data = await response.json();
 
-    return userProfile;
+      if (!response.ok) {
+        throw new Error(data.message || 'Profile update failed');
+      }
+
+      return data.user;
+    } catch (error: any) {
+      throw new Error(error.message || 'Profile update failed');
+    }
   }
 
-  private static async createUserProfileFromPhone(firebaseUser: any): Promise<User> {
-    const userProfile: User = {
-      id: firebaseUser.uid,
-      email: firebaseUser.email || '',
-      displayName: firebaseUser.displayName || '',
-      photoURL: firebaseUser.photoURL || '',
-      phoneNumber: firebaseUser.phoneNumber || '',
-      role: 'player',
-      clubId: '',
-      teamIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true,
-      preferences: {
-        notifications: {
-          email: true,
-          push: true,
-          sms: true,
+  // Reset password
+  static async resetPassword(email: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        language: 'en',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-    };
+        body: JSON.stringify({ email }),
+      });
 
-    await setDoc(doc(db, 'users', firebaseUser.uid), {
-      ...userProfile,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      const data = await response.json();
 
-    return userProfile;
+      if (!response.ok) {
+        throw new Error(data.message || 'Password reset failed');
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Password reset failed');
+    }
   }
 
-  // Utility methods
-  static getCurrentUser() {
-    return auth.currentUser;
+  // Google sign in (placeholder for future implementation)
+  static async signInWithGoogle(): Promise<User> {
+    throw new Error('Google sign in not implemented yet');
   }
 
-  static onAuthStateChanged(callback: (user: any) => void) {
-    return auth.onAuthStateChanged(callback);
+  // Phone sign in (placeholder for future implementation)
+  static async signInWithPhone(phoneNumber: string): Promise<User> {
+    throw new Error('Phone sign in not implemented yet');
   }
-} 
+}
+
+export default AuthService; 

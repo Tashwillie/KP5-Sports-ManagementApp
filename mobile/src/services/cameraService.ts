@@ -2,9 +2,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../config/firebase';
-
 interface CameraOptions {
   allowsEditing?: boolean;
   aspect?: [number, number];

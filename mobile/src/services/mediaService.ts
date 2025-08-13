@@ -1,26 +1,4 @@
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
-  increment,
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
-import { db, storage } from '@shared/utils/firebase';
-import {
   MediaFile,
   MediaType,
   MediaCategory,
@@ -86,7 +64,7 @@ export class MediaService {
       },
     };
 
-    const uploadRef = await addDoc(collection(db, 'mediaUploads'), {
+    const uploadRef = await addDoc(null, {
       ...uploadData,
       startedAt: serverTimestamp(),
     });
@@ -170,7 +148,7 @@ export class MediaService {
         },
       };
 
-      const mediaFileRef = await addDoc(collection(db, 'mediaFiles'), {
+      const mediaFileRef = await addDoc(null, {
         ...mediaFileData,
         uploadedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -217,7 +195,7 @@ export class MediaService {
     if (!currentUser) throw new Error('User not authenticated');
 
     let q = query(
-      collection(db, 'mediaFiles'),
+      null,
       where('uploadedBy', '==', currentUser),
       orderBy('uploadedAt', 'desc')
     );
@@ -343,7 +321,7 @@ export class MediaService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const albumRef = await addDoc(collection(db, 'mediaAlbums'), {
+    const albumRef = await addDoc(null, {
       ...albumData,
       createdBy: user.uid,
       createdAt: serverTimestamp(),
@@ -370,7 +348,7 @@ export class MediaService {
     if (!currentUser) throw new Error('User not authenticated');
 
     const q = query(
-      collection(db, 'mediaAlbums'),
+      null,
       where('createdBy', '==', currentUser),
       orderBy('createdAt', 'desc')
     );
@@ -405,7 +383,7 @@ export class MediaService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const folderRef = await addDoc(collection(db, 'mediaFolders'), {
+    const folderRef = await addDoc(null, {
       ...folderData,
       createdBy: user.uid,
       createdAt: serverTimestamp(),
@@ -432,7 +410,7 @@ export class MediaService {
     if (!currentUser) throw new Error('User not authenticated');
 
     const q = query(
-      collection(db, 'mediaFolders'),
+      null,
       where('createdBy', '==', currentUser),
       orderBy('createdAt', 'desc')
     );
@@ -464,7 +442,7 @@ export class MediaService {
       accessCount: 0,
     };
 
-    const shareRef = await addDoc(collection(db, 'mediaShares'), {
+    const shareRef = await addDoc(null, {
       ...shareData,
       createdAt: serverTimestamp(),
     });
@@ -477,7 +455,7 @@ export class MediaService {
     if (!currentUser) throw new Error('User not authenticated');
 
     const q = query(
-      collection(db, 'mediaShares'),
+      null,
       where('sharedWith', 'array-contains', currentUser),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc')
@@ -515,7 +493,7 @@ export class MediaService {
       isResolved: false,
     };
 
-    const commentRef = await addDoc(collection(db, 'mediaComments'), {
+    const commentRef = await addDoc(null, {
       ...commentData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -526,7 +504,7 @@ export class MediaService {
 
   async getFileComments(fileId: string): Promise<MediaComment[]> {
     const q = query(
-      collection(db, 'mediaComments'),
+      null,
       where('fileId', '==', fileId),
       orderBy('createdAt', 'asc')
     );
@@ -682,7 +660,7 @@ export class MediaService {
     callback: (files: MediaFile[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'mediaFiles'),
+      null,
       where('uploadedBy', '==', userId),
       orderBy('uploadedAt', 'desc')
     );
@@ -703,7 +681,7 @@ export class MediaService {
     callback: (uploads: MediaUpload[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'mediaUploads'),
+      null,
       where('metadata.uploadedBy', '==', userId),
       orderBy('startedAt', 'desc')
     );

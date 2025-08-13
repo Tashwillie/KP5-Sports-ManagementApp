@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocalAuth } from "@/hooks/useLocalApi";
+import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,32 +11,27 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { signIn } = useLocalAuth();
+  const { login, loading } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
     try {
-      await signIn(email, password);
+      await login(email, password);
       toast.success("Welcome back!");
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Sign in error:", error);
       setError(error.message || "Failed to sign in. Please check your credentials.");
       toast.error("Sign in failed. Please check your credentials.");
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
     setError("");
     
     try {
@@ -45,8 +40,6 @@ export default function SignInPage() {
     } catch (error: any) {
       setError(error.message || "Failed to sign in with Google.");
       toast.error("Google sign-in failed.");
-    } finally {
-      setLoading(false);
     }
   };
 

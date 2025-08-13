@@ -1,28 +1,4 @@
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  QuerySnapshot,
-  DocumentData,
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@shared/utils/firebase';
-import {
   RegistrationForm,
   RegistrationFormType,
   RegistrationFormStatus,
@@ -60,7 +36,7 @@ export class RegistrationService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const formRef = await addDoc(collection(db, 'registrationForms'), {
+    const formRef = await addDoc(null, {
       ...formData,
       currentRegistrations: 0,
       createdAt: serverTimestamp(),
@@ -91,7 +67,7 @@ export class RegistrationService {
     status?: RegistrationFormStatus
   ): Promise<RegistrationForm[]> {
     let q = query(
-      collection(db, 'registrationForms'),
+      null,
       orderBy('createdAt', 'desc')
     );
 
@@ -187,7 +163,7 @@ export class RegistrationService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const waiverRef = await addDoc(collection(db, 'waivers'), {
+    const waiverRef = await addDoc(null, {
       ...waiverData,
       createdAt: serverTimestamp(),
     });
@@ -200,7 +176,7 @@ export class RegistrationService {
     isActive: boolean = true
   ): Promise<Waiver[]> {
     let q = query(
-      collection(db, 'waivers'),
+      null,
       where('isActive', '==', isActive),
       orderBy('createdAt', 'desc')
     );
@@ -269,7 +245,7 @@ export class RegistrationService {
     // Calculate pricing
     const pricing = await this.calculatePricing(form, registrationData);
 
-    const registrationRef = await addDoc(collection(db, 'registrations'), {
+    const registrationRef = await addDoc(null, {
       formId,
       registrantId: user.uid,
       ...registrationData,
@@ -303,7 +279,7 @@ export class RegistrationService {
     userId?: string
   ): Promise<Registration[]> {
     let q = query(
-      collection(db, 'registrations'),
+      null,
       orderBy('createdAt', 'desc')
     );
 
@@ -501,7 +477,7 @@ export class RegistrationService {
     endDate: Date
   ): Promise<RegistrationAnalytics[]> {
     const q = query(
-      collection(db, 'registrationAnalytics'),
+      null,
       where('formId', '==', formId),
       where('date', '>=', startDate),
       where('date', '<=', endDate),
@@ -522,7 +498,7 @@ export class RegistrationService {
     type?: RegistrationFormType
   ): Promise<FormTemplate[]> {
     let q = query(
-      collection(db, 'formTemplates'),
+      null,
       where('isPublic', '==', true),
       orderBy('usageCount', 'desc')
     );
@@ -575,7 +551,7 @@ export class RegistrationService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const exportRef = await addDoc(collection(db, 'registrationExports'), {
+    const exportRef = await addDoc(null, {
       formId,
       requestedBy: user.uid,
       format,
@@ -596,7 +572,7 @@ export class RegistrationService {
     callback: (registrations: Registration[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'registrations'),
+      null,
       where('formId', '==', formId),
       orderBy('createdAt', 'desc')
     );

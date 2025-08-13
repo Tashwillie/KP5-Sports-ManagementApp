@@ -1,191 +1,97 @@
 'use client';
 
-import { useFirebase } from '@/contexts/FirebaseContext';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import apiClient from '@/lib/apiClient';
+import {
+  FileText, Upload, Settings, Search, Grid, List, Eye, Download, File,
+  FileSpreadsheet, Presentation, FileType, X, User, Calendar, SortAsc, MoreHorizontal
+} from 'lucide-react';
 
 interface Document {
   id: string;
   title: string;
-  description?: string;
+  description: string;
   type: 'pdf' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx' | 'txt';
   url: string;
   size: number;
+  category: 'rules' | 'forms' | 'reports' | 'presentations' | 'contracts' | 'manuals';
+  tags: string[];
   uploadedBy: string;
   uploadedAt: Date;
-  tags: string[];
-  category: 'forms' | 'policies' | 'training' | 'tournaments' | 'schedules' | 'reports';
-  isPublic: boolean;
-  downloads: number;
   lastModified: Date;
+  views: number;
+  downloads: number;
+  isPublic: boolean;
+  teamId?: string;
+  tournamentId?: string;
   version: string;
 }
 
 export default function DocumentsPage() {
-  const { userData, loading } = useFirebase();
+  const { user: userData, loading  } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<'date' | 'name' | 'size' | 'downloads'>('date');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size' | 'views'>('date');
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
 
-  // Mock data for documents
   useEffect(() => {
-    if (!loading) {
-      const mockDocuments: Document[] = [
-        {
-          id: '1',
-          title: 'Player Registration Form',
-          description: 'Official registration form for new players joining the club',
-          type: 'pdf',
-          url: '/documents/player-registration-form.pdf',
-          size: 512000,
-          uploadedBy: 'Club Administrator',
-          uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          tags: ['registration', 'form', 'player', 'official'],
-          category: 'forms',
-          isPublic: true,
-          downloads: 156,
-          lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          version: '2.1',
-        },
-        {
-          id: '2',
-          title: 'Club Policies and Procedures',
-          description: 'Complete guide to club policies, rules, and procedures',
-          type: 'pdf',
-          url: '/documents/club-policies.pdf',
-          size: 2048000,
-          uploadedBy: 'Club Director',
-          uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-          tags: ['policies', 'procedures', 'rules', 'guidelines'],
-          category: 'policies',
-          isPublic: true,
-          downloads: 89,
-          lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-          version: '1.5',
-        },
-        {
-          id: '3',
-          title: 'Training Program Schedule',
-          description: 'Weekly training program schedule for all age groups',
-          type: 'xlsx',
-          url: '/documents/training-schedule.xlsx',
-          size: 256000,
-          uploadedBy: 'Head Coach',
-          uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          tags: ['training', 'schedule', 'program', 'weekly'],
-          category: 'schedules',
-          isPublic: false,
-          downloads: 234,
-          lastModified: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          version: '3.0',
-        },
-        {
-          id: '4',
-          title: 'Tournament Rules and Regulations',
-          description: 'Official rules and regulations for the Spring Tournament',
-          type: 'pdf',
-          url: '/documents/tournament-rules.pdf',
-          size: 1024000,
-          uploadedBy: 'Tournament Director',
-          uploadedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          tags: ['tournament', 'rules', 'regulations', 'official'],
-          category: 'tournaments',
-          isPublic: true,
-          downloads: 178,
-          lastModified: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          version: '1.2',
-        },
-        {
-          id: '5',
-          title: 'Coaching Certification Guide',
-          description: 'Step-by-step guide for coaches to obtain certifications',
-          type: 'docx',
-          url: '/documents/coaching-certification-guide.docx',
-          size: 768000,
-          uploadedBy: 'Director of Coaching',
-          uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          tags: ['coaching', 'certification', 'guide', 'training'],
-          category: 'training',
-          isPublic: false,
-          downloads: 45,
-          lastModified: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          version: '1.0',
-        },
-        {
-          id: '6',
-          title: 'Monthly Financial Report',
-          description: 'Monthly financial report and budget overview',
-          type: 'xlsx',
-          url: '/documents/monthly-financial-report.xlsx',
-          size: 512000,
-          uploadedBy: 'Club Treasurer',
-          uploadedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-          tags: ['financial', 'report', 'budget', 'monthly'],
-          category: 'reports',
-          isPublic: false,
-          downloads: 23,
-          lastModified: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-          version: '1.1',
-        },
-        {
-          id: '7',
-          title: 'Emergency Contact Form',
-          description: 'Emergency contact information form for all players',
-          type: 'pdf',
-          url: '/documents/emergency-contact-form.pdf',
-          size: 256000,
-          uploadedBy: 'Club Administrator',
-          uploadedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-          tags: ['emergency', 'contact', 'form', 'safety'],
-          category: 'forms',
-          isPublic: true,
-          downloads: 312,
-          lastModified: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-          version: '2.0',
-        },
-        {
-          id: '8',
-          title: 'Team Performance Analysis',
-          description: 'Detailed analysis of team performance and statistics',
-          type: 'pptx',
-          url: '/documents/team-performance-analysis.pptx',
-          size: 1536000,
-          uploadedBy: 'Performance Analyst',
-          uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          tags: ['performance', 'analysis', 'statistics', 'team'],
-          category: 'reports',
-          isPublic: false,
-          downloads: 67,
-          lastModified: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          version: '1.3',
-        },
-      ];
-      setDocuments(mockDocuments);
-      setLoadingDocuments(false);
-    }
-  }, [loading]);
+    const load = async () => {
+      if (loading || !userData) return;
+      try {
+        setLoadingDocuments(true);
+        const resp = await apiClient.getEvents();
+        // Map events with type 'document' if such exists; backend lacks dedicated documents API.
+        const docs: Document[] = (resp.data.events || [])
+          .filter((e: any) => (e.type || '').toLowerCase() === 'document')
+          .map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            description: e.description || '',
+            type: 'pdf',
+            url: '#',
+            size: 0,
+            category: 'manuals',
+            tags: [],
+            uploadedBy: e.creatorId || 'System',
+            uploadedAt: new Date(e.createdAt),
+            lastModified: new Date(e.updatedAt),
+            views: 0,
+            downloads: 0,
+            isPublic: true,
+            version: '1.0',
+          }));
+        setDocuments(docs);
+      } catch (e) {
+        setDocuments([]);
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+    load();
+  }, [loading, userData]);
 
   const filteredDocuments = documents.filter(document => {
     const matchesSearch = document.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         document.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         document.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          document.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesTab = activeTab === 'all' || document.category === activeTab;
-    return matchesSearch && matchesTab;
+    const matchesCategory = activeCategory === 'all' || document.category === activeCategory;
+    return matchesSearch && matchesCategory;
   });
 
   const sortedDocuments = [...filteredDocuments].sort((a, b) => {
     switch (sortBy) {
-      case 'date':
-        return b.uploadedAt.getTime() - a.uploadedAt.getTime();
       case 'name':
         return a.title.localeCompare(b.title);
+      case 'date':
+        return b.lastModified.getTime() - a.lastModified.getTime();
       case 'size':
         return b.size - a.size;
-      case 'downloads':
-        return b.downloads - a.downloads;
+      case 'views':
+        return b.views - a.views;
       default:
         return 0;
     }
@@ -212,42 +118,31 @@ export default function DocumentsPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'forms': return 'primary';
-      case 'policies': return 'success';
-      case 'training': return 'info';
-      case 'tournaments': return 'warning';
-      case 'schedules': return 'secondary';
-      case 'reports': return 'danger';
-      default: return 'secondary';
+      case 'rules': return 'primary';
+      case 'forms': return 'success';
+      case 'reports': return 'info';
+      case 'presentations': return 'warning';
+      case 'contracts': return 'danger';
+      case 'manuals': return 'secondary';
+      default: return 'light';
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'pdf': return 'bi-file-earmark-pdf';
-      case 'doc':
-      case 'docx': return 'bi-file-earmark-word';
-      case 'xls':
-      case 'xlsx': return 'bi-file-earmark-excel';
-      case 'ppt':
-      case 'pptx': return 'bi-file-earmark-ppt';
-      case 'txt': return 'bi-file-earmark-text';
-      default: return 'bi-file-earmark';
+      case 'pdf': return <FileText size={20} />;
+      case 'doc': case 'docx': return <File size={20} />;
+      case 'xls': case 'xlsx': return <FileSpreadsheet size={20} />;
+      case 'ppt': case 'pptx': return <Presentation size={20} />;
+      case 'txt': return <FileType size={20} />;
+      default: return <File size={20} />;
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'pdf': return 'danger';
-      case 'doc':
-      case 'docx': return 'primary';
-      case 'xls':
-      case 'xlsx': return 'success';
-      case 'ppt':
-      case 'pptx': return 'warning';
-      case 'txt': return 'secondary';
-      default: return 'secondary';
-    }
+  const incrementViews = (documentId: string) => {
+    setDocuments(prev => 
+      prev.map(doc => doc.id === documentId ? { ...doc, views: doc.views + 1 } : doc)
+    );
   };
 
   const incrementDownloads = (documentId: string) => {
@@ -256,12 +151,51 @@ export default function DocumentsPage() {
     );
   };
 
+  // Show loading state while Firebase is initializing or documents are loading
   if (loading || loadingDocuments) {
     return (
-      <div className="container-fluid">
-        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <div className="d-flex">
+        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+          <div className="p-3">
+            <div className="d-flex align-items-center mb-4">
+              <div className="bg-primary rounded p-2 me-3">
+                <FileText size={24} className="text-white" />
+              </div>
+              <h5 className="mb-0">KP5 Academy</h5>
+            </div>
+          </div>
+        </div>
+        <div className="flex-grow-1 bg-light">
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if no user data
+  if (!userData) {
+    return (
+      <div className="d-flex">
+        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+          <div className="p-3">
+            <div className="d-flex align-items-center mb-4">
+              <div className="bg-primary rounded p-2 me-3">
+                <FileText size={24} className="text-white" />
+              </div>
+              <h5 className="mb-0">KP5 Academy</h5>
+            </div>
+          </div>
+        </div>
+        <div className="flex-grow-1 bg-light">
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+            <div className="text-center">
+              <h5 className="text-muted">Access Denied</h5>
+              <p className="text-muted">Please log in to view documents.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -269,328 +203,394 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="container-fluid">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="h3 mb-0">Documents</h1>
-          <p className="text-muted mb-0">Manage and access important club documents</p>
-        </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-primary">
-            <i className="bi bi-cloud-upload me-2"></i>
-            Upload Document
-          </button>
-          <button className="btn btn-outline-secondary">
-            <i className="bi bi-gear me-2"></i>
-            Settings
-          </button>
+    <div className="d-flex">
+      {/* Sidebar */}
+      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+        <div className="p-3">
+          <div className="d-flex align-items-center mb-4">
+            <div className="bg-primary rounded p-2 me-3">
+              <FileText size={24} className="text-white" />
+            </div>
+            <h5 className="mb-0">KP5 Academy</h5>
+          </div>
+          
+          {/* User Profile */}
+          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
+            <div className="bg-primary rounded-circle p-2 me-3">
+              <User size={20} className="text-white" />
+            </div>
+            <div>
+              <h6 className="mb-0">{userData.displayName || 'User'}</h6>
+              <small className="text-muted">{userData.role}</small>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="nav flex-column">
+            <a className="nav-link" href="/dashboard">
+              <FileText size={20} className="me-2" />
+              Dashboard
+            </a>
+            <a className="nav-link" href="/announcements">
+              <FileText size={20} className="me-2" />
+              Announcements
+            </a>
+            <a className="nav-link" href="/messages">
+              <FileText size={20} className="me-2" />
+              Messages
+            </a>
+            <a className="nav-link" href="/notifications">
+              <FileText size={20} className="me-2" />
+              Notifications
+            </a>
+            <a className="nav-link" href="/teams">
+              <FileText size={20} className="me-2" />
+              Teams
+            </a>
+            <a className="nav-link" href="/tournaments">
+              <FileText size={20} className="me-2" />
+              Tournaments
+            </a>
+            <a className="nav-link" href="/schedule">
+              <FileText size={20} className="me-2" />
+              Schedule
+            </a>
+            <a className="nav-link" href="/media">
+              <FileText size={20} className="me-2" />
+              Media
+            </a>
+            <a className="nav-link active" href="/documents">
+              <FileText size={20} className="me-2" />
+              Documents
+            </a>
+            <a className="nav-link" href="/photos">
+              <FileText size={20} className="me-2" />
+              Photos
+            </a>
+          </nav>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-primary bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-file-earmark-text text-primary fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Total Documents</h6>
-                  <h4 className="mb-0">{documents.length}</h4>
-                </div>
-              </div>
+      {/* Main Content */}
+      <div className="flex-grow-1 bg-light">
+        {/* Top Header */}
+        <div className="bg-white border-bottom p-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 className="mb-0">Documents</h4>
+              <p className="text-muted mb-0">Manage and organize your documents</p>
+            </div>
+            <div className="d-flex gap-2">
+              <button className="btn btn-primary">
+                <Upload size={20} className="me-2" />
+                Upload Document
+              </button>
+              <button className="btn btn-outline-secondary">
+                <Settings size={20} className="me-2" />
+                Settings
+              </button>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-danger bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-file-earmark-pdf text-danger fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">PDF Files</h6>
-                  <h4 className="mb-0">{documents.filter(doc => doc.type === 'pdf').length}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-success bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-file-earmark-excel text-success fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Spreadsheets</h6>
-                  <h4 className="mb-0">{documents.filter(doc => doc.type === 'xls' || doc.type === 'xlsx').length}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-warning bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-file-earmark-ppt text-warning fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Presentations</h6>
-                  <h4 className="mb-0">{documents.filter(doc => doc.type === 'ppt' || doc.type === 'pptx').length}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Filters and Controls */}
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body">
-          <div className="row align-items-center">
-            <div className="col-md-4">
-              <div className="btn-group" role="group">
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'all' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('all')}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'forms' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('forms')}
-                >
-                  Forms
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'policies' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('policies')}
-                >
-                  Policies
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'training' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('training')}
-                >
-                  Training
-                </button>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-search text-muted"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control border-start-0"
-                  placeholder="Search documents..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="d-flex gap-2 justify-content-end">
-                <select 
-                  className="form-select" 
-                  style={{ width: 'auto' }}
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                >
-                  <option value="date">Sort by Date</option>
-                  <option value="name">Sort by Name</option>
-                  <option value="size">Sort by Size</option>
-                  <option value="downloads">Sort by Downloads</option>
-                </select>
-                <div className="btn-group" role="group">
-                  <button
-                    type="button"
-                    className={`btn btn-outline-secondary ${viewMode === 'grid' ? 'active' : ''}`}
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <i className="bi bi-grid"></i>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline-secondary ${viewMode === 'list' ? 'active' : ''}`}
-                    onClick={() => setViewMode('list')}
-                  >
-                    <i className="bi bi-list"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Documents Grid/List */}
-      {viewMode === 'grid' ? (
-        <div className="row">
-          {sortedDocuments.map((document) => (
-            <div key={document.id} className="col-md-6 col-lg-4 col-xl-3 mb-4">
-              <div className="card border-0 shadow-sm h-100">
+        {/* Main Content */}
+        <div className="p-4">
+          {/* Stats Cards */}
+          <div className="row mb-4">
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
                 <div className="card-body">
-                  <div className="d-flex align-items-center mb-3">
-                    <div className={`bg-${getTypeColor(document.type)} bg-opacity-10 rounded-circle p-3 me-3`}>
-                      <i className={`bi ${getTypeIcon(document.type)} text-${getTypeColor(document.type)} fs-4`}></i>
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-primary bg-opacity-10 rounded-circle p-3">
+                        <FileText size={24} className="text-primary" />
+                      </div>
                     </div>
-                    <div className="flex-grow-1">
-                      <h6 className="card-title mb-1">{document.title}</h6>
-                      <small className="text-muted">v{document.version}</small>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Total Documents</h6>
+                      <h4 className="mb-0">{documents.length}</h4>
                     </div>
                   </div>
-                  
-                  {document.description && (
-                    <p className="text-muted small mb-3">{document.description.substring(0, 100)}...</p>
-                  )}
-                  
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <span className={`badge bg-${getCategoryColor(document.category)} rounded-pill`}>
-                      {document.category}
-                    </span>
-                    <small className="text-muted">{formatFileSize(document.size)}</small>
-                  </div>
-                  
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <small className="text-muted">
-                      <i className="bi bi-download me-1"></i>
-                      {document.downloads} downloads
-                    </small>
-                    <small className="text-muted">{formatTimeAgo(document.uploadedAt)}</small>
-                  </div>
-                  
-                  <div className="d-flex gap-2">
-                    <button 
-                      className="btn btn-sm btn-outline-primary flex-fill"
-                      onClick={() => setSelectedDocument(document)}
-                    >
-                      <i className="bi bi-eye me-1"></i>
-                      Preview
-                    </button>
-                    <button 
-                      className="btn btn-sm btn-outline-success flex-fill"
-                      onClick={() => incrementDownloads(document.id)}
-                    >
-                      <i className="bi bi-download me-1"></i>
-                      Download
-                    </button>
-                  </div>
-                </div>
-                <div className="card-footer bg-transparent">
-                  <small className="text-muted">
-                    <i className="bi bi-person me-1"></i>
-                    {document.uploadedBy}
-                  </small>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="card border-0 shadow-sm">
-          <div className="card-body p-0">
-            <div className="table-responsive">
-              <table className="table table-hover mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th>Document</th>
-                    <th>Title</th>
-                    <th>Category</th>
-                    <th>Size</th>
-                    <th>Downloads</th>
-                    <th>Uploaded</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedDocuments.map((document) => (
-                    <tr key={document.id}>
-                      <td>
-                        <div className="d-flex align-items-center">
-                          <div className={`bg-${getTypeColor(document.type)} bg-opacity-10 rounded-circle p-2 me-3`}>
-                            <i className={`bi ${getTypeIcon(document.type)} text-${getTypeColor(document.type)}`}></i>
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-success bg-opacity-10 rounded-circle p-3">
+                        <FileText size={24} className="text-success" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">PDF Files</h6>
+                      <h4 className="mb-0">{documents.filter(doc => doc.type === 'pdf').length}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-warning bg-opacity-10 rounded-circle p-3">
+                        <FileSpreadsheet size={24} className="text-warning" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Spreadsheets</h6>
+                      <h4 className="mb-0">{documents.filter(doc => doc.type === 'xlsx' || doc.type === 'xls').length}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-info bg-opacity-10 rounded-circle p-3">
+                        <Presentation size={24} className="text-info" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Presentations</h6>
+                      <h4 className="mb-0">{documents.filter(doc => doc.type === 'pptx' || doc.type === 'ppt').length}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters and Controls */}
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-body">
+              <div className="row align-items-center">
+                <div className="col-md-3">
+                  <div className="btn-group" role="group">
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'all' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('all')}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'rules' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('rules')}
+                    >
+                      Rules
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'forms' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('forms')}
+                    >
+                      Forms
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'reports' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('reports')}
+                    >
+                      Reports
+                    </button>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="input-group">
+                    <span className="input-group-text bg-light border-end-0">
+                      <Search size={20} className="text-muted" />
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control border-start-0"
+                      placeholder="Search documents..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <select 
+                    className="form-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                  >
+                    <option value="date">Sort by Date</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="size">Sort by Size</option>
+                    <option value="views">Sort by Views</option>
+                  </select>
+                </div>
+                <div className="col-md-2 text-end">
+                  <div className="btn-group" role="group">
+                    <button
+                      type="button"
+                      className={`btn btn-outline-secondary ${viewMode === 'grid' ? 'active' : ''}`}
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <Grid size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-secondary ${viewMode === 'list' ? 'active' : ''}`}
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Documents Grid/List */}
+          {viewMode === 'grid' ? (
+            <div className="row">
+              {sortedDocuments.map((document) => (
+                <div key={document.id} className="col-md-6 col-lg-4 col-xl-3 mb-4">
+                  <div className="card border-0 shadow-sm h-100">
+                    <div className="card-body">
+                      <div className="d-flex align-items-start mb-3">
+                        <div className="flex-shrink-0">
+                          <div className="bg-light rounded p-3">
+                            {getTypeIcon(document.type)}
                           </div>
-                          <span className="badge bg-secondary rounded-pill">v{document.version}</span>
                         </div>
-                      </td>
-                      <td>
-                        <div>
-                          <h6 className="mb-1">{document.title}</h6>
-                          {document.description && (
-                            <small className="text-muted">{document.description.substring(0, 50)}...</small>
-                          )}
+                        <div className="flex-grow-1 ms-3">
+                          <h6 className="card-title mb-1">{document.title}</h6>
+                          <span className={`badge bg-${getCategoryColor(document.category)} rounded-pill`}>
+                            {document.category}
+                          </span>
                         </div>
-                      </td>
-                      <td>
-                        <span className={`badge bg-${getCategoryColor(document.category)} rounded-pill`}>
-                          {document.category}
-                        </span>
-                      </td>
-                      <td>{formatFileSize(document.size)}</td>
-                      <td>{document.downloads}</td>
-                      <td>{formatTimeAgo(document.uploadedAt)}</td>
-                      <td>
-                        <div className="btn-group btn-group-sm">
+                      </div>
+                      <p className="card-text text-muted small mb-3">{document.description}</p>
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <small className="text-muted">{formatFileSize(document.size)}</small>
+                        <small className="text-muted">v{document.version}</small>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="d-flex gap-2">
                           <button 
-                            className="btn btn-outline-primary"
-                            onClick={() => setSelectedDocument(document)}
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => {
+                              incrementViews(document.id);
+                              setSelectedDocument(document);
+                            }}
                           >
-                            <i className="bi bi-eye"></i>
+                            <Eye size={16} />
                           </button>
                           <button 
-                            className="btn btn-outline-success"
+                            className="btn btn-sm btn-outline-success"
                             onClick={() => incrementDownloads(document.id)}
                           >
-                            <i className="bi bi-download"></i>
-                          </button>
-                          <button className="btn btn-outline-secondary">
-                            <i className="bi bi-three-dots"></i>
+                            <Download size={16} />
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="d-flex gap-2 text-muted">
+                          <small>{document.views} views</small>
+                          <small>{document.downloads} downloads</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      )}
+          ) : (
+            /* List View */
+            <div className="card border-0 shadow-sm">
+              <div className="card-body">
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th>Document</th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Version</th>
+                        <th>Views</th>
+                        <th>Downloads</th>
+                        <th>Modified</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedDocuments.map((document) => (
+                        <tr key={document.id}>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <div className="bg-light rounded p-2 me-3">
+                                {getTypeIcon(document.type)}
+                              </div>
+                              <div>
+                                <div className="fw-medium">{document.title}</div>
+                                <small className="text-muted">{document.type.toUpperCase()}</small>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`badge bg-${getCategoryColor(document.category)}`}>
+                              {document.category}
+                            </span>
+                          </td>
+                          <td>{formatFileSize(document.size)}</td>
+                          <td>v{document.version}</td>
+                          <td>{document.views}</td>
+                          <td>{document.downloads}</td>
+                          <td>{formatTimeAgo(document.lastModified)}</td>
+                          <td>
+                            <div className="d-flex gap-2">
+                              <button 
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  incrementViews(document.id);
+                                  setSelectedDocument(document);
+                                }}
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button 
+                                className="btn btn-sm btn-outline-success"
+                                onClick={() => incrementDownloads(document.id)}
+                              >
+                                <Download size={16} />
+                              </button>
+                              <button className="btn btn-sm btn-outline-secondary">
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Empty State */}
-      {sortedDocuments.length === 0 && (
-        <div className="text-center py-5">
-          <i className="bi bi-file-earmark-text fs-1 text-muted mb-3"></i>
-          <h5 className="text-muted">No documents found</h5>
-          <p className="text-muted">There are no documents matching your current filters.</p>
-          <button className="btn btn-primary">
-            <i className="bi bi-cloud-upload me-2"></i>
-            Upload Your First Document
-          </button>
+          {/* Empty State */}
+          {sortedDocuments.length === 0 && (
+            <div className="text-center py-5">
+              <FileText size={64} className="text-muted mb-3" />
+              <h5 className="text-muted">No documents found</h5>
+              <p className="text-muted">There are no documents matching your current filters.</p>
+              <button className="btn btn-primary">
+                <Upload size={20} className="me-2" />
+                Upload Your First Document
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Document Detail Modal */}
       {selectedDocument && (
@@ -603,88 +603,63 @@ export default function DocumentsPage() {
                   type="button" 
                   className="btn-close" 
                   onClick={() => setSelectedDocument(null)}
-                ></button>
+                >
+                  <X size={20} />
+                </button>
               </div>
               <div className="modal-body">
+                <div className="text-center mb-4">
+                  <div className="bg-light rounded p-5">
+                    <FileText size={64} className="text-muted mb-3" />
+                    <h6 className="text-muted">{selectedDocument.title}</h6>
+                    <p className="text-muted">{selectedDocument.description}</p>
+                    <div className="d-flex justify-content-center gap-2">
+                      <span className={`badge bg-${getCategoryColor(selectedDocument.category)}`}>
+                        {selectedDocument.category}
+                      </span>
+                      <span className="badge bg-secondary">
+                        {selectedDocument.type.toUpperCase()}
+                      </span>
+                      <span className="badge bg-info">
+                        v{selectedDocument.version}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="row">
-                  <div className="col-md-8">
-                    <div className="text-center py-5">
-                      <div className={`bg-${getTypeColor(selectedDocument.type)} bg-opacity-10 rounded-circle p-4 d-inline-block mb-3`}>
-                        <i className={`bi ${getTypeIcon(selectedDocument.type)} text-${getTypeColor(selectedDocument.type)} fs-1`}></i>
-                      </div>
-                      <h5>Document Preview</h5>
-                      <p className="text-muted">Click download to view this document</p>
-                      <button 
-                        className="btn btn-primary"
-                        onClick={() => incrementDownloads(selectedDocument.id)}
-                      >
-                        <i className="bi bi-download me-2"></i>
-                        Download Document
-                      </button>
+                  <div className="col-md-6">
+                    <h6>Document Details</h6>
+                    <ul className="list-unstyled">
+                      <li><strong>Type:</strong> {selectedDocument.type.toUpperCase()}</li>
+                      <li><strong>Size:</strong> {formatFileSize(selectedDocument.size)}</li>
+                      <li><strong>Category:</strong> {selectedDocument.category}</li>
+                      <li><strong>Version:</strong> {selectedDocument.version}</li>
+                      <li><strong>Uploaded by:</strong> {selectedDocument.uploadedBy}</li>
+                      <li><strong>Uploaded:</strong> {formatTimeAgo(selectedDocument.uploadedAt)}</li>
+                      <li><strong>Modified:</strong> {formatTimeAgo(selectedDocument.lastModified)}</li>
+                    </ul>
+                  </div>
+                  <div className="col-md-6">
+                    <h6>Statistics</h6>
+                    <ul className="list-unstyled">
+                      <li><strong>Views:</strong> {selectedDocument.views}</li>
+                      <li><strong>Downloads:</strong> {selectedDocument.downloads}</li>
+                      <li><strong>Public:</strong> {selectedDocument.isPublic ? 'Yes' : 'No'}</li>
+                    </ul>
+                    
+                    <h6 className="mt-3">Tags</h6>
+                    <div className="d-flex flex-wrap gap-1">
+                      {selectedDocument.tags.map((tag, index) => (
+                        <span key={index} className="badge bg-light text-dark">{tag}</span>
+                      ))}
                     </div>
                   </div>
-                  <div className="col-md-4">
-                    <div className="card">
-                      <div className="card-body">
-                        <h6>Details</h6>
-                        <dl className="row mb-0">
-                          <dt className="col-sm-4">Type:</dt>
-                          <dd className="col-sm-8">
-                            <span className={`badge bg-${getTypeColor(selectedDocument.type)} rounded-pill`}>
-                              {selectedDocument.type.toUpperCase()}
-                            </span>
-                          </dd>
-                          
-                          <dt className="col-sm-4">Category:</dt>
-                          <dd className="col-sm-8">
-                            <span className={`badge bg-${getCategoryColor(selectedDocument.category)} rounded-pill`}>
-                              {selectedDocument.category}
-                            </span>
-                          </dd>
-                          
-                          <dt className="col-sm-4">Size:</dt>
-                          <dd className="col-sm-8">{formatFileSize(selectedDocument.size)}</dd>
-                          
-                          <dt className="col-sm-4">Version:</dt>
-                          <dd className="col-sm-8">v{selectedDocument.version}</dd>
-                          
-                          <dt className="col-sm-4">Downloads:</dt>
-                          <dd className="col-sm-8">{selectedDocument.downloads}</dd>
-                          
-                          <dt className="col-sm-4">Uploaded:</dt>
-                          <dd className="col-sm-8">{formatTimeAgo(selectedDocument.uploadedAt)}</dd>
-                          
-                          <dt className="col-sm-4">Modified:</dt>
-                          <dd className="col-sm-8">{formatTimeAgo(selectedDocument.lastModified)}</dd>
-                          
-                          <dt className="col-sm-4">By:</dt>
-                          <dd className="col-sm-8">{selectedDocument.uploadedBy}</dd>
-                        </dl>
-                        
-                        {selectedDocument.description && (
-                          <>
-                            <hr />
-                            <h6>Description</h6>
-                            <p className="text-muted">{selectedDocument.description}</p>
-                          </>
-                        )}
-                        
-                        {selectedDocument.tags.length > 0 && (
-                          <>
-                            <hr />
-                            <h6>Tags</h6>
-                            <div className="d-flex flex-wrap gap-1">
-                              {selectedDocument.tags.map((tag, index) => (
-                                <span key={index} className="badge bg-light text-dark rounded-pill">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <h6>Description</h6>
+                  <p>{selectedDocument.description}</p>
                 </div>
               </div>
               <div className="modal-footer">
@@ -696,10 +671,14 @@ export default function DocumentsPage() {
                   Close
                 </button>
                 <button 
+                  type="button" 
                   className="btn btn-primary"
-                  onClick={() => incrementDownloads(selectedDocument.id)}
+                  onClick={() => {
+                    incrementDownloads(selectedDocument.id);
+                    setSelectedDocument(null);
+                  }}
                 >
-                  <i className="bi bi-download me-2"></i>
+                  <Download size={16} className="me-1" />
                   Download
                 </button>
               </div>

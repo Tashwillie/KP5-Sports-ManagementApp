@@ -1,25 +1,4 @@
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
-  increment,
-} from 'firebase/firestore';
-import { db } from '@shared/utils/firebase';
-import {
   Payment,
   PaymentType,
   PaymentStatus,
@@ -47,7 +26,7 @@ export class PaymentService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const paymentRef = await addDoc(collection(db, 'payments'), {
+    const paymentRef = await addDoc(null, {
       ...paymentData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -81,7 +60,7 @@ export class PaymentService {
     if (!currentUser) throw new Error('User not authenticated');
 
     let q = query(
-      collection(db, 'payments'),
+      null,
       where('userId', '==', currentUser),
       orderBy('createdAt', 'desc')
     );
@@ -151,7 +130,7 @@ export class PaymentService {
     };
 
     const paymentIntentRef = await addDoc(
-      collection(db, 'paymentIntents'),
+      null,
       {
         ...paymentIntentData,
         createdAt: serverTimestamp(),
@@ -182,7 +161,7 @@ export class PaymentService {
   async createInvoice(
     invoiceData: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const invoiceRef = await addDoc(collection(db, 'invoices'), {
+    const invoiceRef = await addDoc(null, {
       ...invoiceData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -215,7 +194,7 @@ export class PaymentService {
     if (!currentUser) throw new Error('User not authenticated');
 
     let q = query(
-      collection(db, 'invoices'),
+      null,
       where('userId', '==', currentUser),
       orderBy('createdAt', 'desc')
     );
@@ -252,7 +231,7 @@ export class PaymentService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const subscriptionRef = await addDoc(collection(db, 'subscriptions'), {
+    const subscriptionRef = await addDoc(null, {
       ...subscriptionData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -287,7 +266,7 @@ export class PaymentService {
     if (!currentUser) throw new Error('User not authenticated');
 
     let q = query(
-      collection(db, 'subscriptions'),
+      null,
       where('userId', '==', currentUser),
       orderBy('createdAt', 'desc')
     );
@@ -328,7 +307,7 @@ export class PaymentService {
     isActive: boolean = true
   ): Promise<SubscriptionPlan[]> {
     let q = query(
-      collection(db, 'subscriptionPlans'),
+      null,
       where('isActive', '==', isActive),
       orderBy('price', 'asc')
     );
@@ -353,7 +332,7 @@ export class PaymentService {
     const user = await this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
 
-    const paymentMethodRef = await addDoc(collection(db, 'paymentMethods'), {
+    const paymentMethodRef = await addDoc(null, {
       ...paymentMethodData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -370,7 +349,7 @@ export class PaymentService {
     if (!currentUser) throw new Error('User not authenticated');
 
     const q = query(
-      collection(db, 'paymentMethods'),
+      null,
       where('userId', '==', currentUser),
       where('isActive', '==', isActive),
       orderBy('isDefault', 'desc')
@@ -435,7 +414,7 @@ export class PaymentService {
       metadata: metadata || {},
     };
 
-    const refundRef = await addDoc(collection(db, 'refunds'), {
+    const refundRef = await addDoc(null, {
       ...refundData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -457,7 +436,7 @@ export class PaymentService {
     paymentId: string,
     reminderData: Omit<PaymentReminder, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const reminderRef = await addDoc(collection(db, 'paymentReminders'), {
+    const reminderRef = await addDoc(null, {
       ...reminderData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -471,7 +450,7 @@ export class PaymentService {
     status?: string
   ): Promise<PaymentReminder[]> {
     let q = query(
-      collection(db, 'paymentReminders'),
+      null,
       orderBy('scheduledDate', 'asc')
     );
 
@@ -522,7 +501,7 @@ export class PaymentService {
   async createStripeCustomer(
     customerData: Omit<StripeCustomer, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const customerRef = await addDoc(collection(db, 'stripeCustomers'), {
+    const customerRef = await addDoc(null, {
       ...customerData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -533,7 +512,7 @@ export class PaymentService {
 
   async getStripeCustomer(userId: string): Promise<StripeCustomer | null> {
     const q = query(
-      collection(db, 'stripeCustomers'),
+      null,
       where('userId', '==', userId),
       limit(1)
     );
@@ -555,7 +534,7 @@ export class PaymentService {
     paymentId: string,
     sessionData: Omit<PaymentSession, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const sessionRef = await addDoc(collection(db, 'paymentSessions'), {
+    const sessionRef = await addDoc(null, {
       ...sessionData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -570,7 +549,7 @@ export class PaymentService {
     callback: (payments: Payment[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'payments'),
+      null,
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
@@ -595,7 +574,7 @@ export class PaymentService {
     callback: (invoices: Invoice[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'invoices'),
+      null,
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );

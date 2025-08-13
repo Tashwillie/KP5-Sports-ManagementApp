@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/contexts/FirebaseContext';
 import { 
   Search, 
   Filter, 
@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Sidebar from '@/components/layout/Sidebar';
+import apiClient from '@/lib/apiClient';
 
 interface League {
   id: string;
@@ -86,146 +87,60 @@ interface LeagueWithStats extends League {
 
 export default function LeaguesPage() {
   const router = useRouter();
-  const { userData, loading: authLoading } = useFirebase();
+  const { userData, loading  } = useAuth();
   const [activeTab, setActiveTab] = useState('leagues');
   const [leagues, setLeagues] = useState<LeagueWithStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [formatFilter, setFormatFilter] = useState('all');
 
-  // Mock data for leagues
-  const mockLeagues: LeagueWithStats[] = [
-    {
-      id: '1',
-      name: 'Premier League 2024',
-      description: 'Top-tier competitive league featuring the best teams in the region',
-      season: '2024',
-      startDate: '2024-03-01',
-      endDate: '2024-08-31',
-      maxTeams: 16,
-      currentTeams: 12,
-      status: 'active',
-      format: 'round_robin',
-      organizer: 'League Manager',
-      organizerId: 'manager1',
-      prizePool: '$50,000',
-      entryFee: 500,
-      entryFeeCurrency: 'USD',
-      rules: 'Standard FIFA rules apply with league-specific modifications',
-      isPublic: true,
-      teams: ['team1', 'team2', 'team3', 'team4'],
-      matches: ['match1', 'match2', 'match3'],
-      standings: [],
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-01-15')
-    },
-    {
-      id: '2',
-      name: 'Youth Development League',
-      description: 'Development league for young players under 18 years old',
-      season: '2024',
-      startDate: '2024-04-01',
-      endDate: '2024-07-31',
-      maxTeams: 12,
-      currentTeams: 8,
-      status: 'upcoming',
-      format: 'group_stage',
-      organizer: 'Youth Coordinator',
-      organizerId: 'youth1',
-      prizePool: '$10,000',
-      entryFee: 200,
-      entryFeeCurrency: 'USD',
-      rules: 'Modified rules for youth development with focus on skill building',
-      isPublic: true,
-      teams: ['team5', 'team6', 'team7'],
-      matches: [],
-      standings: [],
-      createdAt: new Date('2024-02-01'),
-      updatedAt: new Date('2024-02-01')
-    },
-    {
-      id: '3',
-      name: 'Amateur Cup',
-      description: 'Single elimination cup tournament for amateur teams',
-      season: '2024',
-      startDate: '2024-05-15',
-      endDate: '2024-06-30',
-      maxTeams: 32,
-      currentTeams: 24,
-      status: 'upcoming',
-      format: 'knockout',
-      organizer: 'Cup Organizer',
-      organizerId: 'cup1',
-      prizePool: '$25,000',
-      entryFee: 300,
-      entryFeeCurrency: 'USD',
-      rules: 'Single elimination knockout format with consolation matches',
-      isPublic: true,
-      teams: ['team8', 'team9', 'team10', 'team11'],
-      matches: [],
-      standings: [],
-      createdAt: new Date('2024-02-15'),
-      updatedAt: new Date('2024-02-15')
-    },
-    {
-      id: '4',
-      name: 'Corporate League',
-      description: 'League for corporate teams and company-sponsored clubs',
-      season: '2024',
-      startDate: '2024-02-01',
-      endDate: '2024-05-31',
-      maxTeams: 8,
-      currentTeams: 6,
-      status: 'active',
-      format: 'mixed',
-      organizer: 'Corporate Sports',
-      organizerId: 'corp1',
-      prizePool: '$15,000',
-      entryFee: 1000,
-      entryFeeCurrency: 'USD',
-      rules: 'Corporate league rules with modified scheduling for work commitments',
-      isPublic: false,
-      teams: ['team12', 'team13'],
-      matches: ['match4', 'match5'],
-      standings: [],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    },
-    {
-      id: '5',
-      name: 'Regional Championship',
-      description: 'Regional championship featuring teams from multiple districts',
-      season: '2024',
-      startDate: '2024-06-01',
-      endDate: '2024-09-30',
-      maxTeams: 20,
-      currentTeams: 18,
-      status: 'upcoming',
-      format: 'group_stage',
-      organizer: 'Regional Sports Council',
-      organizerId: 'regional1',
-      prizePool: '$75,000',
-      entryFee: 750,
-      entryFeeCurrency: 'USD',
-      rules: 'Regional championship format with group stage and knockout rounds',
-      isPublic: true,
-      teams: ['team14', 'team15', 'team16', 'team17'],
-      matches: [],
-      standings: [],
-      createdAt: new Date('2024-03-01'),
-      updatedAt: new Date('2024-03-01')
-    }
-  ];
+  // Load tournaments as leagues proxy
+  useEffect(() => {
+    const load = async () => {
+      if (loading) return;
+      try {
+        setLoadingData(true);
+        const resp = await apiClient.getTournaments();
+        const items = (resp.data.tournaments || []).map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description || '',
+          season: new Date(t.startDate).getFullYear().toString(),
+          startDate: t.startDate,
+          endDate: t.endDate,
+          maxTeams: t.maxTeams || 0,
+          currentTeams: t.teams?.length || t._count?.teams || 0,
+          status: (t.status || 'UPCOMING').toLowerCase(),
+          format: (t.format || 'ROUND_ROBIN').toLowerCase(),
+          organizer: t.club?.name || 'Organizer',
+          organizerId: t.clubId || '',
+          prizePool: '',
+          entryFee: 0,
+          entryFeeCurrency: 'USD',
+          rules: '',
+          isPublic: true,
+          teams: (t.teams || []).map((tt: any) => tt.teamId),
+          matches: (t.matches || []).map((m: any) => m.matchId),
+          standings: [],
+          createdAt: new Date(t.createdAt),
+          updatedAt: new Date(t.updatedAt),
+        }));
+        setLeagues(items);
+      } catch (e) {
+        setLeagues([]);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    load();
+  }, [loading]);
 
   useEffect(() => {
     // Simulate API call
     const fetchLeagues = async () => {
-      setLoading(true);
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLeagues(mockLeagues);
-      setLoading(false);
+      setLoadingData(true);
+    // data loads via effect now
     };
 
     fetchLeagues();
@@ -305,7 +220,7 @@ export default function LeaguesPage() {
     router.push(`/leagues/${leagueId}/brackets`);
   };
 
-  if (authLoading || loading) {
+  if (loading || loadingData) {
     return (
       <div className="d-flex">
         {/* Sidebar Skeleton */}

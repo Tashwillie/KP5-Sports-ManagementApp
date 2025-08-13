@@ -177,7 +177,7 @@ export const REGISTRATION_STATUS = {
 // API Endpoints
 export const API_ENDPOINTS = {
   auth: {
-    login: '/api/auth/login',
+    login: '/api/auth/signin',
     register: '/api/auth/register',
     logout: '/api/auth/logout',
     resetPassword: '/api/auth/reset-password',

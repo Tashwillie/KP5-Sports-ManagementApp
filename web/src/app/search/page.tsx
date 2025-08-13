@@ -13,14 +13,14 @@ import {
   CalendarIcon,
   StarIcon
 } from '@heroicons/react/24/outline';
-import { PublicSearchFilters, PublicSearchResult } from '@kp5-academy/shared';
+import searchService, { SearchResultItem } from '@/lib/services/searchService';
 
 export default function PublicSearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [filters, setFilters] = useState<PublicSearchFilters>({
+  const [filters, setFilters] = useState<any>({
     category: searchParams.get('category') as any || undefined,
     location: {
       city: searchParams.get('city') || undefined,
@@ -31,7 +31,7 @@ export default function PublicSearchPage() {
     gender: searchParams.get('gender') as any || undefined,
     level: searchParams.get('level') as any || undefined,
   });
-  const [results, setResults] = useState<PublicSearchResult[]>([]);
+  const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'club' | 'team' | 'player' | 'event'>(
@@ -47,57 +47,16 @@ export default function PublicSearchPage() {
   const performSearch = async () => {
     try {
       setLoading(true);
-      // This would be replaced with actual API call
-      const mockResults: PublicSearchResult[] = [
-        {
-          type: 'club',
-          id: 'club1',
-          title: 'Elite Soccer Academy',
-          description: 'Premier soccer academy for youth development',
-          url: '/club/elite-soccer-academy',
-          image: '/api/placeholder/100/100',
-          location: {
-            address: {
-              street: '123 Soccer Way',
-              city: 'Springfield',
-              state: 'IL',
-              zipCode: '62701',
-              country: 'USA',
-            },
-            venue: 'Elite Soccer Complex',
-            venueType: 'complex',
-            facilities: [],
-          },
-          stats: { totalTeams: 12, totalPlayers: 180 },
-          relevance: 1.0,
-          highlights: ['premier', 'academy', 'youth'],
-        },
-        {
-          type: 'team',
-          id: 'team1',
-          title: 'U16 Boys Elite',
-          description: 'Elite U16 boys soccer team',
-          url: '/team/u16-boys-elite',
-          image: '/api/placeholder/100/100',
-          location: {
-            address: {
-              street: '123 Soccer Way',
-              city: 'Springfield',
-              state: 'IL',
-              zipCode: '62701',
-              country: 'USA',
-            },
-            venue: 'Elite Soccer Complex',
-            venueType: 'field',
-            facilities: [],
-          },
-          stats: { wins: 15, losses: 2, ties: 1 },
-          relevance: 0.9,
-          highlights: ['elite', 'boys', 'soccer'],
-        },
-      ];
-      
-      setResults(mockResults);
+      const data = await searchService.search(searchQuery, {
+        category: selectedCategory as any,
+        city: filters.location?.city,
+        state: filters.location?.state,
+        sport: filters.sport,
+        ageGroup: filters.ageGroup,
+        gender: filters.gender,
+        level: filters.level,
+      });
+      setResults(data);
     } catch (error) {
       console.error('Search error:', error);
     } finally {

@@ -19,23 +19,23 @@ export default function HomePage() {
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav me-auto">
               <li className="nav-item">
-                <a className="nav-link" href="#">Dashboard</a>
+                <a className="nav-link" href="/dashboard">Dashboard</a>
               </li>
               <li className="nav-item">
-                <a className="nav-link" href="#">Teams</a>
+                <a className="nav-link" href="/teams">Teams</a>
               </li>
               <li className="nav-item">
-                <a className="nav-link" href="#">Tournaments</a>
+                <a className="nav-link" href="/tournaments">Tournaments</a>
               </li>
               <li className="nav-item">
-                <a className="nav-link" href="#">Calendar</a>
+                <a className="nav-link" href="/events">Calendar</a>
               </li>
             </ul>
 
             {/* Auth Buttons */}
             <div className="d-flex gap-2">
-              <button className="btn btn-outline-primary">Sign In</button>
-              <button className="btn btn-primary">Sign Up</button>
+              <a href="/auth/signin" className="btn btn-outline-primary">Sign In</a>
+              <a href="/auth/signup" className="btn btn-primary">Sign Up</a>
             </div>
           </div>
         </div>
@@ -55,12 +55,12 @@ export default function HomePage() {
               Real-time tracking, comprehensive analytics, and seamless coordination.
             </p>
             <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-              <button className="btn btn-light btn-lg px-4">
+              <a href="/dashboard" className="btn btn-light btn-lg px-4">
                 Get Started
-              </button>
-              <button className="btn btn-outline-light btn-lg px-4">
+              </a>
+              <a href="/features-showcase" className="btn btn-outline-light btn-lg px-4">
                 Learn More
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -141,12 +141,12 @@ export default function HomePage() {
             Join thousands of clubs and teams already using KP5 Academy to manage their sports operations.
           </p>
           <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-            <button className="btn btn-light btn-lg px-4">
+            <a href="/dashboard" className="btn btn-light btn-lg px-4">
               Start Free Trial
-            </button>
-            <button className="btn btn-outline-light btn-lg px-4">
+            </a>
+            <a href="/contact" className="btn btn-outline-light btn-lg px-4">
               Schedule Demo
-            </button>
+            </a>
           </div>
         </div>
       </section>

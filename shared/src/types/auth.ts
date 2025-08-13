@@ -19,6 +19,18 @@ export interface AuthState {
   error: string | null;
 }
 
+export interface AuthContextType {
+  user: AuthUser | null;
+  loading: boolean;
+  error: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, userData?: any) => Promise<void>;
+  signOut: () => Promise<void>;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateProfile: (data: Partial<AuthUser>) => Promise<void>;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

@@ -1,25 +1,4 @@
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
-  increment,
-} from 'firebase/firestore';
-import { db } from '@shared/utils/firebase';
-import {
   PublicClubProfile,
   PublicTeamProfile,
   PublicSearchFilters,
@@ -42,7 +21,7 @@ export class PublicService {
     clubId: string,
     profileData: Omit<PublicClubProfile, 'id' | 'clubId' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const profileRef = await addDoc(collection(db, 'publicClubProfiles'), {
+    const profileRef = await addDoc(null, {
       ...profileData,
       clubId,
       createdAt: serverTimestamp(),
@@ -54,7 +33,7 @@ export class PublicService {
 
   async getPublicClubProfile(slug: string): Promise<PublicClubProfile | null> {
     const q = query(
-      collection(db, 'publicClubProfiles'),
+      null,
       where('slug', '==', slug),
       where('isActive', '==', true),
       limit(1)
@@ -74,7 +53,7 @@ export class PublicService {
 
   async getPublicClubProfileById(clubId: string): Promise<PublicClubProfile | null> {
     const q = query(
-      collection(db, 'publicClubProfiles'),
+      null,
       where('clubId', '==', clubId),
       where('isActive', '==', true),
       limit(1)
@@ -107,7 +86,7 @@ export class PublicService {
     teamId: string,
     profileData: Omit<PublicTeamProfile, 'id' | 'teamId' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const profileRef = await addDoc(collection(db, 'publicTeamProfiles'), {
+    const profileRef = await addDoc(null, {
       ...profileData,
       teamId,
       createdAt: serverTimestamp(),
@@ -119,7 +98,7 @@ export class PublicService {
 
   async getPublicTeamProfile(slug: string): Promise<PublicTeamProfile | null> {
     const q = query(
-      collection(db, 'publicTeamProfiles'),
+      null,
       where('slug', '==', slug),
       where('isActive', '==', true),
       limit(1)
@@ -139,7 +118,7 @@ export class PublicService {
 
   async getPublicTeamProfileById(teamId: string): Promise<PublicTeamProfile | null> {
     const q = query(
-      collection(db, 'publicTeamProfiles'),
+      null,
       where('teamId', '==', teamId),
       where('isActive', '==', true),
       limit(1)
@@ -169,13 +148,13 @@ export class PublicService {
 
   // Search Functionality
   async searchPublicProfiles(filters: PublicSearchFilters): Promise<PublicSearchResult[]> {
-    let q = query(collection(db, 'publicClubProfiles'), where('isActive', '==', true));
+    let q = query(null, where('isActive', '==', true));
 
     // Apply filters
     if (filters.category === 'club') {
-      q = query(collection(db, 'publicClubProfiles'), where('isActive', '==', true));
+      q = query(null, where('isActive', '==', true));
     } else if (filters.category === 'team') {
-      q = query(collection(db, 'publicTeamProfiles'), where('isActive', '==', true));
+      q = query(null, where('isActive', '==', true));
     }
 
     if (filters.location?.city) {
@@ -320,7 +299,7 @@ export class PublicService {
       isActive: true,
     };
 
-    const subscriptionRef = await addDoc(collection(db, 'publicSubscriptions'), {
+    const subscriptionRef = await addDoc(null, {
       ...subscriptionData,
       subscribedAt: serverTimestamp(),
     });
@@ -348,7 +327,7 @@ export class PublicService {
       status: 'new',
     };
 
-    const contactFormRef = await addDoc(collection(db, 'publicContactForms'), {
+    const contactFormRef = await addDoc(null, {
       ...contactFormData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -363,7 +342,7 @@ export class PublicService {
     profileType: 'club' | 'team',
     reviewData: Omit<PublicReview, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const reviewRef = await addDoc(collection(db, 'publicReviews'), {
+    const reviewRef = await addDoc(null, {
       ...reviewData,
       profileId,
       profileType,
@@ -380,7 +359,7 @@ export class PublicService {
     limit: number = 10
   ): Promise<PublicReview[]> {
     const q = query(
-      collection(db, 'publicReviews'),
+      null,
       where('profileId', '==', profileId),
       where('profileType', '==', profileType),
       where('isPublic', '==', true),
@@ -403,7 +382,7 @@ export class PublicService {
     profileType: 'club' | 'team'
   ): Promise<PublicFAQ[]> {
     const q = query(
-      collection(db, 'publicFAQs'),
+      null,
       where('profileId', '==', profileId),
       where('profileType', '==', profileType),
       where('isActive', '==', true),
@@ -425,7 +404,7 @@ export class PublicService {
     profileType: 'club' | 'team'
   ): Promise<PublicSponsor[]> {
     const q = query(
-      collection(db, 'publicSponsors'),
+      null,
       where('profileId', '==', profileId),
       where('profileType', '==', profileType),
       where('isActive', '==', true),
@@ -447,7 +426,7 @@ export class PublicService {
     profileType: 'club' | 'team'
   ): Promise<PublicVolunteer[]> {
     const q = query(
-      collection(db, 'publicVolunteers'),
+      null,
       where('profileId', '==', profileId),
       where('profileType', '==', profileType),
       where('isActive', '==', true),
@@ -588,7 +567,7 @@ export class PublicService {
       nextGeneration: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
     };
 
-    const sitemapRef = await addDoc(collection(db, 'publicSitemaps'), sitemapData);
+    const sitemapRef = await addDoc(null, sitemapData);
     return {
       id: sitemapRef.id,
       ...sitemapData,
@@ -608,7 +587,7 @@ export class PublicService {
     callback: (profile: PublicClubProfile | null) => void
   ): () => void {
     const q = query(
-      collection(db, 'publicClubProfiles'),
+      null,
       where('slug', '==', slug),
       where('isActive', '==', true),
       limit(1)
@@ -636,7 +615,7 @@ export class PublicService {
     callback: (profile: PublicTeamProfile | null) => void
   ): () => void {
     const q = query(
-      collection(db, 'publicTeamProfiles'),
+      null,
       where('slug', '==', slug),
       where('isActive', '==', true),
       limit(1)

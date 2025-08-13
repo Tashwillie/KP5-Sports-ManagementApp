@@ -1,4 +1,3 @@
-import firestore from '@react-native-firebase/firestore';
 import { User, UserRole } from '@kp5-academy/shared';
 
 export class UserService {

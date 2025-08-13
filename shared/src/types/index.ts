@@ -488,14 +488,76 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// Firebase Types
-export interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
+// API Configuration Types
+export interface ApiConfig {
+  baseUrl: string;
+  websocketUrl: string;
+  fileUploadUrl: string;
+  cloudStorageUrl: string;
+}
+
+// Real-time Communication Types
+export interface WebSocketConfig {
+  url: string;
+  reconnectInterval: number;
+  maxReconnectAttempts: number;
+}
+
+export interface RealTimeEvent {
+  type: string;
+  data: any;
+  timestamp: Date;
+  userId?: string;
+  room?: string;
+}
+
+// File Upload Types
+export interface FileUploadConfig {
+  maxFileSize: number;
+  allowedTypes: string[];
+  uploadUrl: string;
+  storageProvider: 's3' | 'gcs' | 'local';
+}
+
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
+// Push Notification Types
+export interface PushNotificationConfig {
+  enabled: boolean;
+  provider: 'expo' | 'web-push';
+  vapidKey?: string;
+}
+
+export interface DeviceToken {
+  id: string;
+  userId: string;
+  token: string;
+  platform: 'ios' | 'android' | 'web';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Offline Support Types
+export interface OfflineQueueItem {
+  id: string;
+  type: 'create' | 'update' | 'delete';
+  endpoint: string;
+  data?: any;
+  timestamp: number;
+  retryCount: number;
+  maxRetries: number;
+}
+
+export interface SyncStatus {
+  isOnline: boolean;
+  lastSync: Date | null;
+  pendingItems: number;
+  isSyncing: boolean;
+  error: string | null;
 }
 
 // Notification Types
@@ -532,5 +594,60 @@ export * from './media';
 export * from './public';
 export * from './admin';
 export * from './match';
+
+export interface Match {
+  id: string;
+  title: string;
+  description?: string;
+  startTime: Date;
+  endTime?: Date;
+  location?: string;
+  address?: string;
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'POSTPONED';
+  homeScore?: number;
+  awayScore?: number;
+  isActive: boolean;
+  homeTeamId?: string;
+  awayTeamId?: string;
+  tournamentId?: string;
+  creatorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // Relations
+  homeTeam?: Team;
+  awayTeam?: Team;
+  creator?: User;
+  participants?: MatchParticipant[];
+  events?: LiveMatchEvent[];
+}
+
+export type LiveMatchEventType = 'GOAL' | 'ASSIST' | 'YELLOW_CARD' | 'RED_CARD' | 'SUBSTITUTION' | 'INJURY' | 'OTHER';
+
+export type LiveMatchStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'POSTPONED';
+
+export interface LiveMatchEvent {
+  id: string;
+  matchId: string;
+  type: LiveMatchEventType;
+  timestamp: Date;
+  minute?: number;
+  description?: string;
+  playerId?: string;
+  teamId?: string;
+  data?: any;
+  createdAt: Date;
+}
+
+export interface MatchParticipant {
+  id: string;
+  matchId: string;
+  userId: string;
+  teamId?: string;
+  role: 'PLAYER' | 'COACH' | 'REFEREE' | 'SPECTATOR';
+  status: 'PENDING' | 'CONFIRMED' | 'DECLINED' | 'MAYBE';
+  joinedAt: Date;
+  user?: User;
+  team?: Team;
+}
 
  

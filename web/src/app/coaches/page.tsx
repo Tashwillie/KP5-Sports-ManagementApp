@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useUsers } from '@/hooks/useUsers';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -75,163 +77,48 @@ interface CoachWithStats extends Coach {
 
 export default function CoachesPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('coaches');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
   const [specializationFilter, setSpecializationFilter] = useState('all');
+  const { users: apiCoaches, loading: loadingCoaches, error } = useUsers({ role: 'COACH' });
 
-  // Mock user data
-  const userData = {
-    id: 'user123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin'
-  };
+  // Auth user replaces mock user data
+  const userData = user ? { id: user.id, name: user.displayName || '', email: user.email, role: user.role } : null;
 
-  // Mock coaches data
-  const mockCoaches: CoachWithStats[] = [
-    {
-      id: '1',
-      firstName: 'Michael',
-      lastName: 'Okechukwu',
-      email: 'michael.okechukwu@email.com',
-      phone: '+234 801 234 5678',
-      dateOfBirth: '1985-03-15',
-      age: 38,
-      specialization: 'Football',
-      experience: 12,
-      certification: 'UEFA Pro License',
-      teamId: 'team1',
-      teamName: 'Elite FC',
-      clubId: 'club1',
-      clubName: 'Elite Football Academy',
-      status: 'active',
-      level: 'head',
-      nationality: 'Nigerian',
-      address: 'Lagos, Nigeria',
-      bio: 'Experienced football coach with 12 years of professional coaching experience.',
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z',
-      teamsCoached: 8,
-      totalMatches: 156,
-      winRate: 68.5,
-      rating: 4.8,
-      activePlayers: 25
-    },
-    {
-      id: '2',
-      firstName: 'Sarah',
-      lastName: 'Kamau',
-      email: 'sarah.kamau@email.com',
-      phone: '+254 700 123 456',
-      dateOfBirth: '1990-08-22',
-      age: 33,
-      specialization: 'Basketball',
-      experience: 8,
-      certification: 'FIBA Level 3',
-      teamId: 'team2',
-      teamName: 'Basketball Stars',
-      clubId: 'club2',
-      clubName: 'Basketball Stars Club',
-      status: 'active',
+  const coaches: CoachWithStats[] = useMemo(() => {
+    return (apiCoaches || []).map((u: any) => ({
+      id: u.id,
+      firstName: u.firstName || '',
+      lastName: u.lastName || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      dateOfBirth: u.profile?.dateOfBirth || '',
+      age: 0,
+      specialization: u.profile?.specialization || 'Football',
+      experience: u.profile?.experience || 0,
+      certification: u.profile?.certification || '',
+      teamId: u.teams?.[0]?.teamId,
+      teamName: u.teams?.[0]?.team?.name,
+      clubId: u.clubs?.[0]?.clubId,
+      clubName: u.clubs?.[0]?.club?.name,
+      status: u.isActive ? 'active' : 'inactive',
       level: 'senior',
-      nationality: 'Kenyan',
-      address: 'Nairobi, Kenya',
-      bio: 'Former professional basketball player turned coach.',
-      createdAt: '2024-01-10T14:30:00Z',
-      updatedAt: '2024-01-10T14:30:00Z',
-      teamsCoached: 5,
-      totalMatches: 89,
-      winRate: 72.3,
-      rating: 4.6,
-      activePlayers: 18
-    },
-    {
-      id: '3',
-      firstName: 'Kwame',
-      lastName: 'Mensah',
-      email: 'kwame.mensah@email.com',
-      phone: '+233 24 567 8901',
-      dateOfBirth: '1988-12-03',
-      age: 35,
-      specialization: 'Cricket',
-      experience: 10,
-      certification: 'ICC Level 2',
-      teamId: 'team3',
-      teamName: 'Cricket Champions',
-      clubId: 'club3',
-      clubName: 'Cricket Champions',
-      status: 'on_leave',
-      level: 'head',
-      nationality: 'Ghanaian',
-      address: 'Accra, Ghana',
-      bio: 'Cricket specialist with international coaching experience.',
-      createdAt: '2024-01-05T09:15:00Z',
-      updatedAt: '2024-01-05T09:15:00Z',
-      teamsCoached: 6,
-      totalMatches: 112,
-      winRate: 65.8,
-      rating: 4.4,
-      activePlayers: 22
-    },
-    {
-      id: '4',
-      firstName: 'Zara',
-      lastName: 'van der Merwe',
-      email: 'zara.vandermerwe@email.com',
-      phone: '+27 21 123 4567',
-      dateOfBirth: '1992-03-18',
-      age: 31,
-      specialization: 'Tennis',
-      experience: 6,
-      certification: 'ITF Level 2',
-      teamId: 'team4',
-      teamName: 'Tennis Excellence',
-      clubId: 'club4',
-      clubName: 'Tennis Excellence',
-      status: 'inactive',
-      level: 'assistant',
-      nationality: 'South African',
-      address: 'Cape Town, South Africa',
-      bio: 'Former tennis player with coaching certification.',
-      createdAt: '2024-01-01T11:45:00Z',
-      updatedAt: '2024-01-01T11:45:00Z',
-      teamsCoached: 3,
-      totalMatches: 45,
-      winRate: 58.2,
-      rating: 4.1,
-      activePlayers: 12
-    },
-    {
-      id: '5',
-      firstName: 'Juma',
-      lastName: 'Mkamba',
-      email: 'juma.mkamba@email.com',
-      phone: '+255 22 987 6543',
-      dateOfBirth: '1987-07-10',
-      age: 36,
-      specialization: 'Swimming',
-      experience: 9,
-      certification: 'FINA Level 3',
-      teamId: 'team5',
-      teamName: 'Swimming Dolphins',
-      clubId: 'club5',
-      clubName: 'Swimming Dolphins',
-      status: 'suspended',
-      level: 'senior',
-      nationality: 'Tanzanian',
-      address: 'Dar es Salaam, Tanzania',
-      bio: 'Swimming coach with Olympic training experience.',
-      createdAt: '2023-12-28T16:20:00Z',
-      updatedAt: '2023-12-28T16:20:00Z',
-      teamsCoached: 7,
-      totalMatches: 78,
-      winRate: 71.4,
-      rating: 4.3,
-      activePlayers: 15
-    }
-  ];
+      nationality: u.profile?.nationality || '',
+      address: u.profile?.address || '',
+      bio: u.profile?.bio || '',
+      photo: u.avatar || '',
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+      teamsCoached: u.profile?.teamsCoached || 0,
+      totalMatches: u.profile?.totalMatches || 0,
+      winRate: u.profile?.winRate || 0,
+      rating: u.profile?.rating || 0,
+      activePlayers: u.profile?.activePlayers || 0,
+    }));
+  }, [apiCoaches]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -295,7 +182,7 @@ export default function CoachesPage() {
   };
 
   // Filter coaches based on search and filters
-  const filteredCoaches = mockCoaches.filter(coach => {
+  const filteredCoaches = coaches.filter(coach => {
     const fullName = `${coach.firstName} ${coach.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
                          coach.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -310,10 +197,10 @@ export default function CoachesPage() {
   });
 
   // Calculate stats
-  const totalCoaches = mockCoaches.length;
-  const activeCoaches = mockCoaches.filter(coach => coach.status === 'active').length;
-  const totalTeams = mockCoaches.reduce((sum, coach) => sum + coach.teamsCoached, 0);
-  const avgWinRate = mockCoaches.reduce((sum, coach) => sum + coach.winRate, 0) / mockCoaches.length;
+  const totalCoaches = coaches.length;
+  const activeCoaches = coaches.filter(coach => coach.status === 'active').length;
+  const totalTeams = coaches.reduce((sum, coach) => sum + coach.teamsCoached, 0);
+  const avgWinRate = coaches.length ? coaches.reduce((sum, coach) => sum + coach.winRate, 0) / coaches.length : 0;
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh' }}>

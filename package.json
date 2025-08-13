@@ -10,22 +10,14 @@
     "build:mobile": "cd mobile && npm run build",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
-    "firebase:emulators": "cd firebase && firebase emulators:start",
-    "firebase:deploy": "cd firebase && firebase deploy",
-    "firebase:setup": "node scripts/setup-firebase.js",
-    "firebase:init": "cd firebase && firebase init",
-    "firebase:login": "cd firebase && firebase login",
-    "firebase:use": "cd firebase && firebase use",
     "setup": "npm install && cd web && npm install && cd ../mobile && npm install && cd ../shared && npm install",
-    "setup:firebase": "npm run firebase:setup && npm run firebase:init",
-    "dev": "concurrently \"npm run dev:web\" \"npm run dev:mobile\" \"npm run firebase:emulators\"",
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:mobile\"",
     "clean": "rm -rf web/.next web/out mobile/.expo mobile/dist",
     "reset": "npm run clean && npm run setup"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "concurrently": "^8.0.0",
-    "firebase-tools": "^13.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {
@@ -33,6 +25,6 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "firebase": "^11.10.0"
+    "socket.io-client": "^4.8.1"
   }
 }

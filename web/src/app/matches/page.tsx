@@ -1,228 +1,136 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/contexts/FirebaseContext';
 import Sidebar from '@/components/layout/Sidebar';
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Edit, 
-  Users, 
-  Trophy, 
-  Calendar,
-  MapPin,
-  Shield,
-  Eye,
-  Bell,
-  Grid3X3,
-  MessageCircle,
-  ChevronDown,
-  MoreVertical,
-  Home,
-  Folder,
-  GraduationCap,
-  ShoppingCart,
-  Cloud,
-  HelpCircle,
-  Mail,
-  Flag,
-  Maximize2,
-  User,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  GitBranch,
-  Award,
-  Zap,
-  Heart,
-  DollarSign,
-  FileText,
-  ImageIcon,
-  BarChart3,
-  Settings,
-  TrendingUp,
-  Clock,
-  Play,
-  Square,
-  Target
-} from 'lucide-react';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useMatches } from '@/hooks/useMatches';
 
-// Define Match interface locally
 interface Match {
   id: string;
   homeTeam: string;
   awayTeam: string;
   homeScore: number;
   awayScore: number;
-  date: Date;
+  date: string;
   time: string;
   venue: string;
   status: 'scheduled' | 'live' | 'completed' | 'cancelled';
   tournament?: string;
-  referee?: string;
-  notes?: string;
+  referee: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface MatchWithStats extends Match {
   homeTeamId: string;
   awayTeamId: string;
   tournamentId?: string;
-  refereeId?: string;
-  attendance?: number;
-  weather?: string;
+  spectators: number;
+  weather: string;
 }
 
 export default function MatchesPage() {
-  const router = useRouter();
-  const { userData, loading: authLoading } = useFirebase();
-  const [activeTab, setActiveTab] = useState('matches');
+  return (
+    <ProtectedRoute>
+      <MatchesContent />
+    </ProtectedRoute>
+  );
+}
 
-  // State
-  const [matches, setMatches] = useState<MatchWithStats[]>([]);
+function MatchesContent() {
+  const { matches: apiMatches, loading: loadingData, error, refetch } = useMatches();
   const [filteredMatches, setFilteredMatches] = useState<MatchWithStats[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [tournamentFilter, setTournamentFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
 
-  // Load matches
-  useEffect(() => {
-    if (!userData || authLoading) return;
+  // Transform API matches to match the interface
+  const matches: MatchWithStats[] = apiMatches.map(match => ({
+    id: match.id,
+    homeTeam: match.homeTeam?.name || 'Unknown Team',
+    awayTeam: match.awayTeam?.name || 'Unknown Team',
+    homeScore: match.homeScore || 0,
+    awayScore: match.awayScore || 0,
+    date: new Date(match.startTime).toISOString().split('T')[0],
+    time: new Date(match.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    venue: match.location || 'Unknown Venue',
+    status: match.status === 'SCHEDULED' ? 'scheduled' : 
+            match.status === 'IN_PROGRESS' ? 'live' : 
+            match.status === 'COMPLETED' ? 'completed' : 'cancelled',
+    tournament: match.tournament?.name,
+    referee: match.referee?.displayName || 'Unassigned',
+    createdAt: match.createdAt,
+    updatedAt: match.updatedAt,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    tournamentId: match.tournamentId,
+    spectators: 0, // Not available in API
+    weather: 'Unknown', // Not available in API
+  }));
 
-    const loadMatches = async () => {
-      try {
-        setLoading(true);
-
-        // Mock data - in real implementation, this would come from Firebase
-        const mockMatches: MatchWithStats[] = [
-          {
-            id: '1',
-            homeTeam: 'Thunder U12',
-            awayTeam: 'Lightning U12',
-            homeScore: 2,
-            awayScore: 1,
-            date: new Date('2024-01-15'),
-            time: '14:00',
-            venue: 'Central Stadium',
-            status: 'completed',
-            tournament: 'Spring League',
-            referee: 'John Smith',
-            homeTeamId: 'team1',
-            awayTeamId: 'team2',
-            tournamentId: 'tournament1',
-            refereeId: 'referee1',
-            attendance: 150,
-            weather: 'Sunny',
-          },
-          {
-            id: '2',
-            homeTeam: 'Storm U14',
-            awayTeam: 'Thunder U14',
-            homeScore: 0,
-            awayScore: 0,
-            date: new Date('2024-01-20'),
-            time: '16:30',
-            venue: 'North Field',
-            status: 'scheduled',
-            tournament: 'Spring League',
-            referee: 'Mike Johnson',
-            homeTeamId: 'team3',
-            awayTeamId: 'team1',
-            tournamentId: 'tournament1',
-            refereeId: 'referee2',
-          },
-          {
-            id: '3',
-            homeTeam: 'Lightning U16',
-            awayTeam: 'Storm U16',
-            homeScore: 3,
-            awayScore: 2,
-            date: new Date(),
-            time: '15:00',
-            venue: 'South Arena',
-            status: 'live',
-            tournament: 'Championship Cup',
-            referee: 'Sarah Wilson',
-            homeTeamId: 'team2',
-            awayTeamId: 'team3',
-            tournamentId: 'tournament2',
-            refereeId: 'referee3',
-            attendance: 200,
-            weather: 'Cloudy',
-          },
-        ];
-
-        setMatches(mockMatches);
-        setFilteredMatches(mockMatches);
-      } catch (error) {
-        console.error('Error loading matches:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMatches();
-  }, [userData, authLoading]);
-
-  // Filter matches
+  // Filter matches based on search and filters
   useEffect(() => {
     let filtered = matches;
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(match =>
         match.homeTeam.toLowerCase().includes(searchTerm.toLowerCase()) ||
         match.awayTeam.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        match.venue.toLowerCase().includes(searchTerm.toLowerCase())
+        match.venue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        match.tournament?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(match => match.status === statusFilter);
     }
 
-    // Tournament filter
-    if (tournamentFilter !== 'all') {
-      filtered = filtered.filter(match => match.tournament === tournamentFilter);
+    if (dateFilter !== 'all') {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      filtered = filtered.filter(match => {
+        const matchDate = new Date(match.date);
+        switch (dateFilter) {
+          case 'today':
+            return matchDate.toDateString() === today.toDateString();
+          case 'tomorrow':
+            return matchDate.toDateString() === tomorrow.toDateString();
+          case 'this-week':
+            const weekStart = new Date(today);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            return matchDate >= weekStart && matchDate <= weekEnd;
+          case 'upcoming':
+            return matchDate > today;
+          default:
+            return true;
+        }
+      });
     }
 
     setFilteredMatches(filtered);
-  }, [matches, searchTerm, statusFilter, tournamentFilter]);
+  }, [matches, searchTerm, statusFilter, dateFilter]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'scheduled':
-        return 'badge bg-secondary';
+        return 'bg-primary';
       case 'live':
-        return 'badge bg-danger';
+        return 'bg-success';
       case 'completed':
-        return 'badge bg-success';
+        return 'bg-secondary';
       case 'cancelled':
-        return 'badge bg-warning';
+        return 'bg-danger';
       default:
-        return 'badge bg-secondary';
+        return 'bg-secondary';
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return <Clock className="h-4 w-4" />;
-      case 'live':
-        return <Play className="h-4 w-4" />;
-      case 'completed':
-        return <Square className="h-4 w-4" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -231,66 +139,45 @@ export default function MatchesPage() {
   };
 
   const handleCreateMatch = () => {
-    router.push('/matches/create');
+    window.location.href = '/matches/create';
   };
 
   const handleViewMatch = (matchId: string) => {
-    router.push(`/matches/${matchId}`);
+    window.location.href = `/matches/${matchId}`;
   };
 
   const handleEditMatch = (matchId: string) => {
-    router.push(`/matches/${matchId}/edit`);
+    window.location.href = `/matches/${matchId}/edit`;
   };
 
   const handleLiveMatch = (matchId: string) => {
-    router.push(`/matches/${matchId}/live`);
+    window.location.href = `/matches/${matchId}/live`;
   };
 
-  if (authLoading || loading) {
+  if (loadingData) {
     return (
-      <div className="d-flex">
-        {/* Sidebar Skeleton */}
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="placeholder-glow">
-              <div className="placeholder col-8 mb-4"></div>
-              <div className="placeholder col-6 mb-3"></div>
-              <div className="placeholder col-10 mb-2"></div>
-              <div className="placeholder col-8 mb-2"></div>
-            </div>
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
-        </div>
-        
-        {/* Main Content Skeleton */}
-        <div className="flex-grow-1 bg-light">
-          <div className="p-4">
-            <div className="placeholder-glow">
-              <div className="placeholder col-4 mb-4"></div>
-              <div className="row g-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="col-md-6 col-lg-3">
-                    <div className="card placeholder-glow">
-                      <div className="card-body">
-                        <div className="placeholder col-8"></div>
-                        <div className="placeholder col-4"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <p className="mt-3">Loading matches...</p>
         </div>
       </div>
     );
   }
 
-  if (!userData) {
+  if (error) {
     return (
       <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
         <div className="text-center">
-          <h2 className="h2 fw-bold text-dark mb-3">Access Denied</h2>
-          <p className="text-muted">Please sign in to view matches.</p>
+          <div className="alert alert-danger" role="alert">
+            <h4 className="alert-heading">Error loading matches</h4>
+            <p>{error}</p>
+            <button className="btn btn-primary" onClick={refetch}>
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -298,7 +185,7 @@ export default function MatchesPage() {
 
   return (
     <div className="d-flex">
-      <Sidebar activeTab="matches" userData={userData} />
+      <Sidebar activeTab="matches" />
 
       {/* Main Content */}
       <div className="flex-grow-1 bg-light">
@@ -306,244 +193,174 @@ export default function MatchesPage() {
         <div className="bg-white border-bottom p-3">
           <div className="d-flex align-items-center justify-content-between">
             <div className="d-flex align-items-center gap-3">
-              <div className="d-flex align-items-center">
+              <button className="btn btn-link text-dark p-0">
+                <i className="bi bi-grid-3x3"></i>
+              </button>
+              <div>
                 <h5 className="mb-0">Matches Management</h5>
+                <small className="text-muted">
+                  Schedule and manage matches
+                </small>
               </div>
             </div>
             
             <div className="d-flex align-items-center gap-3">
-              <button className="btn btn-link text-muted p-1">
-                <Flag className="h-4 w-4" />
-              </button>
-              <button className="btn btn-link text-muted p-1">
-                <Maximize2 className="h-4 w-4" />
-              </button>
-              <button className="btn btn-link text-muted p-1">
-                <Search className="h-4 w-4" />
-              </button>
-              <button className="btn btn-link text-muted p-1">
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button className="btn btn-link text-muted p-1 position-relative">
-                <Bell className="h-4 w-4" />
-                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill" style={{fontSize: '0.6rem', backgroundColor: '#4169E1'}}>5</span>
-              </button>
-              <button className="btn btn-link text-muted p-1">
-                <MessageCircle className="h-4 w-4" />
-              </button>
               <button className="btn btn-sm" style={{backgroundColor: '#4169E1', borderColor: '#4169E1', color: 'white'}} onClick={handleCreateMatch}>
-                <Plus className="h-4 w-4 me-1" />
-                Create Match
+                <i className="bi bi-plus me-1"></i>
+                Schedule Match
               </button>
             </div>
           </div>
         </div>
 
-        {/* Main Matches Content */}
+        {/* Main Content */}
         <div className="p-4">
-          {/* Stats Cards */}
-          <div className="row g-4 mb-4">
-            <div className="col-md-6 col-lg-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 className="card-subtitle mb-2 text-muted">Total Matches</h6>
-                      <h2 className="card-title mb-1 fw-bold" style={{color: '#4169E1'}}>{matches.length}</h2>
-                      <small className="text-muted">Matches</small>
-                    </div>
-                    <Target className="h-6 w-6 text-muted" />
-                  </div>
-                </div>
+          {/* Filters and Search */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-4">
+              <div className="input-group">
+                <span className="input-group-text">
+                  <i className="bi bi-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search matches..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
-
-            <div className="col-md-6 col-lg-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 className="card-subtitle mb-2 text-muted">Live Matches</h6>
-                      <h2 className="card-title mb-1 fw-bold text-danger">{matches.filter(m => m.status === 'live').length}</h2>
-                      <small className="text-muted">Currently Live</small>
-                    </div>
-                    <Play className="h-6 w-6 text-danger" />
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-3">
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="live">Live</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
-
-            <div className="col-md-6 col-lg-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 className="card-subtitle mb-2 text-muted">Scheduled</h6>
-                      <h2 className="card-title mb-1 fw-bold text-warning">{matches.filter(m => m.status === 'scheduled').length}</h2>
-                      <small className="text-muted">Upcoming</small>
-                    </div>
-                    <Clock className="h-6 w-6 text-warning" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-6 col-lg-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 className="card-subtitle mb-2 text-muted">Completed</h6>
-                      <h2 className="card-title mb-1 fw-bold text-success">{matches.filter(m => m.status === 'completed').length}</h2>
-                      <small className="text-muted">Finished</small>
-                    </div>
-                    <Square className="h-6 w-6 text-success" />
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-3">
+              <select
+                className="form-select"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              >
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="this-week">This Week</option>
+                <option value="upcoming">Upcoming</option>
+              </select>
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="card border-0 shadow-sm mb-4">
-            <div className="card-header bg-transparent border-0">
-              <h5 className="card-title mb-0">Filters</h5>
-            </div>
-            <div className="card-body">
-              <div className="row g-3">
-                <div className="col-md-6 col-lg-4">
-                  <div className="position-relative">
-                    <Search className="position-absolute top-50 start-0 translate-middle-y ms-3 h-4 w-4 text-muted" />
-                    <input
-                      type="text"
-                      className="form-control ps-5"
-                      placeholder="Search matches..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <select 
-                    className="form-select" 
-                    value={statusFilter} 
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="live">Live</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <div className="col-md-6 col-lg-4">
-                  <select 
-                    className="form-select" 
-                    value={tournamentFilter} 
-                    onChange={(e) => setTournamentFilter(e.target.value)}
-                  >
-                    <option value="all">All Tournaments</option>
-                    <option value="Spring League">Spring League</option>
-                    <option value="Championship Cup">Championship Cup</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Matches Table */}
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-transparent border-0">
-              <h5 className="card-title mb-0">Matches ({filteredMatches.length})</h5>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Teams</th>
-                      <th>Score</th>
-                      <th>Date & Time</th>
-                      <th>Venue</th>
-                      <th>Status</th>
-                      <th>Tournament</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMatches.map((match) => (
-                      <tr key={match.id}>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <div className="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                              <Target className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <div className="fw-medium">{match.homeTeam}</div>
-                              <small className="text-muted">vs {match.awayTeam}</small>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="fw-bold">
-                            {match.status === 'scheduled' ? 'TBD' : `${match.homeScore} - ${match.awayScore}`}
-                          </div>
-                        </td>
-                        <td>
-                          <div>
-                            <div className="fw-medium">{formatDate(match.date)}</div>
-                            <small className="text-muted">{match.time}</small>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <MapPin className="h-4 w-4 text-muted me-2" />
-                            <span>{match.venue}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={getStatusBadgeClass(match.status)}>
-                            {getStatusIcon(match.status)}
-                            <span className="ms-1">{match.status}</span>
+          {/* Matches Grid */}
+          <div className="row g-4">
+            {filteredMatches.map((match) => (
+              <div key={match.id} className="col-md-6 col-lg-4">
+                <div className="card border-0 shadow-sm h-100">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <span className={`badge ${getStatusBadgeClass(match.status)} me-2`}>
+                          {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
+                        </span>
+                        {match.status === 'live' && (
+                          <span className="badge bg-danger">
+                            <i className="bi bi-circle-fill me-1"></i>LIVE
                           </span>
-                        </td>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <Trophy className="h-4 w-4 text-warning me-2" />
-                            <span>{match.tournament || 'Friendly'}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="d-flex gap-2">
-                            <button 
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleViewMatch(match.id)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            {match.status === 'live' && (
-                              <button 
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleLiveMatch(match.id)}
-                              >
-                                <Play className="h-4 w-4" />
-                              </button>
-                            )}
-                            <button 
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleEditMatch(match.id)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        )}
+                      </div>
+                      <div className="dropdown">
+                        <button className="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                          <i className="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul className="dropdown-menu">
+                          <li><a className="dropdown-item" href="#" onClick={() => handleViewMatch(match.id)}>
+                            <i className="bi bi-eye me-2"></i>View
+                          </a></li>
+                          {match.status === 'live' && (
+                            <li><a className="dropdown-item" href="#" onClick={() => handleLiveMatch(match.id)}>
+                              <i className="bi bi-play-circle me-2"></i>Live Control
+                            </a></li>
+                          )}
+                          <li><a className="dropdown-item" href="#" onClick={() => handleEditMatch(match.id)}>
+                            <i className="bi bi-pencil me-2"></i>Edit
+                          </a></li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center mb-3">
+                      <div className="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style={{width: '60px', height: '60px'}}>
+                        <i className="bi bi-calendar text-primary fs-4"></i>
+                      </div>
+                      <h5 className="card-title mb-1">{match.homeTeam} vs {match.awayTeam}</h5>
+                      <p className="text-muted small mb-0">{match.tournament || 'Friendly Match'}</p>
+                    </div>
+                    
+                    <div className="row text-center mb-3">
+                      <div className="col-4">
+                        <div className="text-primary fw-bold">{match.homeScore}</div>
+                        <small className="text-muted">Home</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-success fw-bold">{match.awayScore}</div>
+                        <small className="text-muted">Away</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-warning fw-bold">{match.spectators}</div>
+                        <small className="text-muted">Spectators</small>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <small className="text-muted">Date & Time</small>
+                        <div className="fw-bold">{formatDate(match.date)} • {match.time}</div>
+                      </div>
+                      <div className="text-end">
+                        <small className="text-muted">Venue</small>
+                        <div className="fw-bold">{match.venue}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <small className="text-muted">Referee</small>
+                        <div className="fw-bold">{match.referee}</div>
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleViewMatch(match.id)}
+                      >
+                        {match.status === 'live' ? 'Live View' : 'View Match'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
+
+          {filteredMatches.length === 0 && (
+            <div className="text-center py-5">
+              <i className="bi bi-calendar display-1 text-muted"></i>
+              <h4 className="mt-3">No matches found</h4>
+              <p className="text-muted">Try adjusting your search or filters</p>
+              <button 
+                className="btn btn-primary"
+                onClick={handleCreateMatch}
+              >
+                Schedule Your First Match
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavigationItem {
   name: string;
@@ -110,10 +110,10 @@ const navigationItems: NavigationItem[] = [
 
 export const Navigation: React.FC = () => {
   const pathname = usePathname();
-  const { user, userData, logout } = useFirebase();
+  const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const userRole = userData?.role || 'player';
+  const userRole = user?.role || 'player';
 
   const filteredNavigation = navigationItems.filter(item => 
     item.roles.includes(userRole)

@@ -1,32 +1,14 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  writeBatch,
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+// Firebase imports removed - will be replaced with API calls
 import { 
   League, 
   LeagueStanding, 
   LeagueTeamStats,
   ApiResponse 
 } from '../../../../shared/src/types';
+import apiClient from '../apiClient';
 
 export class LeagueService {
   private static instance: LeagueService;
-  private leaguesCollection = collection(db, 'leagues');
-  private standingsCollection = collection(db, 'leagueStandings');
 
   public static getInstance(): LeagueService {
     if (!LeagueService.instance) {
@@ -38,23 +20,20 @@ export class LeagueService {
   // Get league by ID
   async getLeague(leagueId: string): Promise<League> {
     try {
-      const docRef = doc(this.leaguesCollection, leagueId);
-      const docSnap = await getDoc(docRef);
-      
-      if (!docSnap.exists()) {
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/leagues/${leagueId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+      });
+
+      if (!response.ok) {
         throw new Error('League not found');
       }
 
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        startDate: data.startDate?.toDate() || new Date(),
-        endDate: data.endDate?.toDate() || new Date(),
-        registrationDeadline: data.registrationDeadline?.toDate() || new Date(),
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as League;
+      const result = await response.json();
+      return result.data;
     } catch (error) {
       console.error('Error getting league:', error);
       throw new Error('Failed to get league');
@@ -64,25 +43,25 @@ export class LeagueService {
   // Get league standings
   async getLeagueStandings(leagueId: string, divisionId?: string): Promise<LeagueStanding[]> {
     try {
-      let q = query(
-        this.standingsCollection,
-        where('leagueId', '==', leagueId),
-        orderBy('position', 'asc')
-      );
-
+      // Note: This would need to be implemented in the backend API
+      const params = new URLSearchParams();
       if (divisionId) {
-        q = query(q, where('divisionId', '==', divisionId));
+        params.append('divisionId', divisionId);
       }
 
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          lastUpdated: data.lastUpdated?.toDate() || new Date(),
-        } as LeagueStanding;
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/leagues/${leagueId}/standings?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch league standings');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting league standings:', error);
       throw new Error('Failed to get league standings');
@@ -92,13 +71,22 @@ export class LeagueService {
   // Create league
   async createLeague(leagueData: Omit<League, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
-      const docRef = await addDoc(this.leaguesCollection, {
-        ...leagueData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/leagues`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(leagueData),
       });
 
-      return docRef.id;
+      if (!response.ok) {
+        throw new Error('Failed to create league');
+      }
+
+      const result = await response.json();
+      return result.data.id;
     } catch (error) {
       console.error('Error creating league:', error);
       throw new Error('Failed to create league');
@@ -108,11 +96,19 @@ export class LeagueService {
   // Update league
   async updateLeague(leagueId: string, updates: Partial<League>): Promise<void> {
     try {
-      const docRef = doc(this.leaguesCollection, leagueId);
-      await updateDoc(docRef, {
-        ...updates,
-        updatedAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/leagues/${leagueId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(updates),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to update league');
+      }
     } catch (error) {
       console.error('Error updating league:', error);
       throw new Error('Failed to update league');
@@ -122,60 +118,51 @@ export class LeagueService {
   // Delete league
   async deleteLeague(leagueId: string): Promise<void> {
     try {
-      const docRef = doc(this.leaguesCollection, leagueId);
-      await deleteDoc(docRef);
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/leagues/${leagueId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete league');
+      }
     } catch (error) {
       console.error('Error deleting league:', error);
       throw new Error('Failed to delete league');
     }
   }
 
-  // Subscribe to league updates
+  // Real-time subscriptions (simplified for API-based approach)
   subscribeToLeague(leagueId: string, callback: (league: League) => void): () => void {
-    const docRef = doc(this.leaguesCollection, leagueId);
-    
-    return onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const league: League = {
-          id: doc.id,
-          ...data,
-          startDate: data.startDate?.toDate() || new Date(),
-          endDate: data.endDate?.toDate() || new Date(),
-          registrationDeadline: data.registrationDeadline?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as League;
-        
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const league = await this.getLeague(leagueId);
         callback(league);
+      } catch (error) {
+        console.error('Error in league subscription:', error);
       }
-    });
+    }, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(interval);
   }
 
-  // Subscribe to league standings updates
   subscribeToLeagueStandings(leagueId: string, divisionId: string | undefined, callback: (standings: LeagueStanding[]) => void): () => void {
-    let q = query(
-      this.standingsCollection,
-      where('leagueId', '==', leagueId),
-      orderBy('position', 'asc')
-    );
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const standings = await this.getLeagueStandings(leagueId, divisionId);
+        callback(standings);
+      } catch (error) {
+        console.error('Error in league standings subscription:', error);
+        callback([]);
+      }
+    }, 10000); // Poll every 10 seconds
 
-    if (divisionId) {
-      q = query(q, where('divisionId', '==', divisionId));
-    }
-    
-    return onSnapshot(q, (querySnapshot) => {
-      const standings = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          lastUpdated: data.lastUpdated?.toDate() || new Date(),
-        } as LeagueStanding;
-      });
-      
-      callback(standings);
-    });
+    return () => clearInterval(interval);
   }
 }
 

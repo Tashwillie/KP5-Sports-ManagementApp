@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useLocalAuth } from '@/hooks/useLocalApi';
 import { UserRole } from '../../../../shared/src/types';
 import { 
@@ -22,6 +24,14 @@ import {
 } from 'lucide-react';
 
 export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfileContent />
+    </ProtectedRoute>
+  );
+}
+
+function ProfileContent() {
   const { user, loading } = useLocalAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({

@@ -1,274 +1,273 @@
 import { useState, useEffect, useCallback } from 'react';
-import { LiveMatch, LiveMatchEvent, LiveMatchStatus } from '../types';
-import LiveMatchService from '../services/LiveMatchService';
+import { useRealTimeContext } from '../providers/RealTimeProvider';
+import LiveMatchService, { AddMatchEventData, GetMatchesFilters } from '../services/LiveMatchService';
+import { LiveMatchEvent, LiveMatchEventType, LiveMatchStatus, Match } from '../types';
 
-interface UseLiveMatchOptions {
+export interface UseLiveMatchOptions {
   matchId?: string;
   autoSubscribe?: boolean;
+  enableRealTime?: boolean;
 }
 
-interface UseLiveMatchReturn {
-  // Match data
-  match: LiveMatch | null;
+export interface UseLiveMatchReturn {
+  match: Match | null;
   events: LiveMatchEvent[];
+  participants: any[];
   loading: boolean;
   error: string | null;
-  
-  // Actions
-  createMatch: (matchData: Omit<LiveMatch, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
-  updateMatch: (updates: Partial<LiveMatch>) => Promise<boolean>;
-  startMatch: () => Promise<boolean>;
-  endMatch: () => Promise<boolean>;
-  addEvent: (eventData: {
-    type: LiveMatchEvent['type'];
-    minute: number;
-    playerId?: string;
-    teamId: string;
-    data?: any;
-  }) => Promise<boolean>;
-  
-  // Real-time subscriptions
-  subscribeToMatch: (callback: (match: LiveMatch) => void) => () => void;
-  subscribeToEvents: (callback: (events: LiveMatchEvent[]) => void) => () => void;
+  startMatch: () => Promise<void>;
+  endMatch: (homeScore?: number, awayScore?: number) => Promise<void>;
+  pauseMatch: () => Promise<void>;
+  resumeMatch: () => Promise<void>;
+  addEvent: (eventData: Omit<AddMatchEventData, 'matchId'>) => Promise<void>;
+  refresh: () => void;
 }
 
-export function useLiveMatch(options: UseLiveMatchOptions = {}): UseLiveMatchReturn {
-  const { matchId, autoSubscribe = true } = options;
-  
-  const [match, setMatch] = useState<LiveMatch | null>(null);
-  const [events, setEvents] = useState<LiveMatchEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load initial match data
-  useEffect(() => {
-    if (!matchId) return;
-
-    const loadMatch = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const response = await LiveMatchService.getMatch(matchId);
-        if (response.success && response.data) {
-          setMatch(response.data);
-        } else {
-          setError(response.error || 'Failed to load match');
-        }
-      } catch (err) {
-        setError('Failed to load match');
-        console.error('Error loading match:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMatch();
-  }, [matchId]);
-
-  // Load initial events data
-  useEffect(() => {
-    if (!matchId) return;
-
-    const loadEvents = async () => {
-      try {
-        const response = await LiveMatchService.getMatchEvents(matchId);
-        if (response.success && response.data) {
-          setEvents(response.data);
-        }
-      } catch (err) {
-        console.error('Error loading events:', err);
-      }
-    };
-
-    loadEvents();
-  }, [matchId]);
-
-  // Auto-subscribe to real-time updates
-  useEffect(() => {
-    if (!matchId || !autoSubscribe) return;
-
-    const unsubscribeMatch = LiveMatchService.subscribeToMatch(matchId, (updatedMatch) => {
-      setMatch(updatedMatch);
-    });
-
-    const unsubscribeEvents = LiveMatchService.subscribeToMatchEvents(matchId, (updatedEvents) => {
-      setEvents(updatedEvents);
-    });
-
-    return () => {
-      unsubscribeMatch();
-      unsubscribeEvents();
-    };
-  }, [matchId, autoSubscribe]);
-
-  // Actions
-  const createMatch = useCallback(async (matchData: Omit<LiveMatch, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await LiveMatchService.createMatch(matchData);
-      if (response.success && response.data) {
-        setMatch(response.data);
-        return true;
-      } else {
-        setError(response.error || 'Failed to create match');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to create match');
-      console.error('Error creating match:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const updateMatch = useCallback(async (updates: Partial<LiveMatch>): Promise<boolean> => {
-    if (!matchId) return false;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await LiveMatchService.updateMatch(matchId, updates);
-      if (response.success) {
-        return true;
-      } else {
-        setError(response.error || 'Failed to update match');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to update match');
-      console.error('Error updating match:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId]);
-
-  const startMatch = useCallback(async (): Promise<boolean> => {
-    if (!matchId) return false;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await LiveMatchService.startMatch(matchId);
-      if (response.success) {
-        return true;
-      } else {
-        setError(response.error || 'Failed to start match');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to start match');
-      console.error('Error starting match:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId]);
-
-  const endMatch = useCallback(async (): Promise<boolean> => {
-    if (!matchId) return false;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await LiveMatchService.endMatch(matchId);
-      if (response.success) {
-        return true;
-      } else {
-        setError(response.error || 'Failed to end match');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to end match');
-      console.error('Error ending match:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId]);
-
-  const addEvent = useCallback(async (eventData: {
-    type: LiveMatchEvent['type'];
-    minute: number;
-    playerId?: string;
-    teamId: string;
-    data?: any;
-  }): Promise<boolean> => {
-    if (!matchId) return false;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await LiveMatchService.addMatchEvent({
-        matchId,
-        type: eventData.type,
-        timestamp: new Date(),
-        minute: eventData.minute,
-        playerId: eventData.playerId,
-        teamId: eventData.teamId,
-        data: eventData.data || {},
-        createdBy: 'current-user', // This should come from auth context
-      });
-      
-      if (response.success) {
-        return true;
-      } else {
-        setError(response.error || 'Failed to add event');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to add event');
-      console.error('Error adding event:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId]);
-
-  // Manual subscription methods
-  const subscribeToMatch = useCallback((callback: (match: LiveMatch) => void) => {
-    if (!matchId) return () => {};
-    return LiveMatchService.subscribeToMatch(matchId, callback);
-  }, [matchId]);
-
-  const subscribeToEvents = useCallback((callback: (events: LiveMatchEvent[]) => void) => {
-    if (!matchId) return () => {};
-    return LiveMatchService.subscribeToMatchEvents(matchId, callback);
-  }, [matchId]);
-
-  return {
-    match,
-    events,
-    loading,
-    error,
-    createMatch,
-    updateMatch,
-    startMatch,
-    endMatch,
-    addEvent,
-    subscribeToMatch,
-    subscribeToEvents,
-  };
-}
-
-// Hook for managing multiple matches
-export function useLiveMatches(filters?: {
+export interface UseLiveMatchesOptions {
   status?: LiveMatchStatus;
   clubId?: string;
   tournamentId?: string;
   limit?: number;
-}) {
-  const [matches, setMatches] = useState<LiveMatch[]>([]);
+  enableRealTime?: boolean;
+}
+
+export interface UseLiveMatchesReturn {
+  matches: Match[];
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+}
+
+export const useLiveMatch = (options: UseLiveMatchOptions = {}): UseLiveMatchReturn => {
+  const { matchId, autoSubscribe = false, enableRealTime = false } = options;
+  const realTime = useRealTimeContext();
+  
+  const [match, setMatch] = useState<Match | null>(null);
+  const [events, setEvents] = useState<LiveMatchEvent[]>([]);
+  const [participants, setParticipants] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize LiveMatchService with real-time service
+  useEffect(() => {
+    if (enableRealTime && realTime.service) {
+      LiveMatchService.setRealTimeService(realTime.service);
+    }
+  }, [enableRealTime, realTime.service]);
+
+  // Load match data
+  const loadMatch = useCallback(async () => {
+    if (!matchId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const [matchResponse, eventsResponse, participantsResponse] = await Promise.all([
+        LiveMatchService.getMatch(matchId),
+        LiveMatchService.getMatchEvents(matchId),
+        LiveMatchService.getMatchParticipants(matchId)
+      ]);
+
+      if (matchResponse.success && matchResponse.match) {
+        setMatch(matchResponse.match);
+      } else {
+        setError(matchResponse.error || 'Failed to load match');
+      }
+
+      if (eventsResponse.success && eventsResponse.events) {
+        setEvents(eventsResponse.events);
+      }
+
+      if (participantsResponse.success && participantsResponse.participants) {
+        setParticipants(participantsResponse.participants);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  }, [matchId]);
+
+  // Load match on mount and when matchId changes
+  useEffect(() => {
+    if (matchId) {
+      loadMatch();
+    }
+  }, [matchId, loadMatch]);
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!enableRealTime || !realTime.service || !matchId) return;
+
+    const unsubscribe = realTime.service.on('match-updated', (event) => {
+      if (event.data.matchId === matchId) {
+        setMatch(event.data.match);
+      }
+    });
+
+    const unsubscribeEvents = realTime.service.on('match-event-added', (event) => {
+      if (event.data.matchId === matchId) {
+        setEvents(prev => [...prev, event.data.event]);
+      }
+    });
+
+    const unsubscribeStatus = realTime.service.on('match-started', (event) => {
+      if (event.data.matchId === matchId) {
+        loadMatch(); // Refresh match data to get updated status
+      }
+    });
+
+    const unsubscribePause = realTime.service.on('match-paused', (event) => {
+      if (event.data.matchId === matchId) {
+        loadMatch(); // Refresh match data to get updated status
+      }
+    });
+
+    const unsubscribeResume = realTime.service.on('match-resumed', (event) => {
+      if (event.data.matchId === matchId) {
+        loadMatch(); // Refresh match data to get updated status
+      }
+    });
+
+    const unsubscribeEnd = realTime.service.on('match-ended', (event) => {
+      if (event.data.matchId === matchId) {
+        loadMatch(); // Refresh match data to get updated status
+      }
+    });
+
+    // Join match room
+    realTime.service.joinRoom(`match:${matchId}`);
+
+    return () => {
+      unsubscribe();
+      unsubscribeEvents();
+      unsubscribeStatus();
+      unsubscribePause();
+      unsubscribeResume();
+      unsubscribeEnd();
+      realTime.service?.leaveRoom(`match:${matchId}`);
+    };
+  }, [enableRealTime, realTime.service, matchId, loadMatch]);
+
+  // Match control functions
+  const startMatch = useCallback(async () => {
+    if (!matchId) return;
+    
+    try {
+      const response = await LiveMatchService.startMatch(matchId);
+      if (response.success) {
+        await loadMatch(); // Refresh match data
+      } else {
+        setError(response.error || 'Failed to start match');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [matchId, loadMatch]);
+
+  const endMatch = useCallback(async (homeScore?: number, awayScore?: number) => {
+    if (!matchId) return;
+    
+    try {
+      const response = await LiveMatchService.endMatch(matchId, homeScore, awayScore);
+      if (response.success) {
+        await loadMatch(); // Refresh match data
+      } else {
+        setError(response.error || 'Failed to end match');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [matchId, loadMatch]);
+
+  const pauseMatch = useCallback(async () => {
+    if (!matchId) return;
+    
+    try {
+      const response = await LiveMatchService.pauseMatch(matchId);
+      if (response.success) {
+        await loadMatch(); // Refresh match data
+      } else {
+        setError(response.error || 'Failed to pause match');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [matchId, loadMatch]);
+
+  const resumeMatch = useCallback(async () => {
+    if (!matchId) return;
+    
+    try {
+      const response = await LiveMatchService.resumeMatch(matchId);
+      if (response.success) {
+        await loadMatch(); // Refresh match data
+      } else {
+        setError(response.error || 'Failed to resume match');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [matchId, loadMatch]);
+
+  // Add match event
+  const addEvent = useCallback(async (eventData: Omit<AddMatchEventData, 'matchId'>) => {
+    if (!matchId) return;
+    
+    try {
+      const fullEventData: AddMatchEventData = {
+        ...eventData,
+        matchId,
+        timestamp: new Date()
+      };
+      
+      const response = await LiveMatchService.addMatchEvent(fullEventData);
+      if (response.success && response.event) {
+        setEvents(prev => [...prev, response.event!]);
+      } else {
+        setError(response.error || 'Failed to add event');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [matchId]);
+
+  const refresh = useCallback(() => {
+    if (matchId) {
+      loadMatch();
+    }
+  }, [matchId, loadMatch]);
+
+  return {
+    match,
+    events,
+    participants,
+    loading,
+    error,
+    startMatch,
+    endMatch,
+    pauseMatch,
+    resumeMatch,
+    addEvent,
+    refresh
+  };
+};
+
+export const useLiveMatches = (options: UseLiveMatchesOptions = {}): UseLiveMatchesReturn => {
+  const { status, clubId, tournamentId, limit, enableRealTime = false } = options;
+  const realTime = useRealTimeContext();
+  
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize LiveMatchService with real-time service
+  useEffect(() => {
+    if (enableRealTime && realTime.service) {
+      LiveMatchService.setRealTimeService(realTime.service);
+    }
+  }, [enableRealTime, realTime.service]);
 
   // Load matches
   const loadMatches = useCallback(async () => {
@@ -276,26 +275,48 @@ export function useLiveMatches(filters?: {
     setError(null);
     
     try {
+      const filters: GetMatchesFilters = {};
+      if (status) filters.status = status;
+      if (clubId) filters.clubId = clubId;
+      if (tournamentId) filters.tournamentId = tournamentId;
+      if (limit) filters.limit = limit;
+
       const response = await LiveMatchService.getMatches(filters);
-      if (response.success && response.data) {
-        setMatches(response.data);
+      if (response.success && response.matches) {
+        setMatches(response.matches);
       } else {
         setError(response.error || 'Failed to load matches');
       }
     } catch (err) {
-      setError('Failed to load matches');
-      console.error('Error loading matches:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [status, clubId, tournamentId, limit]);
 
-  // Subscribe to live matches
-  const subscribeToLiveMatches = useCallback((callback: (matches: LiveMatch[]) => void) => {
-    return LiveMatchService.subscribeToLiveMatches(callback);
-  }, []);
-
+  // Load matches on mount and when filters change
   useEffect(() => {
+    loadMatches();
+  }, [loadMatches]);
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!enableRealTime || !realTime.service) return;
+
+    const unsubscribe = realTime.service.on('live-matches-updated', (event) => {
+      setMatches(event.data.matches);
+    });
+
+    // Join live matches room
+    realTime.service.joinRoom('live-matches');
+
+    return () => {
+      unsubscribe();
+      realTime.service?.leaveRoom('live-matches');
+    };
+  }, [enableRealTime, realTime.service]);
+
+  const refresh = useCallback(() => {
     loadMatches();
   }, [loadMatches]);
 
@@ -303,7 +324,6 @@ export function useLiveMatches(filters?: {
     matches,
     loading,
     error,
-    loadMatches,
-    subscribeToLiveMatches,
+    refresh
   };
-} 
+}; 

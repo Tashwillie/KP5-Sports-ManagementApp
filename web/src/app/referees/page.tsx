@@ -280,7 +280,17 @@ export default function RefereesPage() {
   };
 
   // Filter referees based on search and filters
-  const filteredReferees = mockReferees.filter(referee => {
+  const filteredReferees = (apiRefs || []).map((u: any) => ({
+    id: u.id,
+    firstName: u.firstName || '',
+    lastName: u.lastName || '',
+    email: u.email || '',
+    phone: u.phone || '',
+    specialization: u.profile?.specialization || 'Football',
+    licenseNumber: u.profile?.licenseNumber || '',
+    status: u.isActive ? 'active' : 'inactive',
+    level: 'senior',
+  } as any)).filter(referee => {
     const fullName = `${referee.firstName} ${referee.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
                          referee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -295,10 +305,10 @@ export default function RefereesPage() {
   });
 
   // Calculate stats
-  const totalReferees = mockReferees.length;
-  const activeReferees = mockReferees.filter(referee => referee.status === 'active').length;
-  const totalMatches = mockReferees.reduce((sum, referee) => sum + referee.matchesOfficiated, 0);
-  const avgAccuracy = mockReferees.reduce((sum, referee) => sum + referee.accuracyRate, 0) / mockReferees.length;
+  const totalReferees = apiRefs?.length || 0;
+  const activeReferees = (apiRefs || []).filter((u: any) => u.isActive).length;
+  const totalMatches = 0;
+  const avgAccuracy = 0;
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh' }}>

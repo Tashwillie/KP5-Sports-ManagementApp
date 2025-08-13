@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/contexts/FirebaseContext';
 import { 
   Search, 
   Filter, 
@@ -48,6 +48,7 @@ import {
   Target
 } from 'lucide-react';
 import Link from 'next/link';
+import { useMatchSupportData } from '@/hooks/useMatchSupportData';
 
 interface MatchFormData {
   homeTeamId: string;
@@ -92,7 +93,7 @@ const VENUES = [
 
 export default function CreateMatchPage() {
   const router = useRouter();
-  const { userData, loading: authLoading } = useFirebase();
+  const { userData, loading  } = useAuth();
   const [activeTab, setActiveTab] = useState('matches');
 
   // State
@@ -115,50 +116,15 @@ export default function CreateMatchPage() {
   const [submitError, setSubmitError] = useState('');
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // Load data
+  // Load data from API
+  const { teams: apiTeams, tournaments: apiTournaments, referees: apiReferees, loading: loadingSupport, error: supportError } = useMatchSupportData();
   useEffect(() => {
-    if (!userData || authLoading) return;
-
-    const loadData = async () => {
-      try {
-        setIsLoadingData(true);
-
-        // Mock data - in real implementation, this would come from Firebase
-        const mockTeams: Team[] = [
-          { id: 'team1', name: 'Thunder U12', clubName: 'Thunder Club' },
-          { id: 'team2', name: 'Lightning U12', clubName: 'Lightning Club' },
-          { id: 'team3', name: 'Storm U14', clubName: 'Storm Club' },
-          { id: 'team4', name: 'Thunder U14', clubName: 'Thunder Club' },
-          { id: 'team5', name: 'Lightning U16', clubName: 'Lightning Club' },
-          { id: 'team6', name: 'Storm U16', clubName: 'Storm Club' },
-        ];
-
-        const mockTournaments: Tournament[] = [
-          { id: 'tournament1', name: 'Spring League' },
-          { id: 'tournament2', name: 'Championship Cup' },
-          { id: 'tournament3', name: 'Friendly Series' },
-        ];
-
-        const mockReferees: Referee[] = [
-          { id: 'referee1', name: 'John Smith' },
-          { id: 'referee2', name: 'Mike Johnson' },
-          { id: 'referee3', name: 'Sarah Wilson' },
-          { id: 'referee4', name: 'David Brown' },
-        ];
-
-        setTeams(mockTeams);
-        setTournaments(mockTournaments);
-        setReferees(mockReferees);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setSubmitError('Failed to load teams, tournaments, or referees');
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
-
-    loadData();
-  }, [userData, authLoading]);
+    setIsLoadingData(loadingSupport);
+    if (supportError) setSubmitError(supportError);
+    setTeams(apiTeams as any);
+    setTournaments(apiTournaments as any);
+    setReferees(apiReferees.map(r => ({ id: r.id, name: r.displayName })) as any);
+  }, [apiTeams, apiTournaments, apiReferees, loadingSupport, supportError]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -234,22 +200,21 @@ export default function CreateMatchPage() {
     setIsSubmitting(true);
 
     try {
-      const matchData = {
-        ...formData,
-        status: 'scheduled',
-        homeScore: 0,
-        awayScore: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const payload = {
+        title: `${teams.find(t=>t.id===formData.homeTeamId)?.name || 'Home'} vs ${teams.find(t=>t.id===formData.awayTeamId)?.name || 'Away'}`,
+        homeTeamId: formData.homeTeamId,
+        awayTeamId: formData.awayTeamId,
+        startTime: new Date(`${formData.date}T${formData.time}:00`).toISOString(),
+        endTime: new Date(new Date(`${formData.date}T${formData.time}:00`).getTime() + 90*60000).toISOString(),
+        location: formData.venue,
+        tournamentId: formData.tournamentId || undefined,
+        refereeId: formData.refereeId || undefined,
+        notes: formData.notes,
+        isActive: formData.isActive,
+      } as any;
 
-      // Mock API call - in real implementation, this would call Firebase
-      console.log('Creating match:', matchData);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to matches page
+      const api = (await import('@/lib/apiClient')).default;
+      await api.createMatch(payload);
       router.push('/matches');
     } catch (error) {
       console.error('Error creating match:', error);
