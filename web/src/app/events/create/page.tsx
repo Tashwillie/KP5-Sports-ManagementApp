@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/contexts/FirebaseContext';
 import { 
   Search, 
   Filter, 
@@ -80,7 +80,7 @@ const EVENT_TYPES = [
 
 export default function CreateEventPage() {
   const router = useRouter();
-  const { userData, loading: authLoading } = useFirebase();
+  const { userData, loading  } = useAuth();
   const [activeTab, setActiveTab] = useState('events');
 
   // State

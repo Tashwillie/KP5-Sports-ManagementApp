@@ -1,28 +1,7 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  serverTimestamp,
-  QueryConstraint,
-  arrayUnion,
-  arrayRemove
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { Event, EventType, EventStatus, EventRecurrence, EventParticipant } from '../../../../shared/src/types';
+import { apiClient } from '../apiClient';
 
 export class EventService {
-  private static eventsCollection = collection(db, 'events');
-  private static eventParticipantsCollection = collection(db, 'event_participants');
-
   // Event Management
   static async createEvent(eventData: Partial<Event>): Promise<string> {
     try {
@@ -52,13 +31,8 @@ export class EventService {
         isActive: true,
       };
 
-      const docRef = await addDoc(this.eventsCollection, {
-        ...event,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      return docRef.id;
+      const response = await apiClient.createEvent(event);
+      return response.data.id;
     } catch (error) {
       console.error('Error creating event:', error);
       throw new Error('Failed to create event');
@@ -67,34 +41,22 @@ export class EventService {
 
   static async getEvent(eventId: string): Promise<Event | null> {
     try {
-      const docRef = doc(this.eventsCollection, eventId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
-      }
-
-      return null;
+      const response = await apiClient.getEvent(eventId);
+      return response.data;
     } catch (error) {
       console.error('Error fetching event:', error);
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
       throw new Error('Failed to fetch event');
     }
   }
 
   static async updateEvent(eventId: string, updates: Partial<Event>): Promise<void> {
     try {
-      const docRef = doc(this.eventsCollection, eventId);
-      await updateDoc(docRef, {
+      await apiClient.updateEvent(eventId, {
         ...updates,
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date(),
       });
     } catch (error) {
       console.error('Error updating event:', error);
@@ -104,8 +66,7 @@ export class EventService {
 
   static async deleteEvent(eventId: string): Promise<void> {
     try {
-      const docRef = doc(this.eventsCollection, eventId);
-      await deleteDoc(docRef);
+      await apiClient.deleteEvent(eventId);
     } catch (error) {
       console.error('Error deleting event:', error);
       throw new Error('Failed to delete event');
@@ -121,49 +82,37 @@ export class EventService {
     limit?: number;
   }): Promise<Event[]> {
     try {
-      const constraints: QueryConstraint[] = [
-        where('teamIds', 'array-contains', teamId),
-        where('isActive', '==', true),
-        orderBy('startTime', 'asc')
-      ];
+      const response = await apiClient.getEvents();
+      let events = response.data || [];
+      
+      // Filter by team
+      events = events.filter(event => event.teamIds?.includes(teamId));
 
+      // Apply additional filters
       if (filters?.type) {
-        constraints.push(where('type', '==', filters.type));
+        events = events.filter(event => event.type === filters.type);
       }
 
       if (filters?.status) {
-        constraints.push(where('status', '==', filters.status));
+        events = events.filter(event => event.status === filters.status);
       }
 
       if (filters?.startDate) {
-        constraints.push(where('startTime', '>=', filters.startDate));
+        events = events.filter(event => new Date(event.startTime) >= filters.startDate!);
       }
 
       if (filters?.endDate) {
-        constraints.push(where('endTime', '<=', filters.endDate));
+        events = events.filter(event => new Date(event.endTime) <= filters.endDate!);
       }
 
       if (filters?.limit) {
-        constraints.push(limit(filters.limit));
+        events = events.slice(0, filters.limit);
       }
 
-      const q = query(this.eventsCollection, ...constraints);
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
-      });
+      return events;
     } catch (error) {
       console.error('Error fetching events by team:', error);
-      throw new Error('Failed to fetch events');
+      throw new Error('Failed to fetch events by team');
     }
   }
 
@@ -175,49 +124,37 @@ export class EventService {
     limit?: number;
   }): Promise<Event[]> {
     try {
-      const constraints: QueryConstraint[] = [
-        where('clubId', '==', clubId),
-        where('isActive', '==', true),
-        orderBy('startTime', 'asc')
-      ];
+      const response = await apiClient.getEvents();
+      let events = response.data || [];
+      
+      // Filter by club
+      events = events.filter(event => event.clubId === clubId);
 
+      // Apply additional filters
       if (filters?.type) {
-        constraints.push(where('type', '==', filters.type));
+        events = events.filter(event => event.type === filters.type);
       }
 
       if (filters?.status) {
-        constraints.push(where('status', '==', filters.status));
+        events = events.filter(event => event.status === filters.status);
       }
 
       if (filters?.startDate) {
-        constraints.push(where('startTime', '>=', filters.startDate));
+        events = events.filter(event => new Date(event.startTime) >= filters.startDate!);
       }
 
       if (filters?.endDate) {
-        constraints.push(where('endTime', '<=', filters.endDate));
+        events = events.filter(event => new Date(event.endTime) <= filters.endDate!);
       }
 
       if (filters?.limit) {
-        constraints.push(limit(filters.limit));
+        events = events.slice(0, filters.limit);
       }
 
-      const q = query(this.eventsCollection, ...constraints);
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
-      });
+      return events;
     } catch (error) {
       console.error('Error fetching events by club:', error);
-      throw new Error('Failed to fetch events');
+      throw new Error('Failed to fetch events by club');
     }
   }
 
@@ -238,26 +175,34 @@ export class EventService {
     }
   }
 
-  // Event Participants
+  // Event Participant Management
   static async addEventParticipant(eventId: string, participantData: Omit<EventParticipant, 'id'>): Promise<string> {
     try {
       const participant: Omit<EventParticipant, 'id'> = {
         eventId,
         userId: participantData.userId,
-        teamId: participantData.teamId,
-        status: participantData.status || 'invited',
-        response: participantData.response || 'pending',
+        status: participantData.status || 'confirmed',
+        response: participantData.response || 'yes',
         notes: participantData.notes || '',
         joinedAt: new Date(),
-        isActive: true,
       };
 
-      const docRef = await addDoc(this.eventParticipantsCollection, {
-        ...participant,
-        joinedAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/events/${eventId}/participants`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(participant),
       });
 
-      return docRef.id;
+      if (!response.ok) {
+        throw new Error('Failed to add event participant');
+      }
+
+      const result = await response.json();
+      return result.data.id;
     } catch (error) {
       console.error('Error adding event participant:', error);
       throw new Error('Failed to add event participant');
@@ -266,19 +211,18 @@ export class EventService {
 
   static async updateEventParticipant(eventId: string, userId: string, updates: Partial<EventParticipant>): Promise<void> {
     try {
-      const participantQuery = query(
-        this.eventParticipantsCollection,
-        where('eventId', '==', eventId),
-        where('userId', '==', userId)
-      );
-      const participantSnapshot = await getDocs(participantQuery);
-      
-      if (!participantSnapshot.empty) {
-        const participantDoc = participantSnapshot.docs[0];
-        await updateDoc(doc(this.eventParticipantsCollection, participantDoc.id), {
-          ...updates,
-          updatedAt: serverTimestamp(),
-        });
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/events/${eventId}/participants/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update event participant');
       }
     } catch (error) {
       console.error('Error updating event participant:', error);
@@ -288,23 +232,20 @@ export class EventService {
 
   static async getEventParticipants(eventId: string): Promise<EventParticipant[]> {
     try {
-      const q = query(
-        this.eventParticipantsCollection,
-        where('eventId', '==', eventId),
-        where('isActive', '==', true),
-        orderBy('joinedAt', 'asc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          joinedAt: data.joinedAt?.toDate() || new Date(),
-        } as EventParticipant;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/events/${eventId}/participants`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch event participants');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error fetching event participants:', error);
       throw new Error('Failed to fetch event participants');
@@ -319,31 +260,33 @@ export class EventService {
   ): Promise<string[]> {
     try {
       const eventIds: string[] = [];
-      let currentDate = new Date(baseEvent.startTime || new Date());
+      const startDate = new Date(baseEvent.startTime || new Date());
 
       for (let i = 0; i < occurrences; i++) {
+        const eventStartTime = new Date(startDate);
+        const eventEndTime = new Date(baseEvent.endTime || startDate);
+
+        // Calculate next occurrence based on recurrence pattern
+        if (recurrence.type === 'daily') {
+          eventStartTime.setDate(eventStartTime.getDate() + (i * recurrence.interval));
+          eventEndTime.setDate(eventEndTime.getDate() + (i * recurrence.interval));
+        } else if (recurrence.type === 'weekly') {
+          eventStartTime.setDate(eventStartTime.getDate() + (i * recurrence.interval * 7));
+          eventEndTime.setDate(eventEndTime.getDate() + (i * recurrence.interval * 7));
+        } else if (recurrence.type === 'monthly') {
+          eventStartTime.setMonth(eventStartTime.getMonth() + (i * recurrence.interval));
+          eventEndTime.setMonth(eventEndTime.getMonth() + (i * recurrence.interval));
+        }
+
         const eventData = {
           ...baseEvent,
-          startTime: new Date(currentDate),
-          endTime: new Date(currentDate.getTime() + (baseEvent.endTime!.getTime() - baseEvent.startTime!.getTime())),
-          recurrence: i === 0 ? recurrence : null, // Only first event has recurrence info
+          startTime: eventStartTime,
+          endTime: eventEndTime,
+          recurrence: i === 0 ? recurrence : null, // Only set recurrence on first event
         };
 
         const eventId = await this.createEvent(eventData);
         eventIds.push(eventId);
-
-        // Calculate next occurrence
-        switch (recurrence.frequency) {
-          case 'daily':
-            currentDate.setDate(currentDate.getDate() + recurrence.interval);
-            break;
-          case 'weekly':
-            currentDate.setDate(currentDate.getDate() + (7 * recurrence.interval));
-            break;
-          case 'monthly':
-            currentDate.setMonth(currentDate.getMonth() + recurrence.interval);
-            break;
-        }
       }
 
       return eventIds;
@@ -361,119 +304,102 @@ export class EventService {
         endDate,
       });
     } catch (error) {
-      console.error('Error fetching calendar events:', error);
-      throw new Error('Failed to fetch calendar events');
+      console.error('Error fetching events for calendar:', error);
+      throw new Error('Failed to fetch events for calendar');
     }
   }
 
-  // Real-time subscriptions
+  // Real-time subscriptions (simplified for API-based approach)
   static subscribeToTeamEvents(teamId: string, callback: (events: Event[]) => void): () => void {
-    const q = query(
-      this.eventsCollection,
-      where('teamIds', 'array-contains', teamId),
-      where('isActive', '==', true),
-      orderBy('startTime', 'asc')
-    );
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const events = await this.getEventsByTeam(teamId);
+        callback(events);
+      } catch (error) {
+        console.error('Error in team events subscription:', error);
+        callback([]);
+      }
+    }, 5000); // Poll every 5 seconds
 
-    return onSnapshot(q, (querySnapshot) => {
-      const events = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
-      });
-      callback(events);
-    });
+    return () => clearInterval(interval);
   }
 
   static subscribeToEvent(eventId: string, callback: (event: Event | null) => void): () => void {
-    const docRef = doc(this.eventsCollection, eventId);
-    
-    return onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const event: Event = {
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const event = await this.getEvent(eventId);
         callback(event);
-      } else {
+      } catch (error) {
+        console.error('Error in event subscription:', error);
         callback(null);
       }
-    });
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
   }
 
   // Utility methods
   static getEventTypeDisplayName(type: EventType): string {
     const typeNames: Record<EventType, string> = {
-      'practice': 'Practice',
-      'game': 'Game',
-      'tournament': 'Tournament',
-      'meeting': 'Meeting',
-      'tryout': 'Tryout',
-      'training': 'Training',
-      'scrimmage': 'Scrimmage',
-      'team_building': 'Team Building',
-      'other': 'Other',
+      practice: 'Practice',
+      game: 'Game',
+      tournament: 'Tournament',
+      meeting: 'Meeting',
+      tryout: 'Tryout',
+      camp: 'Camp',
+      clinic: 'Clinic',
+      other: 'Other',
     };
-    return typeNames[type] || type;
+    return typeNames[type] || 'Unknown';
   }
 
   static getEventStatusDisplayName(status: EventStatus): string {
     const statusNames: Record<EventStatus, string> = {
-      'scheduled': 'Scheduled',
-      'in_progress': 'In Progress',
-      'completed': 'Completed',
-      'cancelled': 'Cancelled',
-      'postponed': 'Postponed',
+      scheduled: 'Scheduled',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      postponed: 'Postponed',
     };
-    return statusNames[status] || status;
+    return statusNames[status] || 'Unknown';
   }
 
   static getEventTypeColor(type: EventType): string {
-    const colors: Record<EventType, string> = {
-      'practice': 'bg-blue-100 text-blue-800',
-      'game': 'bg-green-100 text-green-800',
-      'tournament': 'bg-purple-100 text-purple-800',
-      'meeting': 'bg-gray-100 text-gray-800',
-      'tryout': 'bg-yellow-100 text-yellow-800',
-      'training': 'bg-indigo-100 text-indigo-800',
-      'scrimmage': 'bg-orange-100 text-orange-800',
-      'team_building': 'bg-pink-100 text-pink-800',
-      'other': 'bg-gray-100 text-gray-800',
+    const typeColors: Record<EventType, string> = {
+      practice: '#3B82F6', // Blue
+      game: '#EF4444', // Red
+      tournament: '#8B5CF6', // Purple
+      meeting: '#10B981', // Green
+      tryout: '#F59E0B', // Yellow
+      camp: '#EC4899', // Pink
+      clinic: '#06B6D4', // Cyan
+      other: '#6B7280', // Gray
     };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+    return typeColors[type] || '#6B7280';
   }
 
   static formatEventTime(startTime: Date, endTime: Date): string {
-    const start = startTime.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    const start = new Date(startTime).toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true,
     });
-    const end = endTime.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    const end = new Date(endTime).toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true,
     });
     return `${start} - ${end}`;
   }
 
   static formatEventDate(date: Date): string {
-    return date.toLocaleDateString('en-US', { 
+    return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   }
 } 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -58,6 +58,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface SettingsSection {
   id: string;
@@ -78,6 +79,14 @@ interface SettingsItem {
 }
 
 export default function SettingsPage() {
+  return (
+    <ProtectedRoute>
+      <SettingsContent />
+    </ProtectedRoute>
+  );
+}
+
+function SettingsContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('settings');
   const [activeSection, setActiveSection] = useState('profile');

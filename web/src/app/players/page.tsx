@@ -1,39 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Search,
-  Filter,
-  Bell,
-  Home,
-  Users as UsersIcon,
-  Calendar as CalendarIcon,
-  Trophy as TrophyIcon,
-  MapPin as MapPinIcon,
-  FileText as FileTextIcon,
-  Settings as SettingsIcon,
-  BarChart3,
-  Target,
-  User,
-  Building,
-  Users,
-  MapPin,
-  Phone,
-  Mail,
-  Globe,
-  Star,
-  Award,
-  UserCheck,
-  Activity,
-  Trophy,
-  Calendar
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { usePlayers } from '@/hooks/usePlayers';
 
 interface Player {
   id: string;
@@ -74,202 +44,57 @@ interface PlayerWithStats extends Player {
 }
 
 export default function PlayersPage() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('players');
+  return (
+    <ProtectedRoute>
+      <PlayersContent />
+    </ProtectedRoute>
+  );
+}
+
+function PlayersContent() {
+  const { players, loading: loadingData, error, refetch } = usePlayers();
+  const [filteredPlayers, setFilteredPlayers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [positionFilter, setPositionFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
 
-  // Mock user data
-  const userData = {
-    id: 'user123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin'
-  };
+  // Load players (replace mock with API data)
+  useEffect(() => {
+    // When API players change, just mirror to filtered
+    setFilteredPlayers(players as any[]);
+  }, [players]);
 
-  // Mock players data
-  const mockPlayers: PlayerWithStats[] = [
-    {
-      id: '1',
-      firstName: 'Ahmed',
-      lastName: 'Hassan',
-      email: 'ahmed.hassan@email.com',
-      phone: '+234 801 234 5678',
-      dateOfBirth: '2000-05-15',
-      age: 23,
-      position: 'Forward',
-      jerseyNumber: 10,
-      teamId: 'team1',
-      teamName: 'Elite FC',
-      clubId: 'club1',
-      clubName: 'Elite Football Academy',
-      status: 'active',
-      level: 'elite',
-      height: 180,
-      weight: 75,
-      nationality: 'Nigerian',
-      address: 'Lagos, Nigeria',
-      emergencyContact: 'Fatima Hassan',
-      emergencyPhone: '+234 802 345 6789',
-      medicalInfo: 'No known allergies',
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z',
-      matchesPlayed: 25,
-      goalsScored: 18,
-      assists: 12,
-      yellowCards: 2,
-      redCards: 0,
-      minutesPlayed: 2250,
-      rating: 4.8
-    },
-    {
-      id: '2',
-      firstName: 'Sarah',
-      lastName: 'Muthoni',
-      email: 'sarah.muthoni@email.com',
-      phone: '+254 700 123 456',
-      dateOfBirth: '2002-08-22',
-      age: 21,
-      position: 'Midfielder',
-      jerseyNumber: 8,
-      teamId: 'team2',
-      teamName: 'Basketball Stars',
-      clubId: 'club2',
-      clubName: 'Basketball Stars Club',
-      status: 'active',
-      level: 'advanced',
-      height: 165,
-      weight: 58,
-      nationality: 'Kenyan',
-      address: 'Nairobi, Kenya',
-      emergencyContact: 'John Muthoni',
-      emergencyPhone: '+254 701 234 567',
-      medicalInfo: 'Asthma - uses inhaler',
-      createdAt: '2024-01-10T14:30:00Z',
-      updatedAt: '2024-01-10T14:30:00Z',
-      matchesPlayed: 20,
-      goalsScored: 8,
-      assists: 15,
-      yellowCards: 1,
-      redCards: 0,
-      minutesPlayed: 1800,
-      rating: 4.5
-    },
-    {
-      id: '3',
-      firstName: 'Kwame',
-      lastName: 'Mensah',
-      email: 'kwame.mensah@email.com',
-      phone: '+233 24 567 8901',
-      dateOfBirth: '1999-12-03',
-      age: 24,
-      position: 'Defender',
-      jerseyNumber: 4,
-      teamId: 'team3',
-      teamName: 'Cricket Champions',
-      clubId: 'club3',
-      clubName: 'Cricket Champions',
-      status: 'injured',
-      level: 'intermediate',
-      height: 175,
-      weight: 70,
-      nationality: 'Ghanaian',
-      address: 'Accra, Ghana',
-      emergencyContact: 'Ama Mensah',
-      emergencyPhone: '+233 25 678 9012',
-      medicalInfo: 'Recovering from ankle injury',
-      createdAt: '2024-01-05T09:15:00Z',
-      updatedAt: '2024-01-05T09:15:00Z',
-      matchesPlayed: 15,
-      goalsScored: 2,
-      assists: 5,
-      yellowCards: 3,
-      redCards: 1,
-      minutesPlayed: 1350,
-      rating: 3.8
-    },
-    {
-      id: '4',
-      firstName: 'Zara',
-      lastName: 'van der Merwe',
-      email: 'zara.vandermerwe@email.com',
-      phone: '+27 21 123 4567',
-      dateOfBirth: '2001-03-18',
-      age: 22,
-      position: 'Goalkeeper',
-      jerseyNumber: 1,
-      teamId: 'team4',
-      teamName: 'Tennis Excellence',
-      clubId: 'club4',
-      clubName: 'Tennis Excellence',
-      status: 'inactive',
-      level: 'beginner',
-      height: 170,
-      weight: 62,
-      nationality: 'South African',
-      address: 'Cape Town, South Africa',
-      emergencyContact: 'Pieter van der Merwe',
-      emergencyPhone: '+27 22 234 5678',
-      medicalInfo: 'No medical issues',
-      createdAt: '2024-01-01T11:45:00Z',
-      updatedAt: '2024-01-01T11:45:00Z',
-      matchesPlayed: 8,
-      goalsScored: 0,
-      assists: 0,
-      yellowCards: 0,
-      redCards: 0,
-      minutesPlayed: 720,
-      rating: 3.2
-    },
-    {
-      id: '5',
-      firstName: 'Juma',
-      lastName: 'Mkamba',
-      email: 'juma.mkamba@email.com',
-      phone: '+255 22 987 6543',
-      dateOfBirth: '2003-07-10',
-      age: 20,
-      position: 'Forward',
-      jerseyNumber: 11,
-      teamId: 'team5',
-      teamName: 'Swimming Dolphins',
-      clubId: 'club5',
-      clubName: 'Swimming Dolphins',
-      status: 'suspended',
-      level: 'advanced',
-      height: 178,
-      weight: 68,
-      nationality: 'Tanzanian',
-      address: 'Dar es Salaam, Tanzania',
-      emergencyContact: 'Mama Mkamba',
-      emergencyPhone: '+255 23 876 5432',
-      medicalInfo: 'No medical issues',
-      createdAt: '2023-12-28T16:20:00Z',
-      updatedAt: '2023-12-28T16:20:00Z',
-      matchesPlayed: 12,
-      goalsScored: 7,
-      assists: 3,
-      yellowCards: 4,
-      redCards: 1,
-      minutesPlayed: 1080,
-      rating: 3.9
+
+  // Filter players based on search and filters
+  useEffect(() => {
+    let filtered = players;
+
+    if (searchTerm) {
+      filtered = filtered.filter(player =>
+        (player as any).firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (player as any).lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (player as any).teamName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-  ];
+
+    setFilteredPlayers(filtered);
+  }, [players, searchTerm, statusFilter, positionFilter, levelFilter]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'active':
-        return 'badge bg-success';
+        return 'bg-success';
       case 'inactive':
-        return 'badge bg-secondary';
+        return 'bg-secondary';
       case 'injured':
-        return 'badge bg-warning text-dark';
+        return 'bg-warning';
       case 'suspended':
-        return 'badge bg-danger';
+        return 'bg-danger';
       default:
-        return 'badge bg-secondary';
+        return 'bg-secondary';
     }
   };
 
@@ -290,349 +115,246 @@ export default function PlayersPage() {
 
   const getLevelBadgeClass = (level: string) => {
     switch (level) {
-      case 'elite':
-        return 'badge bg-primary';
-      case 'advanced':
-        return 'badge bg-info';
-      case 'intermediate':
-        return 'badge bg-warning text-dark';
       case 'beginner':
-        return 'badge bg-secondary';
+        return 'bg-info';
+      case 'intermediate':
+        return 'bg-primary';
+      case 'advanced':
+        return 'bg-warning';
+      case 'elite':
+        return 'bg-danger';
       default:
-        return 'badge bg-secondary';
+        return 'bg-secondary';
     }
   };
 
   const handleCreatePlayer = () => {
-    router.push('/players/create');
+    window.location.href = '/players/create';
   };
 
   const handleViewPlayer = (playerId: string) => {
-    router.push(`/players/${playerId}`);
+    window.location.href = `/players/${playerId}`;
   };
 
   const handleEditPlayer = (playerId: string) => {
-    router.push(`/players/${playerId}/edit`);
+    window.location.href = `/players/${playerId}/edit`;
   };
 
   const handleManagePlayer = (playerId: string) => {
-    router.push(`/players/${playerId}/manage`);
+    window.location.href = `/players/${playerId}/manage`;
   };
 
-  // Filter players based on search and filters
-  const filteredPlayers = mockPlayers.filter(player => {
-    const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
-                         player.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         player.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         player.teamName?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || player.status === statusFilter;
-    const matchesPosition = positionFilter === 'all' || player.position === positionFilter;
-    const matchesLevel = levelFilter === 'all' || player.level === levelFilter;
-    
-    return matchesSearch && matchesStatus && matchesPosition && matchesLevel;
-  });
+  if (loadingData) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading players...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Calculate stats
-  const totalPlayers = mockPlayers.length;
-  const activePlayers = mockPlayers.filter(player => player.status === 'active').length;
-  const totalGoals = mockPlayers.reduce((sum, player) => sum + player.goalsScored, 0);
-  const totalMatches = mockPlayers.reduce((sum, player) => sum + player.matchesPlayed, 0);
+  if (error) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <p className="text-danger mb-3">{error}</p>
+          <button className="btn btn-primary" onClick={refetch}>Try Again</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      <Sidebar activeTab="players" userData={userData} />
+    <div className="d-flex">
+      <Sidebar activeTab="players" />
 
       {/* Main Content */}
       <div className="flex-grow-1 bg-light">
-        {/* Header */}
+        {/* Top Header */}
         <div className="bg-white border-bottom p-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <h4 className="mb-0 me-3">Players Management</h4>
+          <div className="d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-3">
+              <button className="btn btn-link text-dark p-0">
+                <i className="bi bi-grid-3x3"></i>
+              </button>
+              <div>
+                <h5 className="mb-0">Players Management</h5>
+                <small className="text-muted">
+                  Manage player profiles and statistics
+                </small>
+              </div>
             </div>
-            <div className="d-flex gap-2">
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Search size={16} className="me-1" />
-                Search
-              </button>
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Bell size={16} className="me-1" />
-                Notifications
-              </button>
-              <button 
-                className="btn text-white btn-sm d-flex align-items-center"
-                style={{backgroundColor: '#4169E1'}}
-                onClick={handleCreatePlayer}
-              >
-                <Plus size={16} className="me-1" />
+            
+            <div className="d-flex align-items-center gap-3">
+              <button className="btn btn-sm" style={{backgroundColor: '#4169E1', borderColor: '#4169E1', color: 'white'}} onClick={handleCreatePlayer}>
+                <i className="bi bi-plus me-1"></i>
                 Add Player
               </button>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Main Content */}
         <div className="p-4">
-          <div className="row g-4 mb-4">
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <UserCheck size={24} style={{color: '#4169E1'}} />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Players</h6>
-                      <h4 className="mb-0 fw-bold">{totalPlayers}</h4>
-                    </div>
-                  </div>
-                </div>
+          {/* Filters and Search */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-4">
+              <div className="input-group">
+                <span className="input-group-text">
+                  <i className="bi bi-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search players..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
-
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Activity size={24} className="text-success" />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Active Players</h6>
-                      <h4 className="mb-0 fw-bold">{activePlayers}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="injured">Injured</option>
+                <option value="suspended">Suspended</option>
+              </select>
             </div>
-
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Trophy size={24} className="text-warning" />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Goals</h6>
-                      <h4 className="mb-0 fw-bold">{totalGoals}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                value={positionFilter}
+                onChange={(e) => setPositionFilter(e.target.value)}
+              >
+                <option value="all">All Positions</option>
+                <option value="Forward">Forward</option>
+                <option value="Midfielder">Midfielder</option>
+                <option value="Defender">Defender</option>
+                <option value="Goalkeeper">Goalkeeper</option>
+              </select>
             </div>
-
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Calendar size={24} className="text-info" />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Matches</h6>
-                      <h4 className="mb-0 fw-bold">{totalMatches}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value)}
+              >
+                <option value="all">All Levels</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="elite">Elite</option>
+              </select>
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="card border-0 shadow-sm mb-4">
-            <div className="card-body">
-              <div className="row g-3">
-                <div className="col-md-3">
-                  <label htmlFor="search" className="form-label fw-medium">Search</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-white border-end-0">
-                      <Search size={16} className="text-muted" />
-                    </span>
-                    <input
-                      type="text"
-                      id="search"
-                      className="form-control border-start-0"
-                      placeholder="Search players..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+          {/* Players Grid */}
+          <div className="row g-4">
+            {filteredPlayers.map((player) => (
+              <div key={player.id} className="col-md-6 col-lg-4">
+                <div className="card border-0 shadow-sm h-100">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <span className={`badge ${getStatusBadgeClass('active')} me-2`}>
+                          {getStatusLabel('active')}
+                        </span>
+                        <span className={`badge ${getLevelBadgeClass('beginner')}`}>
+                          Beginner
+                        </span>
+                      </div>
+                      <div className="dropdown">
+                        <button className="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                          <i className="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul className="dropdown-menu">
+                          <li><a className="dropdown-item" href="#" onClick={() => handleViewPlayer(player.id)}>
+                            <i className="bi bi-eye me-2"></i>View
+                          </a></li>
+                          <li><a className="dropdown-item" href="#" onClick={() => handleEditPlayer(player.id)}>
+                            <i className="bi bi-pencil me-2"></i>Edit
+                          </a></li>
+                          <li><a className="dropdown-item" href="#" onClick={() => handleManagePlayer(player.id)}>
+                            <i className="bi bi-gear me-2"></i>Manage
+                          </a></li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center mb-3">
+                      <div className="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style={{width: '60px', height: '60px'}}>
+                        <i className="bi bi-person text-primary fs-4"></i>
+                      </div>
+                      <h5 className="card-title mb-1">{player.displayName}</h5>
+                      <p className="text-muted small mb-0">{player.email}</p>
+                    </div>
+                    
+                    <div className="row text-center mb-3">
+                      <div className="col-4">
+                        <div className="text-primary fw-bold">{player.matchesPlayed}</div>
+                        <small className="text-muted">Matches</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-success fw-bold">{player.goalsScored}</div>
+                        <small className="text-muted">Goals</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-warning fw-bold">{player.rating}</div>
+                        <small className="text-muted">Rating</small>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <small className="text-muted">Team</small>
+                        <div className="fw-bold">{player.teamName || 'Unassigned'}</div>
+                      </div>
+                      <div className="text-end">
+                        <small className="text-muted">Age</small>
+                        <div className="fw-bold">{player.age}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <small className="text-muted">Contact</small>
+                        <div className="fw-bold">{player.email}</div>
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleViewPlayer(player.id)}
+                      >
+                        View Profile
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="col-md-3">
-                  <label htmlFor="statusFilter" className="form-label fw-medium">Status</label>
-                  <select
-                    id="statusFilter"
-                    className="form-select"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="injured">Injured</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
-                </div>
-
-                <div className="col-md-3">
-                  <label htmlFor="positionFilter" className="form-label fw-medium">Position</label>
-                  <select
-                    id="positionFilter"
-                    className="form-select"
-                    value={positionFilter}
-                    onChange={(e) => setPositionFilter(e.target.value)}
-                  >
-                    <option value="all">All Positions</option>
-                    <option value="Forward">Forward</option>
-                    <option value="Midfielder">Midfielder</option>
-                    <option value="Defender">Defender</option>
-                    <option value="Goalkeeper">Goalkeeper</option>
-                  </select>
-                </div>
-
-                <div className="col-md-3">
-                  <label htmlFor="levelFilter" className="form-label fw-medium">Level</label>
-                  <select
-                    id="levelFilter"
-                    className="form-select"
-                    value={levelFilter}
-                    onChange={(e) => setLevelFilter(e.target.value)}
-                  >
-                    <option value="all">All Levels</option>
-                    <option value="elite">Elite</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="beginner">Beginner</option>
-                  </select>
-                </div>
               </div>
-            </div>
+            ))}
           </div>
 
-          {/* Players Table */}
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-0">
-              <div className="table-responsive">
-                <table className="table table-hover mb-0">
-                  <thead className="bg-light">
-                    <tr>
-                      <th className="border-0 px-4 py-3 fw-medium">Player</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Position</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Team</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Age</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Stats</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Rating</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Status</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Level</th>
-                      <th className="border-0 px-4 py-3 fw-medium text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPlayers.map((player) => (
-                      <tr key={player.id}>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
-                              <User size={20} className="text-muted" />
-                            </div>
-                            <div>
-                              <div className="fw-medium">{player.firstName} {player.lastName}</div>
-                              <small className="text-muted">#{player.jerseyNumber}</small>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="badge bg-light text-dark border">
-                            {player.position}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Users size={16} className="text-muted me-2" />
-                            <span>{player.teamName || 'No Team'}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span>{player.age} years</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="small">
-                            <div>Matches: {player.matchesPlayed}</div>
-                            <div>Goals: {player.goalsScored}</div>
-                            <div>Assists: {player.assists}</div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Star size={16} className="text-warning me-1" />
-                            <span>{player.rating}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={getStatusBadgeClass(player.status)}>
-                            {getStatusLabel(player.status)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={getLevelBadgeClass(player.level)}>
-                            {player.level.charAt(0).toUpperCase() + player.level.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          <div className="btn-group" role="group">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleViewPlayer(player.id)}
-                              title="View Player"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleEditPlayer(player.id)}
-                              title="Edit Player"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleManagePlayer(player.id)}
-                              title="Manage Player"
-                            >
-                              <SettingsIcon size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {filteredPlayers.length === 0 && (
-                <div className="text-center py-5">
-                  <UserCheck size={48} className="text-muted mb-3" />
-                  <h5 className="text-muted">No players found</h5>
-                  <p className="text-muted">Try adjusting your search or filters</p>
-                </div>
-              )}
+          {filteredPlayers.length === 0 && (
+            <div className="text-center py-5">
+              <i className="bi bi-people display-1 text-muted"></i>
+              <h4 className="mt-3">No players found</h4>
+              <p className="text-muted">Try adjusting your search or filters</p>
+              <button 
+                className="btn btn-primary"
+                onClick={handleCreatePlayer}
+              >
+                Add Your First Player
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -48,6 +48,8 @@ import {
   Download
 } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useRegistrations } from '@/hooks/useRegistrations';
 
 interface RegistrationForm {
   id: string;
@@ -85,6 +87,14 @@ interface RegistrationApplication {
 }
 
 export default function RegistrationPage() {
+  return (
+    <ProtectedRoute>
+      <RegistrationContent />
+    </ProtectedRoute>
+  );
+}
+
+function RegistrationContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('registration');
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,16 +102,9 @@ export default function RegistrationPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'forms' | 'applications'>('forms');
 
-  // Mock user data
-  const userData = {
-    id: 'user123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin'
-  };
+  const { applications, forms, loading, error, refetch } = useRegistrations();
 
-  // Mock registration forms data
-  const mockForms: RegistrationForm[] = [
+  const mockForms: RegistrationForm[] = useMemo(() => [
     {
       id: '1',
       title: 'Spring Football League Registration',
@@ -182,10 +185,9 @@ export default function RegistrationPage() {
       createdAt: '2024-01-01T16:20:00Z',
       updatedAt: '2024-01-01T16:20:00Z'
     }
-  ];
+  ], []);
 
-  // Mock applications data
-  const mockApplications: RegistrationApplication[] = [
+  const mockApplications: RegistrationApplication[] = useMemo(() => [
     {
       id: '1',
       formId: '1',
@@ -268,7 +270,7 @@ export default function RegistrationPage() {
       amount: 150,
       currency: 'USD'
     }
-  ];
+  ], []);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -365,7 +367,39 @@ export default function RegistrationPage() {
   };
 
   // Filter data based on search and filters
-  const filteredForms = mockForms.filter(form => {
+  const apiForms = useMemo(() => (forms || []).map(f => ({
+    id: f.key,
+    title: f.title,
+    description: '',
+    type: f.key.toLowerCase() as any,
+    status: 'active',
+    startDate: new Date().toISOString().slice(0,10),
+    endDate: new Date().toISOString().slice(0,10),
+    maxParticipants: 0,
+    currentParticipants: 0,
+    fee: 0,
+    currency: 'USD',
+    requirements: f.fields.map(fl => fl.label),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })), [forms]);
+
+  const apiApplications = useMemo(() => (applications || []).map(a => ({
+    id: a.id,
+    formId: a.type,
+    formTitle: a.type,
+    applicantName: [a.user.firstName, a.user.lastName].filter(Boolean).join(' ') || a.user.email,
+    applicantEmail: a.user.email,
+    applicantPhone: '',
+    type: a.type.toLowerCase(),
+    status: a.status.toLowerCase(),
+    submittedAt: a.createdAt,
+    paymentStatus: (a.payment?.status || 'pending').toLowerCase(),
+    amount: a.payment?.amount || 0,
+    currency: a.payment?.currency || 'USD',
+  })), [applications]);
+
+  const filteredForms = apiForms.filter(form => {
     const matchesSearch = form.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          form.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
@@ -374,7 +408,7 @@ export default function RegistrationPage() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const filteredApplications = mockApplications.filter(app => {
+  const filteredApplications = apiApplications.filter(app => {
     const matchesSearch = app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          app.formTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          app.applicantEmail.toLowerCase().includes(searchTerm.toLowerCase());
@@ -385,17 +419,17 @@ export default function RegistrationPage() {
   });
 
   // Calculate stats
-  const totalForms = mockForms.length;
-  const activeForms = mockForms.filter(form => form.status === 'active').length;
-  const totalApplications = mockApplications.length;
-  const pendingApplications = mockApplications.filter(app => app.status === 'pending').length;
-  const totalRevenue = mockApplications
+  const totalForms = apiForms.length;
+  const activeForms = apiForms.filter(form => form.status === 'active').length;
+  const totalApplications = apiApplications.length;
+  const pendingApplications = apiApplications.filter(app => app.status === 'pending').length;
+  const totalRevenue = apiApplications
     .filter(app => app.paymentStatus === 'paid')
     .reduce((sum, app) => sum + app.amount, 0);
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh' }}>
-      <Sidebar activeTab="registration" userData={userData} />
+      <Sidebar activeTab="registration" />
 
       {/* Main Content */}
       <div className="flex-grow-1 bg-light">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -53,29 +53,19 @@ import {
   RefreshCw
 } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
-interface Payment {
-  id: string;
-  transactionId: string;
-  payerName: string;
-  payerEmail: string;
-  payerPhone: string;
-  amount: number;
-  currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
-  paymentMethod: 'credit_card' | 'bank_transfer' | 'mobile_money' | 'cash' | 'paypal';
-  description: string;
-  category: 'registration' | 'membership' | 'tournament' | 'equipment' | 'training' | 'other';
-  relatedEntity: string;
-  relatedEntityType: 'player' | 'team' | 'tournament' | 'league' | 'event' | 'club';
-  createdAt: string;
-  updatedAt: string;
-  processedAt?: string;
-  refundedAt?: string;
-  notes?: string;
-}
+import { usePayments } from '@/hooks/usePayments';
 
 export default function PaymentsPage() {
+  return (
+    <ProtectedRoute>
+      <PaymentsContent />
+    </ProtectedRoute>
+  );
+}
+
+function PaymentsContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('payments');
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,167 +74,19 @@ export default function PaymentsPage() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [dateRange, setDateRange] = useState('all');
 
-  // Mock user data
-  const userData = {
-    id: 'user123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin'
-  };
+  const { payments, loading: loadingData, error, refetch } = usePayments();
 
-  // Mock payments data
-  const mockPayments: Payment[] = [
-    {
-      id: '1',
-      transactionId: 'TXN-001-2024',
-      payerName: 'Ahmed Hassan',
-      payerEmail: 'ahmed.hassan@email.com',
-      payerPhone: '+234 801 234 5678',
-      amount: 50,
-      currency: 'USD',
-      status: 'completed',
-      paymentMethod: 'credit_card',
-      description: 'Spring Football League Registration',
-      category: 'registration',
-      relatedEntity: 'Spring Football League',
-      relatedEntityType: 'league',
-      createdAt: '2024-01-18T14:30:00Z',
-      updatedAt: '2024-01-18T14:35:00Z',
-      processedAt: '2024-01-18T14:35:00Z',
-      notes: 'Payment processed successfully'
-    },
-    {
-      id: '2',
-      transactionId: 'TXN-002-2024',
-      payerName: 'Elite Basketball Team',
-      payerEmail: 'coach@elitebasketball.com',
-      payerPhone: '+254 700 123 456',
-      amount: 100,
-      currency: 'USD',
-      status: 'pending',
-      paymentMethod: 'bank_transfer',
-      description: 'Basketball Tournament Entry Fee',
-      category: 'tournament',
-      relatedEntity: 'Basketball Tournament',
-      relatedEntityType: 'tournament',
-      createdAt: '2024-01-20T09:45:00Z',
-      updatedAt: '2024-01-20T09:45:00Z',
-      notes: 'Awaiting bank confirmation'
-    },
-    {
-      id: '3',
-      transactionId: 'TXN-003-2024',
-      payerName: 'Sarah Muthoni',
-      payerEmail: 'sarah.muthoni@email.com',
-      payerPhone: '+254 701 234 567',
-      amount: 200,
-      currency: 'USD',
-      status: 'completed',
-      paymentMethod: 'mobile_money',
-      description: 'Cricket Academy Enrollment',
-      category: 'training',
-      relatedEntity: 'Cricket Academy',
-      relatedEntityType: 'club',
-      createdAt: '2024-01-22T16:20:00Z',
-      updatedAt: '2024-01-22T16:25:00Z',
-      processedAt: '2024-01-22T16:25:00Z',
-      notes: 'Mobile money payment confirmed'
-    },
-    {
-      id: '4',
-      transactionId: 'TXN-004-2024',
-      payerName: 'Kwame Mensah',
-      payerEmail: 'kwame.mensah@email.com',
-      payerPhone: '+233 24 567 8901',
-      amount: 50,
-      currency: 'USD',
-      status: 'refunded',
-      paymentMethod: 'credit_card',
-      description: 'Spring Football League Registration',
-      category: 'registration',
-      relatedEntity: 'Spring Football League',
-      relatedEntityType: 'league',
-      createdAt: '2024-01-19T12:15:00Z',
-      updatedAt: '2024-01-20T14:45:00Z',
-      processedAt: '2024-01-19T12:20:00Z',
-      refundedAt: '2024-01-20T14:45:00Z',
-      notes: 'Refunded due to application rejection'
-    },
-    {
-      id: '5',
-      transactionId: 'TXN-005-2024',
-      payerName: 'Zara van der Merwe',
-      payerEmail: 'zara.vandermerwe@email.com',
-      payerPhone: '+27 21 123 4567',
-      amount: 150,
-      currency: 'USD',
-      status: 'completed',
-      paymentMethod: 'paypal',
-      description: 'Tennis Club Annual Membership',
-      category: 'membership',
-      relatedEntity: 'Tennis Club',
-      relatedEntityType: 'club',
-      createdAt: '2024-01-15T10:30:00Z',
-      updatedAt: '2024-01-15T10:35:00Z',
-      processedAt: '2024-01-15T10:35:00Z',
-      notes: 'PayPal payment successful'
-    },
-    {
-      id: '6',
-      transactionId: 'TXN-006-2024',
-      payerName: 'Juma Mkamba',
-      payerEmail: 'juma.mkamba@email.com',
-      payerPhone: '+255 22 987 6543',
-      amount: 75,
-      currency: 'USD',
-      status: 'failed',
-      paymentMethod: 'credit_card',
-      description: 'Swimming Equipment Purchase',
-      category: 'equipment',
-      relatedEntity: 'Swimming Club',
-      relatedEntityType: 'club',
-      createdAt: '2024-01-25T11:20:00Z',
-      updatedAt: '2024-01-25T11:25:00Z',
-      notes: 'Card declined - insufficient funds'
-    },
-    {
-      id: '7',
-      transactionId: 'TXN-007-2024',
-      payerName: 'Michael Okechukwu',
-      payerEmail: 'michael.okechukwu@email.com',
-      payerPhone: '+234 802 345 6789',
-      amount: 300,
-      currency: 'USD',
-      status: 'completed',
-      paymentMethod: 'bank_transfer',
-      description: 'Professional Coaching Certification',
-      category: 'training',
-      relatedEntity: 'Coaching Academy',
-      relatedEntityType: 'club',
-      createdAt: '2024-01-23T08:15:00Z',
-      updatedAt: '2024-01-23T14:30:00Z',
-      processedAt: '2024-01-23T14:30:00Z',
-      notes: 'Bank transfer confirmed'
-    },
-    {
-      id: '8',
-      transactionId: 'TXN-008-2024',
-      payerName: 'Grace Wanjiku',
-      payerEmail: 'grace.wanjiku@email.com',
-      payerPhone: '+254 703 456 7890',
-      amount: 25,
-      currency: 'USD',
-      status: 'cancelled',
-      paymentMethod: 'mobile_money',
-      description: 'Swimming Team Tryouts Fee',
-      category: 'registration',
-      relatedEntity: 'Swimming Team',
-      relatedEntityType: 'team',
-      createdAt: '2024-01-24T16:45:00Z',
-      updatedAt: '2024-01-24T17:00:00Z',
-      notes: 'Cancelled by user'
-    }
-  ];
+  // derive filtered list
+  const filteredPayments = useMemo(() => payments.filter(payment => {
+    const matchesSearch = payment.payerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.payerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+    const matchesCategory = categoryFilter === 'all' || payment.category === categoryFilter;
+    const matchesPaymentMethod = paymentMethodFilter === 'all' || payment.paymentMethod === paymentMethodFilter;
+    return matchesSearch && matchesStatus && matchesCategory && matchesPaymentMethod;
+  }), [payments, searchTerm, statusFilter, categoryFilter, paymentMethodFilter]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -346,33 +188,19 @@ export default function PaymentsPage() {
     console.log('Exporting payments...');
   };
 
-  // Filter payments based on search and filters
-  const filteredPayments = mockPayments.filter(payment => {
-    const matchesSearch = payment.payerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.payerEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || payment.category === categoryFilter;
-    const matchesPaymentMethod = paymentMethodFilter === 'all' || payment.paymentMethod === paymentMethodFilter;
-    
-    return matchesSearch && matchesStatus && matchesCategory && matchesPaymentMethod;
-  });
-
   // Calculate stats
-  const totalPayments = mockPayments.length;
-  const completedPayments = mockPayments.filter(payment => payment.status === 'completed').length;
-  const totalRevenue = mockPayments
+  const totalPayments = payments.length;
+  const completedPayments = payments.filter(payment => payment.status === 'completed').length;
+  const totalRevenue = payments
     .filter(payment => payment.status === 'completed')
     .reduce((sum, payment) => sum + payment.amount, 0);
-  const pendingAmount = mockPayments
+  const pendingAmount = payments
     .filter(payment => payment.status === 'pending')
     .reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh' }}>
-      <Sidebar activeTab="payments" userData={userData} />
+      <Sidebar activeTab="payments" />
 
       {/* Main Content */}
       <div className="flex-grow-1 bg-light">
@@ -383,7 +211,7 @@ export default function PaymentsPage() {
               <h4 className="mb-0 me-3">Payments Management</h4>
             </div>
             <div className="d-flex gap-2">
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
+              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center" onClick={() => refetch()}>
                 <Search size={16} className="me-1" />
                 Search
               </button>

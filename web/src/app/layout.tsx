@@ -24,22 +24,13 @@ export const metadata: Metadata = {
     description: 'Professional sports management platform for elite clubs, teams, and athletes.',
     url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003',
     siteName: 'KP5 Academy',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'KP5 Academy Elite Sports Management Platform',
-      },
-    ],
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: 'KP5 Academy - Elite Sports Management Platform',
     description: 'Professional sports management platform for elite clubs, teams, and athletes.',
-    images: ['/og-image.jpg'],
   },
   robots: {
     index: true,
@@ -65,17 +56,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#00529F" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#00529F" />
+        
+        {/* Favicon and PWA assets - only include if files exist */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/site.webmanifest" />
         
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* Bootstrap Icons */}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
       </head>
       <body className={`${inter.className} bg-white`}>
         <Providers>

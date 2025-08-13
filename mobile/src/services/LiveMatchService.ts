@@ -1,25 +1,4 @@
 import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  writeBatch,
-  serverTimestamp,
-  enableNetwork,
-  disableNetwork,
-  enableIndexedDbPersistence,
-  CACHE_SIZE_UNLIMITED
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { 
   LiveMatch, 
   LiveMatchEvent, 
   LiveMatchEventType, 
@@ -30,6 +9,9 @@ import {
 } from '../../../shared/src/types';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiService } from '../../../shared/src/services/api';
+import { RealTimeService } from '../../../shared/src/services/realTimeService';
+import NetInfo from '@react-native-community/netinfo';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -42,12 +24,10 @@ Notifications.setNotificationHandler({
 
 export class MobileLiveMatchService {
   private static instance: MobileLiveMatchService;
-  private matchesCollection = collection(db, 'liveMatches');
-  private eventsCollection = collection(db, 'matchEvents');
-  private playerStatsCollection = collection(db, 'playerMatchStats');
-  private teamStatsCollection = collection(db, 'teamSeasonStats');
+  private realTimeService: RealTimeService | null = null;
   private offlineQueue: Array<{ action: string; data: any; timestamp: number }> = [];
   private isOnline = true;
+  private networkUnsubscribe: (() => void) | null = null;
 
   public static getInstance(): MobileLiveMatchService {
     if (!MobileLiveMatchService.instance) {
@@ -56,12 +36,14 @@ export class MobileLiveMatchService {
     return MobileLiveMatchService.instance;
   }
 
+  // Set real-time service instance
+  setRealTimeService(realTimeService: RealTimeService): void {
+    this.realTimeService = realTimeService;
+  }
+
   // Initialize offline support
   async initializeOfflineSupport(): Promise<void> {
     try {
-      // Enable offline persistence
-      await enableIndexedDbPersistence(db);
-      
       // Load offline queue
       await this.loadOfflineQueue();
       
@@ -76,31 +58,16 @@ export class MobileLiveMatchService {
 
   // Set up network monitoring
   private setupNetworkMonitoring(): void {
-    // Monitor network status changes
-    const unsubscribe = onSnapshot(doc(db, '_network', 'status'), (doc) => {
+    // Monitor network status changes using NetInfo
+    this.networkUnsubscribe = NetInfo.addEventListener(state => {
       const wasOnline = this.isOnline;
-      this.isOnline = doc.exists();
+      this.isOnline = state.isConnected ?? false;
       
       if (!wasOnline && this.isOnline) {
         // Came back online - process offline queue
         this.processOfflineQueue();
       }
     });
-
-    // Fallback network detection
-    setInterval(() => {
-      this.checkNetworkStatus();
-    }, 5000);
-  }
-
-  // Check network status
-  private async checkNetworkStatus(): Promise<void> {
-    try {
-      await enableNetwork(db);
-      this.isOnline = true;
-    } catch (error) {
-      this.isOnline = false;
-    }
   }
 
   // Load offline queue from storage
@@ -140,14 +107,20 @@ export class MobileLiveMatchService {
 
     console.log(`Processing ${this.offlineQueue.length} offline actions`);
 
-    for (const item of this.offlineQueue) {
+    const queueToProcess = [...this.offlineQueue];
+    this.offlineQueue = [];
+
+    for (const item of queueToProcess) {
       try {
         switch (item.action) {
-          case 'addEvent':
-            await this.addMatchEvent(item.data);
+          case 'createMatch':
+            await this.createMatch(item.data);
             break;
           case 'updateMatch':
             await this.updateMatch(item.data.matchId, item.data.updates);
+            break;
+          case 'addMatchEvent':
+            await this.addMatchEvent(item.data);
             break;
           case 'startMatch':
             await this.startMatch(item.data.matchId);
@@ -158,31 +131,35 @@ export class MobileLiveMatchService {
         }
       } catch (error) {
         console.error(`Error processing offline action ${item.action}:`, error);
+        // Re-add failed actions to queue
+        this.offlineQueue.push(item);
       }
     }
 
-    // Clear processed queue
-    this.offlineQueue = [];
     await this.saveOfflineQueue();
   }
 
   // Create a new match
   async createMatch(matchData: Omit<LiveMatch, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<LiveMatch>> {
     try {
-      const docRef = await addDoc(this.matchesCollection, {
-        ...matchData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      if (!this.isOnline) {
+        await this.addToOfflineQueue('createMatch', matchData);
+        return { success: false, error: 'Offline - action queued' };
+      }
 
-      const newMatch: LiveMatch = {
-        ...matchData,
-        id: docRef.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const response = await apiService.post('/matches', matchData);
+      
+      if (response.success && response.data) {
+        // Emit real-time event for new match
+        this.realTimeService?.emit('match-created', {
+          match: response.data,
+          timestamp: new Date()
+        });
 
-      return { success: true, data: newMatch };
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to create match' };
+      }
     } catch (error) {
       console.error('Error creating match:', error);
       return { success: false, error: 'Failed to create match' };
@@ -192,24 +169,13 @@ export class MobileLiveMatchService {
   // Get a single match by ID
   async getMatch(matchId: string): Promise<ApiResponse<LiveMatch>> {
     try {
-      const docRef = doc(this.matchesCollection, matchId);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        return { success: false, error: 'Match not found' };
+      const response = await apiService.get(`/matches/${matchId}`);
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Match not found' };
       }
-
-      const matchData = docSnap.data();
-      const match: LiveMatch = {
-        id: docSnap.id,
-        ...matchData,
-        startTime: matchData.startTime?.toDate() || new Date(),
-        endTime: matchData.endTime?.toDate(),
-        createdAt: matchData.createdAt?.toDate() || new Date(),
-        updatedAt: matchData.updatedAt?.toDate() || new Date(),
-      } as LiveMatch;
-
-      return { success: true, data: match };
     } catch (error) {
       console.error('Error getting match:', error);
       return { success: false, error: 'Failed to get match' };
@@ -224,40 +190,20 @@ export class MobileLiveMatchService {
     limit?: number;
   }): Promise<ApiResponse<LiveMatch[]>> {
     try {
-      let q = query(this.matchesCollection, orderBy('startTime', 'desc'));
+      const params = new URLSearchParams();
+      
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.clubId) params.append('clubId', filters.clubId);
+      if (filters?.tournamentId) params.append('tournamentId', filters.tournamentId);
+      if (filters?.limit) params.append('limit', filters.limit.toString());
 
-      if (filters?.status) {
-        q = query(q, where('status', '==', filters.status));
+      const response = await apiService.get(`/matches?${params.toString()}`);
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to get matches' };
       }
-
-      if (filters?.clubId) {
-        q = query(q, where('clubId', '==', filters.clubId));
-      }
-
-      if (filters?.tournamentId) {
-        q = query(q, where('tournamentId', '==', filters.tournamentId));
-      }
-
-      if (filters?.limit) {
-        q = query(q, limit(filters.limit));
-      }
-
-      const querySnapshot = await getDocs(q);
-      const matches: LiveMatch[] = [];
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        matches.push({
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as LiveMatch);
-      });
-
-      return { success: true, data: matches };
     } catch (error) {
       console.error('Error getting matches:', error);
       return { success: false, error: 'Failed to get matches' };
@@ -267,22 +213,27 @@ export class MobileLiveMatchService {
   // Update match status and basic info
   async updateMatch(matchId: string, updates: Partial<LiveMatch>): Promise<ApiResponse<void>> {
     try {
-      const docRef = doc(this.matchesCollection, matchId);
-      await updateDoc(docRef, {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating match:', error);
-      
-      // Add to offline queue if offline
       if (!this.isOnline) {
         await this.addToOfflineQueue('updateMatch', { matchId, updates });
-        return { success: true }; // Return success for offline operations
+        return { success: false, error: 'Offline - action queued' };
       }
+
+      const response = await apiService.put(`/matches/${matchId}`, updates);
       
+      if (response.success) {
+        // Emit real-time event for match update
+        this.realTimeService?.emit('match-updated', {
+          matchId,
+          updates,
+          timestamp: new Date()
+        });
+
+        return { success: true };
+      } else {
+        return { success: false, error: response.error || 'Failed to update match' };
+      }
+    } catch (error) {
+      console.error('Error updating match:', error);
       return { success: false, error: 'Failed to update match' };
     }
   }
@@ -290,25 +241,29 @@ export class MobileLiveMatchService {
   // Start a match
   async startMatch(matchId: string): Promise<ApiResponse<void>> {
     try {
-      const docRef = doc(this.matchesCollection, matchId);
-      await updateDoc(docRef, {
-        status: 'in_progress',
-        startTime: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      // Send local notification
-      await this.sendLocalNotification('Match Started', 'The match has begun!');
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error starting match:', error);
-      
       if (!this.isOnline) {
         await this.addToOfflineQueue('startMatch', { matchId });
-        return { success: true };
+        return { success: false, error: 'Offline - action queued' };
       }
+
+      const response = await apiService.post(`/matches/${matchId}/start`);
       
+      if (response.success) {
+        // Emit real-time event for match start
+        this.realTimeService?.emit('match-started', {
+          matchId,
+          timestamp: new Date()
+        });
+
+        // Send local notification
+        await this.sendLocalNotification('Match Started', 'The match has begun!');
+
+        return { success: true };
+      } else {
+        return { success: false, error: response.error || 'Failed to start match' };
+      }
+    } catch (error) {
+      console.error('Error starting match:', error);
       return { success: false, error: 'Failed to start match' };
     }
   }
@@ -316,25 +271,29 @@ export class MobileLiveMatchService {
   // End a match
   async endMatch(matchId: string): Promise<ApiResponse<void>> {
     try {
-      const docRef = doc(this.matchesCollection, matchId);
-      await updateDoc(docRef, {
-        status: 'completed',
-        endTime: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      // Send local notification
-      await this.sendLocalNotification('Match Ended', 'The match has finished!');
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error ending match:', error);
-      
       if (!this.isOnline) {
         await this.addToOfflineQueue('endMatch', { matchId });
-        return { success: true };
+        return { success: false, error: 'Offline - action queued' };
       }
+
+      const response = await apiService.post(`/matches/${matchId}/end`);
       
+      if (response.success) {
+        // Emit real-time event for match end
+        this.realTimeService?.emit('match-ended', {
+          matchId,
+          timestamp: new Date()
+        });
+
+        // Send local notification
+        await this.sendLocalNotification('Match Ended', 'The match has finished!');
+
+        return { success: true };
+      } else {
+        return { success: false, error: response.error || 'Failed to end match' };
+      }
+    } catch (error) {
+      console.error('Error ending match:', error);
       return { success: false, error: 'Failed to end match' };
     }
   }
@@ -348,65 +307,37 @@ export class MobileLiveMatchService {
     playerId?: string;
     teamId: string;
     data?: any;
+    createdBy: string;
   }): Promise<ApiResponse<LiveMatchEvent>> {
     try {
-      const batch = writeBatch(db);
+      if (!this.isOnline) {
+        await this.addToOfflineQueue('addMatchEvent', eventData);
+        return { success: false, error: 'Offline - action queued' };
+      }
 
-      // Add the event
-      const eventRef = doc(this.eventsCollection);
-      const newEvent: LiveMatchEvent = {
-        ...eventData,
-        id: eventRef.id,
-        createdAt: new Date(),
-        createdBy: 'mobile-user', // This should come from auth context
-        data: eventData.data || {},
-      };
-
-      batch.set(eventRef, {
-        ...eventData,
-        createdAt: serverTimestamp(),
-      });
-
-      // Update match stats
-      const matchRef = doc(this.matchesCollection, eventData.matchId);
-      const matchDoc = await getDoc(matchRef);
+      const response = await apiService.post(`/matches/${eventData.matchId}/events`, eventData);
       
-      if (matchDoc.exists()) {
-        const matchData = matchDoc.data();
-        const eventForStats: LiveMatchEvent = {
-          ...eventData,
-          id: eventRef.id,
-          createdAt: new Date(),
-          createdBy: 'mobile-user',
-          data: eventData.data || {},
-        };
-        const updatedStats = this.calculateStatsUpdate(matchData.stats, eventForStats);
-        
-        batch.update(matchRef, {
-          stats: updatedStats,
-          updatedAt: serverTimestamp(),
+      if (response.success && response.data) {
+        // Emit real-time event for new match event
+        this.realTimeService?.emit('match-event-added', {
+          matchId: eventData.matchId,
+          event: response.data,
+          timestamp: new Date()
         });
+
+        // Send local notification for important events
+        if (eventData.type === 'goal') {
+          await this.sendLocalNotification('Goal!', `${eventData.data?.playerName || 'Player'} scored!`);
+        } else if (eventData.type === 'red_card') {
+          await this.sendLocalNotification('Red Card', `${eventData.data?.playerName || 'Player'} received a red card!`);
+        }
+
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to add match event' };
       }
-
-      await batch.commit();
-
-      // Send local notification for important events
-      if (['goal', 'red_card', 'penalty_goal'].includes(eventData.type)) {
-        await this.sendLocalNotification(
-          'Match Event',
-          `${eventData.type.replace('_', ' ')} at ${eventData.minute}'`
-        );
-      }
-
-      return { success: true, data: newEvent };
     } catch (error) {
       console.error('Error adding match event:', error);
-      
-      if (!this.isOnline) {
-        await this.addToOfflineQueue('addEvent', eventData);
-        return { success: true };
-      }
-      
       return { success: false, error: 'Failed to add match event' };
     }
   }
@@ -414,26 +345,13 @@ export class MobileLiveMatchService {
   // Get match events
   async getMatchEvents(matchId: string): Promise<ApiResponse<LiveMatchEvent[]>> {
     try {
-      const q = query(
-        this.eventsCollection,
-        where('matchId', '==', matchId),
-        orderBy('minute', 'asc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      const events: LiveMatchEvent[] = [];
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        events.push({
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-        } as LiveMatchEvent);
-      });
-
-      return { success: true, data: events };
+      const response = await apiService.get(`/matches/${matchId}/events`);
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to get match events' };
+      }
     } catch (error) {
       console.error('Error getting match events:', error);
       return { success: false, error: 'Failed to get match events' };
@@ -442,75 +360,69 @@ export class MobileLiveMatchService {
 
   // Subscribe to real-time match updates
   subscribeToMatch(matchId: string, callback: (match: LiveMatch) => void): () => void {
-    const docRef = doc(this.matchesCollection, matchId);
-    
-    return onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const match: LiveMatch = {
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as LiveMatch;
-        
-        callback(match);
+    if (!this.realTimeService) {
+      console.warn('Real-time service not initialized');
+      return () => {};
+    }
+
+    // Join match room
+    this.realTimeService.joinRoom(`match:${matchId}`);
+
+    // Subscribe to match updates
+    const unsubscribe = this.realTimeService.on('match-updated', (event) => {
+      if (event.data.matchId === matchId) {
+        callback(event.data.match);
       }
     });
+
+    return () => {
+      unsubscribe();
+      this.realTimeService?.leaveRoom(`match:${matchId}`);
+    };
   }
 
   // Subscribe to real-time match events
   subscribeToMatchEvents(matchId: string, callback: (events: LiveMatchEvent[]) => void): () => void {
-    const q = query(
-      this.eventsCollection,
-      where('matchId', '==', matchId),
-      orderBy('minute', 'asc')
-    );
+    if (!this.realTimeService) {
+      console.warn('Real-time service not initialized');
+      return () => {};
+    }
 
-    return onSnapshot(q, (querySnapshot) => {
-      const events: LiveMatchEvent[] = [];
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        events.push({
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-        } as LiveMatchEvent);
-      });
+    // Join match events room
+    this.realTimeService.joinRoom(`match-events:${matchId}`);
 
-      callback(events);
+    // Subscribe to match event updates
+    const unsubscribe = this.realTimeService.on('match-events-updated', (event) => {
+      if (event.data.matchId === matchId) {
+        callback(event.data.events);
+      }
     });
+
+    return () => {
+      unsubscribe();
+      this.realTimeService?.leaveRoom(`match-events:${matchId}`);
+    };
   }
 
   // Subscribe to live matches
   subscribeToLiveMatches(callback: (matches: LiveMatch[]) => void): () => void {
-    const q = query(
-      this.matchesCollection,
-      where('status', '==', 'in_progress'),
-      orderBy('startTime', 'desc')
-    );
+    if (!this.realTimeService) {
+      console.warn('Real-time service not initialized');
+      return () => {};
+    }
 
-    return onSnapshot(q, (querySnapshot) => {
-      const matches: LiveMatch[] = [];
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        matches.push({
-          id: doc.id,
-          ...data,
-          startTime: data.startTime?.toDate() || new Date(),
-          endTime: data.endTime?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as LiveMatch);
-      });
+    // Join live matches room
+    this.realTimeService.joinRoom('live-matches');
 
-      callback(matches);
+    // Subscribe to live matches updates
+    const unsubscribe = this.realTimeService.on('live-matches-updated', (event) => {
+      callback(event.data.matches);
     });
+
+    return () => {
+      unsubscribe();
+      this.realTimeService?.leaveRoom('live-matches');
+    };
   }
 
   // Send local notification
@@ -529,38 +441,6 @@ export class MobileLiveMatchService {
     }
   }
 
-  // Calculate stats update based on event
-  private calculateStatsUpdate(currentStats: any, event: LiveMatchEvent): any {
-    const updatedStats = { ...currentStats };
-    const teamKey = event.teamId === currentStats.homeTeamId ? 'homeTeam' : 'awayTeam';
-
-    switch (event.type) {
-      case 'goal':
-        updatedStats[teamKey].goals += 1;
-        if (event.data?.goalType === 'penalty') {
-          updatedStats[teamKey].penaltyGoals = (updatedStats[teamKey].penaltyGoals || 0) + 1;
-        }
-        break;
-      case 'assist':
-        updatedStats[teamKey].assists += 1;
-        break;
-      case 'yellow_card':
-        updatedStats[teamKey].yellowCards += 1;
-        break;
-      case 'red_card':
-        updatedStats[teamKey].redCards += 1;
-        break;
-      case 'substitution_in':
-        updatedStats[teamKey].substitutions = (updatedStats[teamKey].substitutions || 0) + 1;
-        break;
-      case 'injury':
-        updatedStats[teamKey].injuries = (updatedStats[teamKey].injuries || 0) + 1;
-        break;
-    }
-
-    return updatedStats;
-  }
-
   // Get offline queue status
   getOfflineQueueStatus(): { count: number; isOnline: boolean } {
     return {
@@ -576,16 +456,107 @@ export class MobileLiveMatchService {
     }
   }
 
+  // Cleanup
+  cleanup(): void {
+    if (this.networkUnsubscribe) {
+      this.networkUnsubscribe();
+      this.networkUnsubscribe = null;
+    }
+  }
+
   // Delete a match (admin only)
   async deleteMatch(matchId: string): Promise<ApiResponse<void>> {
     try {
-      const docRef = doc(this.matchesCollection, matchId);
-      await deleteDoc(docRef);
+      const response = await apiService.delete(`/matches/${matchId}`);
+      
+      if (response.success) {
+        // Emit real-time event for match deletion
+        this.realTimeService?.emit('match-deleted', {
+          matchId,
+          timestamp: new Date()
+        });
 
-      return { success: true };
+        return { success: true };
+      } else {
+        return { success: false, error: response.error || 'Failed to delete match' };
+      }
     } catch (error) {
       console.error('Error deleting match:', error);
       return { success: false, error: 'Failed to delete match' };
+    }
+  }
+
+  // Get player match stats
+  async getPlayerMatchStats(matchId: string): Promise<ApiResponse<PlayerMatchStats[]>> {
+    try {
+      const response = await apiService.get(`/matches/${matchId}/player-stats`);
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to get player stats' };
+      }
+    } catch (error) {
+      console.error('Error getting player stats:', error);
+      return { success: false, error: 'Failed to get player stats' };
+    }
+  }
+
+  // Get team season stats
+  async getTeamSeasonStats(teamId: string, season?: string): Promise<ApiResponse<TeamSeasonStats[]>> {
+    try {
+      const params = new URLSearchParams();
+      if (season) params.append('season', season);
+
+      const response = await apiService.get(`/teams/${teamId}/season-stats?${params.toString()}`);
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to get team stats' };
+      }
+    } catch (error) {
+      console.error('Error getting team stats:', error);
+      return { success: false, error: 'Failed to get team stats' };
+    }
+  }
+
+  // Get match statistics
+  async getMatchStats(matchId: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiService.get(`/matches/${matchId}/stats`);
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error || 'Failed to get match stats' };
+      }
+    } catch (error) {
+      console.error('Error getting match stats:', error);
+      return { success: false, error: 'Failed to get match stats' };
+    }
+  }
+
+  // Update match statistics
+  async updateMatchStats(matchId: string, stats: any): Promise<ApiResponse<void>> {
+    try {
+      const response = await apiService.put(`/matches/${matchId}/stats`, stats);
+      
+      if (response.success) {
+        // Emit real-time event for stats update
+        this.realTimeService?.emit('match-stats-updated', {
+          matchId,
+          stats,
+          timestamp: new Date()
+        });
+
+        return { success: true };
+      } else {
+        return { success: false, error: response.error || 'Failed to update match stats' };
+      }
+    } catch (error) {
+      console.error('Error updating match stats:', error);
+      return { success: false, error: 'Failed to update match stats' };
     }
   }
 }

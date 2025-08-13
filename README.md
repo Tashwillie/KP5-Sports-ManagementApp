@@ -1,6 +1,6 @@
 # KP5 Academy - Sports Management Platform
 
-A comprehensive, full-featured sports management platform with web and mobile applications, built with Next.js, React Native, and Firebase.
+A comprehensive, full-featured sports management platform with web and mobile applications, built with Next.js, React Native, and PostgreSQL.
 
 ## 🚀 Features
 
@@ -24,7 +24,7 @@ A comprehensive, full-featured sports management platform with web and mobile ap
 
 ### Mobile App Features
 - **Offline Data Synchronization** - Work offline, sync when connected
-- **Push Notification Handling** - Real-time notifications with FCM
+- **Push Notification Handling** - Real-time notifications with Expo
 - **Camera Integration** - Match photos and video capture
 - **GPS Location Services** - Venue location and directions
 - **Background Sync** - Automatic data synchronization
@@ -36,9 +36,13 @@ A comprehensive, full-featured sports management platform with web and mobile ap
 - **Mobile**: React Native, Expo, TypeScript, Tailwind CSS
 
 ### Backend
-- **Firebase**: Firestore, Auth, Storage, Cloud Functions, Hosting
-- **Real-time**: Firestore listeners, FCM push notifications
-- **Payments**: Stripe integration via Cloud Functions
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT-based authentication with role-based access control
+- **API**: RESTful API with comprehensive CRUD operations
+- **Real-time**: WebSocket support for live updates
+- **Payments**: Stripe integration
+- **File Storage**: Cloud storage (AWS S3, Google Cloud Storage)
+- **Push Notifications**: Expo Push Notifications + Web Push API
 
 ### Development
 - **Testing**: Jest, React Testing Library
@@ -67,10 +71,12 @@ kp5-Academy/
 │   │   ├── types/        # TypeScript type definitions
 │   │   ├── services/     # Shared services
 │   │   └── utils/        # Shared utilities
-├── firebase/             # Firebase configuration
-│   ├── functions/        # Cloud Functions
-│   ├── firestore.rules   # Security rules
-│   └── storage.rules     # Storage rules
+├── backend/              # PostgreSQL backend API
+│   ├── src/
+│   │   ├── controllers/  # API controllers
+│   │   ├── routes/       # API routes
+│   │   ├── middleware/   # Express middleware
+│   │   └── prisma/       # Database schema
 └── docs/                 # Documentation
 ```
 
@@ -79,7 +85,7 @@ kp5-Academy/
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
-- Firebase account
+- PostgreSQL database
 - Expo account (for mobile)
 - Stripe account (for payments)
 
@@ -100,63 +106,70 @@ cd ../mobile && npm install
 
 # Install shared dependencies
 cd ../shared && npm install
+
+# Install backend dependencies
+cd ../backend && npm install
 ```
 
-### 2. Firebase Setup
+### 2. Database Setup
 
-1. Create a new Firebase project
-2. Enable Authentication, Firestore, Storage, and Cloud Functions
-3. Copy your Firebase config to environment files
+1. Create a PostgreSQL database
+2. Update the database connection string in `backend/.env`
+3. Run database migrations
+
+```bash
+cd backend
+npm run db:migrate
+npm run db:seed
+```
+
+### 3. Environment Configuration
 
 ```bash
 # Copy environment examples
 cp web/env.example web/.env.local
 cp mobile/env.example mobile/.env
+cp backend/env.example backend/.env
 ```
 
-### 3. Environment Configuration
+### 4. Environment Configuration
 
 #### Web App (.env.local)
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:3001
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+NEXT_PUBLIC_FILE_UPLOAD_URL=http://localhost:3001/api/upload
 ```
 
 #### Mobile App (.env)
 ```env
-EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+EXPO_PUBLIC_API_URL=http://localhost:3001/api
+EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:3001
+EXPO_PUBLIC_FILE_UPLOAD_URL=http://localhost:3001/api/upload
 ```
 
-### 4. Firebase Emulator Setup (Development)
-
-```bash
-# Install Firebase CLI
-npm install -g firebase-tools
-
-# Login to Firebase
-firebase login
-
-# Start emulators
-firebase emulators:start
+#### Backend (.env)
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/kp5_academy"
+JWT_SECRET="your-super-secret-jwt-key"
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 ```
 
 ### 5. Run Development Servers
 
 ```bash
-# Terminal 1: Web app
+# Terminal 1: Backend API
+cd backend
+npm run dev
+
+# Terminal 2: Web app
 cd web
 npm run dev
 
-# Terminal 2: Mobile app
+# Terminal 3: Mobile app
 cd mobile
 npx expo start
-
-# Terminal 3: Firebase emulators
-firebase emulators:start
 ```
 
 ## 🧪 Testing
@@ -174,8 +187,8 @@ cd web && npm test
 # Mobile app tests
 cd mobile && npm test
 
-# Shared tests
-cd shared && npm test
+# Backend tests
+cd backend && npm test
 ```
 
 ### Test Coverage
@@ -185,11 +198,18 @@ npm run test:coverage
 
 ## 🚀 Deployment
 
-### Web App (Firebase Hosting)
+### Backend API
+```bash
+cd backend
+npm run build
+npm start
+```
+
+### Web App (Vercel/Netlify)
 ```bash
 cd web
 npm run build
-firebase deploy --only hosting
+# Deploy to your preferred platform
 ```
 
 ### Mobile App (Expo)
@@ -197,11 +217,6 @@ firebase deploy --only hosting
 cd mobile
 npx expo build:android
 npx expo build:ios
-```
-
-### Cloud Functions
-```bash
-firebase deploy --only functions
 ```
 
 ## 📱 Mobile App Development
@@ -255,31 +270,33 @@ npx expo start --android
 
 ## 🔒 Security
 
-### Firebase Security Rules
-- Implement role-based access control
-- Validate data on write operations
-- Use proper authentication checks
-- Secure file uploads
-
 ### API Security
-- Validate all inputs
-- Implement rate limiting
-- Use HTTPS for all requests
-- Secure environment variables
+- JWT-based authentication with role-based access control
+- Input validation using express-validator and Zod
+- Rate limiting protection
+- CORS configuration
+- Helmet security headers
+- Password hashing with bcrypt
+
+### Database Security
+- Prisma ORM prevents SQL injection
+- Role-based access control
+- Data validation at the database level
+- Secure connection strings
 
 ## 📊 Monitoring & Analytics
 
 ### Performance Monitoring
-- Firebase Performance Monitoring
-- Lighthouse CI integration
-- Bundle size analysis
-- Error tracking with Sentry
+- Application performance monitoring
+- Database query optimization
+- Error tracking and logging
+- Uptime monitoring
 
 ### Analytics
-- Firebase Analytics
 - User behavior tracking
 - Conversion tracking
 - Custom event tracking
+- Performance metrics
 
 ## 🤝 Contributing
 
@@ -327,7 +344,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Firebase team for the excellent platform
+- PostgreSQL team for the excellent database
 - Expo team for React Native tooling
 - Vercel team for Next.js
 - All contributors and supporters

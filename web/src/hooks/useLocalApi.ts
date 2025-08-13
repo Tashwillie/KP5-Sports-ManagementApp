@@ -1,131 +1,340 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApiContext } from '@/providers/ApiProvider';
+// Local API hook for web application
+// This hook provides API access without Firebase dependencies
+
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthService from '@/lib/services/authService';
 
-// Local API hooks that use the ApiProvider context
-export const useLocalClubs = (constraints: Array<{ field: string; operator: any; value: any }> = []) => {
-  const { api } = useApiContext();
-  
-  return useQuery({
-    queryKey: ['clubs', constraints],
-    queryFn: () => api?.clubs.getClubs(constraints) || Promise.resolve([]),
-    enabled: !!api
+interface ApiState {
+  loading: boolean;
+  error: string | null;
+  data: any | null;
+}
+
+export const useLocalApi = () => {
+  const { user, loading: authLoading } = useAuth();
+  const [state, setState] = useState<ApiState>({
+    loading: false,
+    error: null,
+    data: null,
   });
+
+  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'API request failed');
+      }
+
+      setState({ loading: false, error: null, data });
+      return data;
+    } catch (error: any) {
+      setState({ loading: false, error: error.message, data: null });
+      throw error;
+    }
+  };
+
+  const get = (endpoint: string) => apiCall(endpoint, { method: 'GET' });
+  const post = (endpoint: string, body: any) => apiCall(endpoint, { method: 'POST', body: JSON.stringify(body) });
+  const put = (endpoint: string, body: any) => apiCall(endpoint, { method: 'PUT', body: JSON.stringify(body) });
+  const del = (endpoint: string) => apiCall(endpoint, { method: 'DELETE' });
+
+  return {
+    user,
+    loading: authLoading || state.loading,
+    error: state.error,
+    data: state.data,
+    apiCall,
+    get,
+    post,
+    put,
+    delete: del,
+  };
 };
 
-export const useLocalTeams = (constraints: Array<{ field: string; operator: any; value: any }> = []) => {
-  const { api } = useApiContext();
-  
-  return useQuery({
-    queryKey: ['teams', constraints],
-    queryFn: () => api?.teams.getTeams(constraints) || Promise.resolve([]),
-    enabled: !!api
-  });
-};
-
-export const useLocalEvents = (constraints: Array<{ field: string; operator: any; value: any }> = []) => {
-  const { api } = useApiContext();
-  
-  return useQuery({
-    queryKey: ['events', constraints],
-    queryFn: () => api?.events.getEvents(constraints) || Promise.resolve([]),
-    enabled: !!api
-  });
-};
-
-export const useLocalMatches = (constraints: Array<{ field: string; operator: any; value: any }> = []) => {
-  const { api } = useApiContext();
-  
-  return useQuery({
-    queryKey: ['matches', constraints],
-    queryFn: () => api?.matches.getMatches(constraints) || Promise.resolve([]),
-    enabled: !!api
-  });
-};
-
-export const useLocalUsers = (constraints: Array<{ field: string; operator: any; value: any }> = []) => {
-  const { api } = useApiContext();
-  
-  return useQuery({
-    queryKey: ['users', constraints],
-    queryFn: () => api?.users.getUsers(constraints) || Promise.resolve([]),
-    enabled: !!api
-  });
-};
-
-// Auth hook
+// Local authentication hook
 export const useLocalAuth = () => {
-  const { api } = useApiContext();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, error } = useLocalApi();
+  const authService = new AuthService();
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await authService.login(email, password);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const register = async (userData: any) => {
+    try {
+      const response = await authService.register(userData);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  return {
+    user,
+    loading,
+    error,
+    login,
+    register,
+    logout,
+  };
+};
+
+// Local clubs hook
+export const useLocalClubs = () => {
+  const { get, post, put, delete: del, loading, error } = useLocalApi();
+  const [clubs, setClubs] = useState<any[]>([]);
+
+  const fetchClubs = async () => {
+    try {
+      const data = await get('/clubs');
+      setClubs(data.data?.clubs || []);
+    } catch (error) {
+      console.error('Failed to fetch clubs:', error);
+    }
+  };
+
+  const createClub = async (clubData: any) => {
+    try {
+      const data = await post('/clubs', clubData);
+      await fetchClubs();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const updateClub = async (id: string, clubData: any) => {
+    try {
+      const data = await put(`/clubs/${id}`, clubData);
+      await fetchClubs();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const deleteClub = async (id: string) => {
+    try {
+      await del(`/clubs/${id}`);
+      await fetchClubs();
+    } catch (error) {
+      throw error;
+    }
+  };
 
   useEffect(() => {
-    if (!api) return;
+    fetchClubs();
+  }, []);
 
-    const unsubscribe = api.auth.onAuthStateChanged(async (firebaseUser: any) => {
-      if (firebaseUser) {
-        try {
-          const userData = await api.users.getUser(firebaseUser.uid);
-          setUser(userData);
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+  return {
+    clubs,
+    loading,
+    error,
+    fetchClubs,
+    createClub,
+    updateClub,
+    deleteClub,
+  };
+};
 
-    return () => unsubscribe();
-  }, [api]);
+// Local teams hook
+export const useLocalTeams = () => {
+  const { get, post, put, delete: del, loading, error } = useLocalApi();
+  const [teams, setTeams] = useState<any[]>([]);
 
-  // Authentication functions
-  const signIn = async (email: string, password: string) => {
-    if (!api) throw new Error('API not initialized');
-    return await api.auth.signIn(email, password);
+  const fetchTeams = async () => {
+    try {
+      const data = await get('/teams');
+      setTeams(data.data?.teams || []);
+    } catch (error) {
+      console.error('Failed to fetch teams:', error);
+    }
   };
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    if (!api) throw new Error('API not initialized');
-    const firebaseUser = await api.auth.signUp(email, password, displayName);
-    
-    // Create user document
-    await api.users.createUser({
-      id: firebaseUser.uid,
-      email: firebaseUser.email!,
-      displayName: displayName,
-      role: 'player',
-      teamIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true,
-      preferences: {
-        notifications: { email: true, push: true, sms: false },
-        language: 'en',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      }
-    });
-    
-    return firebaseUser;
+  const createTeam = async (teamData: any) => {
+    try {
+      const data = await post('/teams', teamData);
+      await fetchTeams();
+      return data;
+    } catch (error) {
+      throw error;
+    }
   };
 
-  const signOut = async () => {
-    if (!api) throw new Error('API not initialized');
-    return await api.auth.signOut();
+  const updateTeam = async (id: string, teamData: any) => {
+    try {
+      const data = await put(`/teams/${id}`, teamData);
+      await fetchTeams();
+      return data;
+    } catch (error) {
+      throw error;
+    }
   };
 
-  const resetPassword = async (email: string) => {
-    if (!api) throw new Error('API not initialized');
-    return await api.auth.resetPassword(email);
+  const deleteTeam = async (id: string) => {
+    try {
+      await del(`/teams/${id}`);
+      await fetchTeams();
+    } catch (error) {
+      throw error;
+    }
   };
 
-  return { 
-    user, 
-    loading, 
-    signIn, 
-    signUp, 
-    signOut, 
-    resetPassword 
+  useEffect(() => {
+    fetchTeams();
+  }, []);
+
+  return {
+    teams,
+    loading,
+    error,
+    fetchTeams,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+  };
+};
+
+// Local events hook
+export const useLocalEvents = () => {
+  const { get, post, put, delete: del, loading, error } = useLocalApi();
+  const [events, setEvents] = useState<any[]>([]);
+
+  const fetchEvents = async () => {
+    try {
+      const data = await get('/events');
+      setEvents(data.data?.events || []);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    }
+  };
+
+  const createEvent = async (eventData: any) => {
+    try {
+      const data = await post('/events', eventData);
+      await fetchEvents();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const updateEvent = async (id: string, eventData: any) => {
+    try {
+      const data = await put(`/events/${id}`, eventData);
+      await fetchEvents();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      await del(`/events/${id}`);
+      await fetchEvents();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  return {
+    events,
+    loading,
+    error,
+    fetchEvents,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+  };
+};
+
+// Local matches hook
+export const useLocalMatches = () => {
+  const { get, post, put, delete: del, loading, error } = useLocalApi();
+  const [matches, setMatches] = useState<any[]>([]);
+
+  const fetchMatches = async () => {
+    try {
+      const data = await get('/matches');
+      setMatches(data.data?.matches || []);
+    } catch (error) {
+      console.error('Failed to fetch matches:', error);
+    }
+  };
+
+  const createMatch = async (matchData: any) => {
+    try {
+      const data = await post('/matches', matchData);
+      await fetchMatches();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const updateMatch = async (id: string, matchData: any) => {
+    try {
+      const data = await put(`/matches/${id}`, matchData);
+      await fetchMatches();
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const deleteMatch = async (id: string) => {
+    try {
+      await del(`/matches/${id}`);
+      await fetchMatches();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  return {
+    matches,
+    loading,
+    error,
+    fetchMatches,
+    createMatch,
+    updateMatch,
+    deleteMatch,
   };
 }; 

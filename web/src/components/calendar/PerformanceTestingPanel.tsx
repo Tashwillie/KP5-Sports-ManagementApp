@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PerformanceTestingService, PerformanceTestResult, TestScenario, DeviceInfo } from '../../lib/services/performanceTestingService';
 
 interface PerformanceTestingPanelProps {

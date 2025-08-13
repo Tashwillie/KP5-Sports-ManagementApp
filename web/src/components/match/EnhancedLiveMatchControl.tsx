@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,12 @@ import {
   BarChart3,
   Settings,
   Save,
-  RotateCcw
+  RotateCcw,
+  Timer,
+  SkipForward,
+  AlertCircle,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 
 interface Player {
@@ -64,6 +69,16 @@ interface Team {
   };
 }
 
+interface MatchTimerState {
+  currentMinute: number;
+  currentPeriod: 'first_half' | 'halftime' | 'second_half' | 'extra_time' | 'penalties';
+  isTimerRunning: boolean;
+  totalPlayTime: number;
+  pausedTime: number;
+  injuryTime: number;
+  periodDuration: number;
+}
+
 interface EnhancedLiveMatchControlProps {
   matchId: string;
   homeTeam: Team;
@@ -72,6 +87,8 @@ interface EnhancedLiveMatchControlProps {
   onMatchStateChange: (state: 'not_started' | 'in_progress' | 'paused' | 'completed') => void;
   onScoreUpdate: (teamId: string, score: number) => void;
   onStatsUpdate: (teamId: string, stats: any) => void;
+  onTimerControl: (action: string, additionalData?: any) => Promise<boolean>;
+  timerState?: MatchTimerState;
 }
 
 export function EnhancedLiveMatchControl({
@@ -81,42 +98,45 @@ export function EnhancedLiveMatchControl({
   onEventAdd,
   onMatchStateChange,
   onScoreUpdate,
-  onStatsUpdate
+  onStatsUpdate,
+  onTimerControl,
+  timerState
 }: EnhancedLiveMatchControlProps) {
   const [matchState, setMatchState] = useState<'not_started' | 'in_progress' | 'paused' | 'completed'>('not_started');
-  const [elapsedTime, setElapsedTime] = useState(0);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<MatchEvent['type']>('goal');
   const [selectedPlayer, setSelectedPlayer] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedTeam, setSelectedPlayer] = useState('');
   const [eventMinute, setEventMinute] = useState('');
   const [eventSecond, setEventSecond] = useState('');
   const [eventData, setEventData] = useState<any>({});
-  const [activeTab, setActiveTab] = useState<'control' | 'events' | 'stats' | 'settings'>('control');
+  const [activeTab, setActiveTab] = useState<'control' | 'events' | 'stats' | 'settings' | 'timer'>('control');
   const [autoSave, setAutoSave] = useState(true);
   const [performanceMode, setPerformanceMode] = useState<'normal' | 'high' | 'ultra'>('normal');
+  
+  // Timer control states
+  const [injuryTimeMinutes, setInjuryTimeMinutes] = useState(1);
+  const [customPeriodDuration, setCustomPeriodDuration] = useState(45);
+  const [selectedPeriod, setSelectedPeriod] = useState<'first_half' | 'halftime' | 'second_half' | 'extra_time' | 'penalties'>('first_half');
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Initialize timer state from props
+  const [localTimerState, setLocalTimerState] = useState<MatchTimerState>({
+    currentMinute: 0,
+    currentPeriod: 'first_half',
+    isTimerRunning: false,
+    totalPlayTime: 0,
+    pausedTime: 0,
+    injuryTime: 0,
+    periodDuration: 45
+  });
 
-  // Timer logic
+  // Update local timer state when props change
   useEffect(() => {
-    if (matchState === 'in_progress') {
-      intervalRef.current = setInterval(() => {
-        setElapsedTime(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+    if (timerState) {
+      setLocalTimerState(timerState);
     }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [matchState]);
+  }, [timerState]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -124,9 +144,42 @@ export function EnhancedLiveMatchControl({
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const formatPeriodName = (period: string) => {
+    switch (period) {
+      case 'first_half': return '1st Half';
+      case 'halftime': return 'Halftime';
+      case 'second_half': return '2nd Half';
+      case 'extra_time': return 'Extra Time';
+      case 'penalties': return 'Penalties';
+      default: return period;
+    }
+  };
+
+  const getPeriodColor = (period: string) => {
+    switch (period) {
+      case 'first_half': return 'bg-blue-100 text-blue-800';
+      case 'halftime': return 'bg-yellow-100 text-yellow-800';
+      case 'second_half': return 'bg-green-100 text-green-800';
+      case 'extra_time': return 'bg-purple-100 text-purple-800';
+      case 'penalties': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const handleMatchStateChange = (newState: typeof matchState) => {
     setMatchState(newState);
     onMatchStateChange(newState);
+  };
+
+  const handleTimerControl = async (action: string, additionalData?: any) => {
+    try {
+      const success = await onTimerControl(action, additionalData);
+      if (success) {
+        console.log(`Timer control ${action} successful`);
+      }
+    } catch (error) {
+      console.error(`Timer control ${action} failed:`, error);
+    }
   };
 
   const handleScoreChange = (teamId: string, change: number) => {
@@ -223,60 +276,139 @@ export function EnhancedLiveMatchControl({
 
   return (
     <div className="space-y-6">
-      {/* Match Timer and Control */}
+      {/* Enhanced Match Timer and Control */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5" />
+              <Timer className="h-5 w-5" />
               <span>Match Control</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge className={matchState === 'in_progress' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                {matchState === 'in_progress' ? 'LIVE' : matchState.toUpperCase()}
+              <Badge className={getPeriodColor(localTimerState.currentPeriod)}>
+                {formatPeriodName(localTimerState.currentPeriod)}
               </Badge>
-              <span className="text-2xl font-mono font-bold">{formatTime(elapsedTime)}</span>
+              <Badge className={localTimerState.isTimerRunning ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                {localTimerState.isTimerRunning ? 'LIVE' : 'PAUSED'}
+              </Badge>
+              <span className="text-2xl font-mono font-bold">
+                {localTimerState.currentMinute}'{localTimerState.injuryTime > 0 ? `+${localTimerState.injuryTime}` : ''}
+              </span>
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Timer Controls */}
           <div className="flex items-center justify-center space-x-4 mb-6">
             <Button
-              onClick={() => handleMatchStateChange('not_started')}
-              variant={matchState === 'not_started' ? 'default' : 'outline'}
-              disabled={matchState === 'in_progress'}
-            >
-              <Square className="h-4 w-4 mr-2" />
-              Reset
-            </Button>
-            <Button
-              onClick={() => handleMatchStateChange('in_progress')}
-              variant={matchState === 'in_progress' ? 'default' : 'outline'}
-              disabled={matchState === 'completed'}
+              onClick={() => handleTimerControl('start')}
+              variant={localTimerState.isTimerRunning ? 'outline' : 'default'}
+              disabled={localTimerState.isTimerRunning}
             >
               <Play className="h-4 w-4 mr-2" />
               Start
             </Button>
             <Button
-              onClick={() => handleMatchStateChange('paused')}
-              variant={matchState === 'paused' ? 'default' : 'outline'}
-              disabled={matchState !== 'in_progress'}
+              onClick={() => handleTimerControl('pause')}
+              variant="outline"
+              disabled={!localTimerState.isTimerRunning}
             >
               <Pause className="h-4 w-4 mr-2" />
               Pause
             </Button>
             <Button
-              onClick={() => handleMatchStateChange('completed')}
-              variant={matchState === 'completed' ? 'default' : 'outline'}
-              disabled={matchState === 'not_started'}
+              onClick={() => handleTimerControl('resume')}
+              variant="outline"
+              disabled={localTimerState.isTimerRunning}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Resume
+            </Button>
+            <Button
+              onClick={() => handleTimerControl('stop')}
+              variant="outline"
+              disabled={!localTimerState.isTimerRunning}
             >
               <Square className="h-4 w-4 mr-2" />
-              End Match
+              Stop
             </Button>
           </div>
 
+          {/* Advanced Timer Controls */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Injury Time</label>
+              <div className="flex space-x-2">
+                <Input
+                  type="number"
+                  value={injuryTimeMinutes}
+                  onChange={(e) => setInjuryTimeMinutes(parseInt(e.target.value) || 1)}
+                  min="1"
+                  max="10"
+                  className="w-20"
+                />
+                <Button
+                  onClick={() => handleTimerControl('add_injury_time', { minutes: injuryTimeMinutes })}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+                <Button
+                  onClick={() => handleTimerControl('end_injury_time')}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Minus className="h-4 w-4 mr-1" />
+                  End
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Period Duration</label>
+              <div className="flex space-x-2">
+                <Input
+                  type="number"
+                  value={customPeriodDuration}
+                  onChange={(e) => setCustomPeriodDuration(parseInt(e.target.value) || 45)}
+                  min="15"
+                  max="60"
+                  className="w-20"
+                />
+                <Button
+                  onClick={() => handleTimerControl('set_period_duration', { duration: customPeriodDuration })}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  Set
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Period Navigation */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Quick Period Navigation</label>
+            <div className="flex flex-wrap gap-2">
+              {(['first_half', 'halftime', 'second_half', 'extra_time', 'penalties'] as const).map((period) => (
+                <Button
+                  key={period}
+                  onClick={() => handleTimerControl('skip_to_period', { period })}
+                  variant={localTimerState.currentPeriod === period ? 'default' : 'outline'}
+                  size="sm"
+                  disabled={localTimerState.isTimerRunning}
+                >
+                  {formatPeriodName(period)}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Score Control */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-6 mt-6">
             <div className="text-center">
               <h3 className="font-semibold mb-2">{homeTeam.name}</h3>
               <div className="flex items-center justify-center space-x-4">
@@ -325,7 +457,7 @@ export function EnhancedLiveMatchControl({
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="control" className="flex items-center space-x-2">
             <Zap className="h-4 w-4" />
             <span>Quick Add</span>
@@ -337,6 +469,10 @@ export function EnhancedLiveMatchControl({
           <TabsTrigger value="stats" className="flex items-center space-x-2">
             <BarChart3 className="h-4 w-4" />
             <span>Statistics</span>
+          </TabsTrigger>
+          <TabsTrigger value="timer" className="flex items-center space-x-2">
+            <Timer className="h-4 w-4" />
+            <span>Timer</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center space-x-2">
             <Settings className="h-4 w-4" />
@@ -556,6 +692,127 @@ export function EnhancedLiveMatchControl({
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Timer Tab */}
+        <TabsContent value="timer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Timer Controls</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Timer Status */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{localTimerState.currentMinute}</div>
+                    <div className="text-sm text-gray-600">Current Minute</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">{localTimerState.injuryTime}</div>
+                    <div className="text-sm text-gray-600">Injury Time</div>
+                  </div>
+                </div>
+
+                {/* Timer Actions */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Timer Actions</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      onClick={() => handleTimerControl('start')}
+                      disabled={localTimerState.isTimerRunning}
+                      className="w-full"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Timer
+                    </Button>
+                    <Button
+                      onClick={() => handleTimerControl('pause')}
+                      disabled={!localTimerState.isTimerRunning}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Pause className="h-4 w-4 mr-2" />
+                      Pause Timer
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Period Management */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Period Management</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['first_half', 'halftime', 'second_half', 'extra_time', 'penalties'] as const).map((period) => (
+                      <Button
+                        key={period}
+                        onClick={() => handleTimerControl('skip_to_period', { period })}
+                        variant={localTimerState.currentPeriod === period ? 'default' : 'outline'}
+                        size="sm"
+                        disabled={localTimerState.isTimerRunning}
+                        className="text-xs"
+                      >
+                        {formatPeriodName(period)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Injury Time Management */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Injury Time Management</h3>
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      type="number"
+                      value={injuryTimeMinutes}
+                      onChange={(e) => setInjuryTimeMinutes(parseInt(e.target.value) || 1)}
+                      min="1"
+                      max="10"
+                      className="w-20"
+                    />
+                    <Button
+                      onClick={() => handleTimerControl('add_injury_time', { minutes: injuryTimeMinutes })}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Injury Time
+                    </Button>
+                    <Button
+                      onClick={() => handleTimerControl('end_injury_time')}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Minus className="h-4 w-4 mr-1" />
+                      End Injury Time
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Custom Period Duration */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Custom Period Duration</h3>
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      type="number"
+                      value={customPeriodDuration}
+                      onChange={(e) => setCustomPeriodDuration(parseInt(e.target.value) || 45)}
+                      min="15"
+                      max="60"
+                      className="w-20"
+                    />
+                    <Button
+                      onClick={() => handleTimerControl('set_period_duration', { duration: customPeriodDuration })}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      Set Duration
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Settings Tab */}

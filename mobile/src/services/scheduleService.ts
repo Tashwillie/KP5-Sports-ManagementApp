@@ -1,648 +1,209 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  Timestamp,
-  writeBatch,
-  onSnapshot,
-  QuerySnapshot,
-  DocumentData,
-  serverTimestamp,
-  arrayUnion,
-  arrayRemove,
-  increment,
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '../../shared/src/utils/firebase';
-import {
-  Event,
-  Schedule,
-  EventTemplate,
-  CalendarSettings,
-  CalendarView,
-  EventConflict,
-  EventStatistics,
-  CalendarExport,
-  EventType,
-  EventStatus,
-  AttendeeStatus,
-  CalendarViewType,
-  ReminderType,
-} from '../../shared/src/types';
+// Schedule service for PostgreSQL backend - Firebase removed
+import { 
+  Event, 
+  EventType, 
+  EventCategory, 
+  EventStatus, 
+  EventPriority, 
+  EventAttendee, 
+  AttendeeStatus, 
+  AttendeeRole,
+  EventLocation,
+  EventReminder,
+  EventAttachment,
+  EventRecurrence,
+  RecurringEvent
+} from '../../../shared/src/types/schedule';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class ScheduleService {
   private static instance: ScheduleService;
+  private baseURL: string;
+  private token: string | null = null;
 
-  static getInstance(): ScheduleService {
+  public static getInstance(): ScheduleService {
     if (!ScheduleService.instance) {
       ScheduleService.instance = new ScheduleService();
     }
     return ScheduleService.instance;
   }
 
-  // Event Management
-  async createEvent(eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  constructor() {
+    this.baseURL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+    this.loadToken();
+  }
+
+  private async loadToken(): Promise<void> {
     try {
-      const eventRef = await addDoc(collection(db, 'events'), {
-        ...eventData,
-        startDate: Timestamp.fromDate(eventData.startDate),
-        endDate: Timestamp.fromDate(eventData.endDate),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      this.token = await AsyncStorage.getItem('auth_token');
+    } catch (error) {
+      console.error('Error loading token:', error);
+    }
+  }
+
+  private async setToken(token: string): Promise<void> {
+    try {
+      this.token = token;
+      await AsyncStorage.setItem('auth_token', token);
+    } catch (error) {
+      console.error('Error saving token:', error);
+    }
+  }
+
+  private async clearToken(): Promise<void> {
+    try {
+      this.token = null;
+      await AsyncStorage.removeItem('auth_token');
+    } catch (error) {
+      console.error('Error clearing token:', error);
+    }
+  }
+
+  private async makeRequest<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options.headers as Record<string, string>,
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
       });
-      return eventRef.id;
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}`);
+      }
+
+      return data;
     } catch (error) {
-      console.error('Error creating event:', error);
-      throw new Error('Failed to create event');
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
   }
 
-  async getEvent(eventId: string): Promise<Event | null> {
-    try {
-      const eventDoc = await getDoc(doc(db, 'events', eventId));
-      if (eventDoc.exists()) {
-        const data = eventDoc.data();
-        return {
-          ...data,
-          id: eventDoc.id,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting event:', error);
-      throw new Error('Failed to get event');
-    }
+  // Event Management
+  async getEvent(eventId: string): Promise<Event> {
+    return this.makeRequest<Event>(`/events/${eventId}`);
   }
 
-  async updateEvent(eventId: string, updates: Partial<Event>): Promise<void> {
-    try {
-      const updateData: any = {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      };
+  async getEvents(params?: Record<string, any>): Promise<Event[]> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    const response = await this.makeRequest<{ data: Event[] }>(`/events${queryString}`);
+    return response.data || [];
+  }
 
-      if (updates.startDate) {
-        updateData.startDate = Timestamp.fromDate(updates.startDate);
-      }
-      if (updates.endDate) {
-        updateData.endDate = Timestamp.fromDate(updates.endDate);
-      }
+  async getEventsByUser(userId: string): Promise<Event[]> {
+    return this.makeRequest<Event[]>(`/events?userId=${userId}`);
+  }
 
-      await updateDoc(doc(db, 'events', eventId), updateData);
-    } catch (error) {
-      console.error('Error updating event:', error);
-      throw new Error('Failed to update event');
-    }
+  async getEventsByTeam(teamId: string): Promise<Event[]> {
+    return this.makeRequest<Event[]>(`/events?teamId=${teamId}`);
+  }
+
+  async getEventsByClub(clubId: string): Promise<Event[]> {
+    return this.makeRequest<Event[]>(`/events?clubId=${clubId}`);
+  }
+
+  async createEvent(eventData: Partial<Event>): Promise<Event> {
+    return this.makeRequest<Event>('/events', {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+  }
+
+  async updateEvent(eventId: string, eventData: Partial<Event>): Promise<Event> {
+    return this.makeRequest<Event>(`/events/${eventId}`, {
+      method: 'PUT',
+      body: JSON.stringify(eventData),
+    });
   }
 
   async deleteEvent(eventId: string): Promise<void> {
-    try {
-      await deleteDoc(doc(db, 'events', eventId));
-    } catch (error) {
-      console.error('Error deleting event:', error);
-      throw new Error('Failed to delete event');
-    }
-  }
-
-  async getEventsByClub(clubId: string, filters?: {
-    type?: EventType;
-    status?: EventStatus;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<Event[]> {
-    try {
-      let q = query(
-        collection(db, 'events'),
-        where('clubId', '==', clubId),
-        where('isActive', '==', true),
-        orderBy('startDate', 'asc')
-      );
-
-      if (filters?.type) {
-        q = query(q, where('type', '==', filters.type));
-      }
-      if (filters?.status) {
-        q = query(q, where('status', '==', filters.status));
-      }
-      if (filters?.startDate) {
-        q = query(q, where('startDate', '>=', Timestamp.fromDate(filters.startDate)));
-      }
-      if (filters?.endDate) {
-        q = query(q, where('endDate', '<=', Timestamp.fromDate(filters.endDate)));
-      }
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
-      });
-    } catch (error) {
-      console.error('Error getting events by club:', error);
-      throw new Error('Failed to get events');
-    }
-  }
-
-  async getEventsByTeam(teamId: string, filters?: {
-    type?: EventType;
-    status?: EventStatus;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<Event[]> {
-    try {
-      let q = query(
-        collection(db, 'events'),
-        where('teamIds', 'array-contains', teamId),
-        where('isActive', '==', true),
-        orderBy('startDate', 'asc')
-      );
-
-      if (filters?.type) {
-        q = query(q, where('type', '==', filters.type));
-      }
-      if (filters?.status) {
-        q = query(q, where('status', '==', filters.status));
-      }
-      if (filters?.startDate) {
-        q = query(q, where('startDate', '>=', Timestamp.fromDate(filters.startDate)));
-      }
-      if (filters?.endDate) {
-        q = query(q, where('endDate', '<=', Timestamp.fromDate(filters.endDate)));
-      }
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
-      });
-    } catch (error) {
-      console.error('Error getting events by team:', error);
-      throw new Error('Failed to get events');
-    }
-  }
-
-  async getEventsByUser(userId: string, filters?: {
-    type?: EventType;
-    status?: EventStatus;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<Event[]> {
-    try {
-      let q = query(
-        collection(db, 'events'),
-        where('attendees', 'array-contains', { userId, status: 'confirmed' }),
-        where('isActive', '==', true),
-        orderBy('startDate', 'asc')
-      );
-
-      if (filters?.type) {
-        q = query(q, where('type', '==', filters.type));
-      }
-      if (filters?.status) {
-        q = query(q, where('status', '==', filters.status));
-      }
-      if (filters?.startDate) {
-        q = query(q, where('startDate', '>=', Timestamp.fromDate(filters.startDate)));
-      }
-      if (filters?.endDate) {
-        q = query(q, where('endDate', '<=', Timestamp.fromDate(filters.endDate)));
-      }
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
-      });
-    } catch (error) {
-      console.error('Error getting events by user:', error);
-      throw new Error('Failed to get events');
-    }
+    await this.makeRequest(`/events/${eventId}`, {
+      method: 'DELETE',
+    });
   }
 
   // RSVP Management
   async respondToEvent(eventId: string, userId: string, status: AttendeeStatus, notes?: string): Promise<void> {
-    try {
-      const eventRef = doc(db, 'events', eventId);
-      const eventDoc = await getDoc(eventRef);
-      
-      if (!eventDoc.exists()) {
-        throw new Error('Event not found');
-      }
-
-      const event = eventDoc.data() as Event;
-      const attendeeIndex = event.attendees.findIndex(a => a.userId === userId);
-      
-      if (attendeeIndex === -1) {
-        throw new Error('User not invited to this event');
-      }
-
-      const updatedAttendees = [...event.attendees];
-      updatedAttendees[attendeeIndex] = {
-        ...updatedAttendees[attendeeIndex],
-        status,
-        respondedAt: new Date(),
-        rsvpNotes: notes,
-      };
-
-      await updateDoc(eventRef, {
-        attendees: updatedAttendees,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error responding to event:', error);
-      throw new Error('Failed to respond to event');
-    }
+    await this.makeRequest(`/events/${eventId}/rsvp`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, status, notes }),
+    });
   }
 
   async addAttendeeToEvent(eventId: string, attendee: {
     userId: string;
-    role: 'player' | 'coach' | 'parent' | 'referee' | 'spectator' | 'organizer';
+    role: AttendeeRole;
   }): Promise<void> {
-    try {
-      const eventRef = doc(db, 'events', eventId);
-      await updateDoc(eventRef, {
-        attendees: arrayUnion({
-          userId: attendee.userId,
-          status: 'pending',
-          role: attendee.role,
-          respondedAt: null,
-          notes: '',
-          rsvpNotes: '',
-        }),
-        updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error adding attendee to event:', error);
-      throw new Error('Failed to add attendee');
-    }
+    await this.makeRequest(`/events/${eventId}/attendees`, {
+      method: 'POST',
+      body: JSON.stringify(attendee),
+    });
   }
 
   async removeAttendeeFromEvent(eventId: string, userId: string): Promise<void> {
-    try {
-      const eventRef = doc(db, 'events', eventId);
-      const eventDoc = await getDoc(eventRef);
-      
-      if (!eventDoc.exists()) {
-        throw new Error('Event not found');
-      }
-
-      const event = eventDoc.data() as Event;
-      const updatedAttendees = event.attendees.filter(a => a.userId !== userId);
-
-      await updateDoc(eventRef, {
-        attendees: updatedAttendees,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error removing attendee from event:', error);
-      throw new Error('Failed to remove attendee');
-    }
+    await this.makeRequest(`/events/${eventId}/attendees/${userId}`, {
+      method: 'DELETE',
+    });
   }
 
-  // Schedule Management
-  async createSchedule(scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    try {
-      const scheduleRef = await addDoc(collection(db, 'schedules'), {
-        ...scheduleData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return scheduleRef.id;
-    } catch (error) {
-      console.error('Error creating schedule:', error);
-      throw new Error('Failed to create schedule');
-    }
-  }
-
-  async getSchedule(scheduleId: string): Promise<Schedule | null> {
-    try {
-      const scheduleDoc = await getDoc(doc(db, 'schedules', scheduleId));
-      if (scheduleDoc.exists()) {
-        const data = scheduleDoc.data();
-        return {
-          ...data,
-          id: scheduleDoc.id,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Schedule;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting schedule:', error);
-      throw new Error('Failed to get schedule');
-    }
-  }
-
-  async updateSchedule(scheduleId: string, updates: Partial<Schedule>): Promise<void> {
-    try {
-      await updateDoc(doc(db, 'schedules', scheduleId), {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error updating schedule:', error);
-      throw new Error('Failed to update schedule');
-    }
-  }
-
-  async deleteSchedule(scheduleId: string): Promise<void> {
-    try {
-      await deleteDoc(doc(db, 'schedules', scheduleId));
-    } catch (error) {
-      console.error('Error deleting schedule:', error);
-      throw new Error('Failed to delete schedule');
-    }
-  }
-
-  async getSchedulesByClub(clubId: string): Promise<Schedule[]> {
-    try {
-      const q = query(
-        collection(db, 'schedules'),
-        where('clubId', '==', clubId),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Schedule;
-      });
-    } catch (error) {
-      console.error('Error getting schedules by club:', error);
-      throw new Error('Failed to get schedules');
-    }
-  }
-
-  // Event Templates
-  async createEventTemplate(templateData: Omit<EventTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    try {
-      const templateRef = await addDoc(collection(db, 'eventTemplates'), {
-        ...templateData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return templateRef.id;
-    } catch (error) {
-      console.error('Error creating event template:', error);
-      throw new Error('Failed to create event template');
-    }
-  }
-
-  async getEventTemplatesByClub(clubId: string): Promise<EventTemplate[]> {
-    try {
-      const q = query(
-        collection(db, 'eventTemplates'),
-        where('clubId', '==', clubId),
-        orderBy('name', 'asc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as EventTemplate;
-      });
-    } catch (error) {
-      console.error('Error getting event templates:', error);
-      throw new Error('Failed to get event templates');
-    }
-  }
-
-  // Calendar Settings
-  async getCalendarSettings(userId: string): Promise<CalendarSettings | null> {
-    try {
-      const q = query(
-        collection(db, 'calendarSettings'),
-        where('userId', '==', userId),
-        limit(1)
-      );
-
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const data = querySnapshot.docs[0].data();
-        return {
-          ...data,
-          id: querySnapshot.docs[0].id,
-          updatedAt: data.updatedAt.toDate(),
-        } as CalendarSettings;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting calendar settings:', error);
-      throw new Error('Failed to get calendar settings');
-    }
-  }
-
-  async updateCalendarSettings(userId: string, settings: Partial<CalendarSettings>): Promise<void> {
-    try {
-      const q = query(
-        collection(db, 'calendarSettings'),
-        where('userId', '==', userId),
-        limit(1)
-      );
-
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        await updateDoc(doc(db, 'calendarSettings', querySnapshot.docs[0].id), {
-          ...settings,
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await addDoc(collection(db, 'calendarSettings'), {
-          userId,
-          ...settings,
-          updatedAt: serverTimestamp(),
-        });
-      }
-    } catch (error) {
-      console.error('Error updating calendar settings:', error);
-      throw new Error('Failed to update calendar settings');
-    }
-  }
-
-  // Real-time Event Listeners
+  // Real-time Event Listeners (simplified for API-based approach)
   subscribeToEventsByClub(clubId: string, callback: (events: Event[]) => void): () => void {
-    const q = query(
-      collection(db, 'events'),
-      where('clubId', '==', clubId),
-      where('isActive', '==', true),
-      orderBy('startDate', 'asc')
-    );
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const events = await this.getEventsByClub(clubId);
+        callback(events);
+      } catch (error) {
+        console.error('Error in club events subscription:', error);
+        callback([]);
+      }
+    }, 5000); // Poll every 5 seconds
 
-    return onSnapshot(q, (querySnapshot: QuerySnapshot<DocumentData>) => {
-      const events = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
-      });
-      callback(events);
-    });
+    return () => clearInterval(interval);
   }
 
-  subscribeToEventsByTeam(teamId: string, callback: (events: Event[]) => void): () => void {
-    const q = query(
-      collection(db, 'events'),
-      where('teamIds', 'array-contains', teamId),
-      where('isActive', '==', true),
-      orderBy('startDate', 'asc')
-    );
+  subscribeToEventsByUser(userId: string, callback: (events: Event[]) => void): () => void {
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const events = await this.getEventsByUser(userId);
+        callback(events);
+      } catch (error) {
+        console.error('Error in user events subscription:', error);
+        callback([]);
+      }
+    }, 5000); // Poll every 5 seconds
 
-    return onSnapshot(q, (querySnapshot: QuerySnapshot<DocumentData>) => {
-      const events = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
-      });
-      callback(events);
-    });
+    return () => clearInterval(interval);
   }
 
-  // Event Conflict Detection
-  async detectEventConflicts(eventId: string): Promise<EventConflict[]> {
-    try {
-      const event = await this.getEvent(eventId);
-      if (!event) {
-        throw new Error('Event not found');
+  subscribeToEvent(eventId: string, callback: (event: Event | null) => void): () => void {
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const event = await this.getEvent(eventId);
+        callback(event);
+      } catch (error) {
+        console.error('Error in event subscription:', error);
+        callback(null);
       }
+    }, 5000); // Poll every 5 seconds
 
-      const conflicts: EventConflict[] = [];
-
-      // Check for time overlaps
-      const timeOverlapQuery = query(
-        collection(db, 'events'),
-        where('clubId', '==', event.clubId),
-        where('isActive', '==', true),
-        where('startDate', '<', Timestamp.fromDate(event.endDate)),
-        where('endDate', '>', Timestamp.fromDate(event.startDate))
-      );
-
-      const timeOverlapSnapshot = await getDocs(timeOverlapQuery);
-      timeOverlapSnapshot.docs.forEach(doc => {
-        if (doc.id !== eventId) {
-          conflicts.push({
-            eventId,
-            conflictingEventId: doc.id,
-            conflictType: 'time_overlap',
-            severity: 'high',
-            description: 'Time overlap detected',
-            detectedAt: new Date(),
-            resolved: false,
-          });
-        }
-      });
-
-      // Check for location conflicts
-      if (event.location.name) {
-        const locationConflictQuery = query(
-          collection(db, 'events'),
-          where('clubId', '==', event.clubId),
-          where('location.name', '==', event.location.name),
-          where('isActive', '==', true),
-          where('startDate', '<', Timestamp.fromDate(event.endDate)),
-          where('endDate', '>', Timestamp.fromDate(event.startDate))
-        );
-
-        const locationConflictSnapshot = await getDocs(locationConflictQuery);
-        locationConflictSnapshot.docs.forEach(doc => {
-          if (doc.id !== eventId) {
-            conflicts.push({
-              eventId,
-              conflictingEventId: doc.id,
-              conflictType: 'location_conflict',
-              severity: 'medium',
-              description: 'Location conflict detected',
-              detectedAt: new Date(),
-              resolved: false,
-            });
-          }
-        });
-      }
-
-      return conflicts;
-    } catch (error) {
-      console.error('Error detecting event conflicts:', error);
-      throw new Error('Failed to detect event conflicts');
-    }
-  }
-
-  // Event Statistics
-  async getEventStatistics(eventId: string): Promise<EventStatistics | null> {
-    try {
-      const q = query(
-        collection(db, 'eventStatistics'),
-        where('eventId', '==', eventId),
-        limit(1)
-      );
-
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const data = querySnapshot.docs[0].data();
-        return {
-          ...data,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as EventStatistics;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting event statistics:', error);
-      throw new Error('Failed to get event statistics');
-    }
+    return () => clearInterval(interval);
   }
 
   // File Upload for Event Attachments
@@ -653,31 +214,28 @@ export class ScheduleService {
     type: 'document' | 'image' | 'video' | 'other';
     size: number;
   }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('uploadedBy', uploadedBy);
+
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
     try {
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      const fileName = `${eventId}/${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, `event-attachments/${fileName}`);
-
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      const attachment = {
-        id: Date.now().toString(),
-        name: file.name,
-        url: downloadURL,
-        type: this.getFileType(fileExtension),
-        size: file.size,
-        uploadedBy,
-        uploadedAt: new Date(),
-      };
-
-      // Add attachment to event
-      await updateDoc(doc(db, 'events', eventId), {
-        attachments: arrayUnion(attachment),
-        updatedAt: serverTimestamp(),
+      const response = await fetch(`${this.baseURL}/events/${eventId}/attachments`, {
+        method: 'POST',
+        headers,
+        body: formData,
       });
 
-      return attachment;
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
     } catch (error) {
       console.error('Error uploading event attachment:', error);
       throw new Error('Failed to upload attachment');
@@ -687,16 +245,16 @@ export class ScheduleService {
   private getFileType(extension?: string): 'document' | 'image' | 'video' | 'other' {
     if (!extension) return 'other';
     
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'];
-    const documentExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt'];
-
-    if (imageExtensions.includes(extension)) return 'image';
-    if (videoExtensions.includes(extension)) return 'video';
-    if (documentExtensions.includes(extension)) return 'document';
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv'];
+    const documentExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
+    
+    const ext = extension.toLowerCase();
+    
+    if (imageExtensions.includes(ext)) return 'image';
+    if (videoExtensions.includes(ext)) return 'video';
+    if (documentExtensions.includes(ext)) return 'document';
     
     return 'other';
   }
-}
-
-export default ScheduleService.getInstance(); 
+} 

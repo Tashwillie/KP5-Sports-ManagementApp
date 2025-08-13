@@ -1,12 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, sendPasswordResetEmail, onAuthStateChanged, User as FirebaseUser, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { auth, getAPI } from '../lib/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../../../../../shared/src/types';
-import { getAuthErrorMessage } from '../../../../../shared/src/utils/firebase';
 
 interface AuthContextType {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
@@ -30,220 +27,245 @@ export const useAuth = () => {
   return context;
 };
 
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+class AuthService {
+  private token: string | null = null;
+
+  async getToken(): Promise<string | null> {
+    if (!this.token) {
+      this.token = await AsyncStorage.getItem('authToken');
+    }
+    return this.token;
+  }
+
+  async setToken(token: string): Promise<void> {
+    this.token = token;
+    await AsyncStorage.setItem('authToken', token);
+  }
+
+  async removeToken(): Promise<void> {
+    this.token = null;
+    await AsyncStorage.removeItem('authToken');
+  }
+
+  async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+    const token = await this.getToken();
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async signIn(email: string, password: string): Promise<{ user: User; token: string }> {
+          const response = await this.makeRequest('/auth/signin', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    
+    await this.setToken(response.data.token);
+    return response.data;
+  }
+
+  async signUp(email: string, password: string, displayName: string): Promise<{ user: User; token: string }> {
+    const response = await this.makeRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, displayName }),
+    });
+    
+    await this.setToken(response.data.token);
+    return response.data;
+  }
+
+  async getCurrentUser(): Promise<User> {
+    const response = await this.makeRequest('/auth/me');
+    return response.data;
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
+    const response = await this.makeRequest(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    return response.data;
+  }
+
+  async resetPassword(email: string): Promise<void> {
+    await this.makeRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+}
+
+const authService = new AuthService();
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      setFirebaseUser(firebaseUser);
-      
-      if (firebaseUser) {
-        try {
-          // Use shared API to fetch user profile
-          const api = getAPI();
-          const userProfile = await api.users.getUser(firebaseUser.uid);
-          setUser(userProfile);
-          setError(null);
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          // If profile doesn't exist, create one
-          if (firebaseUser.email) {
-            try {
-              const api = getAPI();
-              await api.users.createUser({
-                id: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName || '',
-                photoURL: firebaseUser.photoURL || '',
-                phoneNumber: firebaseUser.phoneNumber || '',
-                role: 'player',
-                teamIds: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                isActive: true,
-                preferences: {
-                  notifications: { email: true, push: true, sms: false },
-                  language: 'en',
-                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                }
-              });
-              
-              const newProfile = await api.users.getUser(firebaseUser.uid);
-              setUser(newProfile);
-              setError(null);
-            } catch (createError) {
-              console.error('Error creating user profile:', createError);
-              setError('Failed to create user profile');
-            }
-          }
+    const initializeAuth = async () => {
+      try {
+        const token = await authService.getToken();
+        if (token) {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
         }
-      } else {
-        setUser(null);
-        setError(null);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        await authService.removeToken();
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
 
-    return unsubscribe;
+    initializeAuth();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       setError(null);
-      const api = getAPI();
-      await api.auth.signIn(email, password);
+      setLoading(true);
+      const { user: userData } = await authService.signIn(email, password);
+      setUser(userData);
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to sign in');
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
       setError(null);
-      const api = getAPI();
-      const newFirebaseUser = await api.auth.signUp(email, password, displayName);
-      
-      // Create user document using shared API
-      await api.users.createUser({
-        id: newFirebaseUser.uid,
-        email: newFirebaseUser.email!,
-        displayName: displayName,
-        role: 'player',
-        teamIds: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isActive: true,
-        preferences: {
-          notifications: { email: true, push: true, sms: false },
-          language: 'en',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        }
-      });
+      setLoading(true);
+      const { user: userData } = await authService.signUp(email, password, displayName);
+      setUser(userData);
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to sign up');
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
       setError(null);
-      const api = getAPI();
-      await api.auth.signOut();
+      await authService.removeToken();
+      setUser(null);
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to sign out');
+      throw error;
     }
   };
 
   const signInWithGoogle = async () => {
     try {
       setError(null);
-      // TODO: Implement Google sign-in
-      console.log('Google sign in not implemented yet');
-      throw new Error('Google sign in not implemented yet');
+      // TODO: Implement Google OAuth with backend API
+      throw new Error('Google sign-in not implemented yet');
     } catch (error: any) {
-      const errorMessage = error.message || 'Google sign in failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to sign in with Google');
+      throw error;
     }
   };
 
   const signInWithPhone = async (phoneNumber: string) => {
     try {
       setError(null);
-      // Phone auth implementation
-      console.log('Phone sign in not implemented yet');
-      throw new Error('Phone sign in not implemented yet');
+      // TODO: Implement phone authentication with backend API
+      throw new Error('Phone sign-in not implemented yet');
     } catch (error: any) {
-      const errorMessage = error.message || 'Phone sign in failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to sign in with phone');
+      throw error;
     }
   };
 
   const verifyOTP = async (verificationId: string, code: string) => {
     try {
       setError(null);
-      // OTP verification implementation
-      console.log('OTP verification not implemented yet');
+      // TODO: Implement OTP verification with backend API
       throw new Error('OTP verification not implemented yet');
     } catch (error: any) {
-      const errorMessage = error.message || 'OTP verification failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to verify OTP');
+      throw error;
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
       setError(null);
-      const api = getAPI();
-      await api.auth.resetPassword(email);
+      await authService.resetPassword(email);
     } catch (error: any) {
-      const errorMessage = getAuthErrorMessage(error.code);
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to reset password');
+      throw error;
     }
   };
 
   const updateProfile = async (updates: Partial<User>) => {
-    if (!firebaseUser) {
-      throw new Error('No user logged in');
-    }
-
     try {
       setError(null);
-      const api = getAPI();
-      await api.users.updateUser(firebaseUser.uid, updates);
-      
-      // Update local state
-      if (user) {
-        setUser({ ...user, ...updates });
+      if (!user) {
+        throw new Error('No user logged in');
       }
+      
+      const updatedUser = await authService.updateUser(user.id, updates);
+      setUser(updatedUser);
     } catch (error: any) {
-      const errorMessage = error.message || 'Failed to update profile';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      setError(error.message || 'Failed to update profile');
+      throw error;
     }
   };
 
   const refreshUser = async () => {
-    if (firebaseUser) {
-      try {
-        const api = getAPI();
-        const userProfile = await api.users.getUser(firebaseUser.uid);
-        setUser(userProfile);
-      } catch (error) {
-        console.error('Error refreshing user:', error);
+    try {
+      setError(null);
+      if (!user) {
+        return;
       }
+      
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    } catch (error: any) {
+      setError(error.message || 'Failed to refresh user');
+      throw error;
     }
   };
 
+  const value: AuthContextType = {
+    user,
+    loading,
+    error,
+    signIn,
+    signUp,
+    signOut,
+    signInWithGoogle,
+    signInWithPhone,
+    verifyOTP,
+    resetPassword,
+    updateProfile,
+    refreshUser,
+  };
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      firebaseUser,
-      loading,
-      error,
-      signIn,
-      signUp,
-      signOut,
-      signInWithGoogle,
-      signInWithPhone,
-      verifyOTP,
-      resetPassword,
-      updateProfile,
-      refreshUser,
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

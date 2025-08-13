@@ -2,7 +2,7 @@
 const nextConfig = {
   images: {
     domains: [
-      'firebasestorage.googleapis.com',
+      'api.example.com',
       'lh3.googleusercontent.com',
       'graph.facebook.com',
     ],
@@ -60,6 +60,13 @@ const nextConfig = {
         tls: false,
       };
     }
+    
+    // Suppress source map warnings for external libraries
+    config.ignoreWarnings = [
+      /Failed to parse source map/,
+      /Source map error/,
+    ];
+    
     return config;
   },
 };

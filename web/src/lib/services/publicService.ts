@@ -1,23 +1,11 @@
 import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import { 
   Club, 
   Team, 
   Event, 
   Player,
   ApiResponse 
 } from '../../../../shared/src/types';
+import apiClient from '../apiClient';
 
 interface ClubStats {
   totalTeams: number;
@@ -30,10 +18,6 @@ interface ClubStats {
 
 export class PublicService {
   private static instance: PublicService;
-  private clubsCollection = collection(db, 'clubs');
-  private teamsCollection = collection(db, 'teams');
-  private eventsCollection = collection(db, 'events');
-  private playersCollection = collection(db, 'players');
 
   public static getInstance(): PublicService {
     if (!PublicService.instance) {
@@ -45,28 +29,20 @@ export class PublicService {
   // Get public club by slug
   async getPublicClub(clubSlug: string): Promise<Club> {
     try {
-      const q = query(
-        this.clubsCollection,
-        where('slug', '==', clubSlug),
-        where('isPublic', '==', true),
-        where('isActive', '==', true)
-      );
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/clubs/${clubSlug}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
+      if (!response.ok) {
         throw new Error('Club not found or not public');
       }
 
-      const doc = querySnapshot.docs[0];
-      const data = doc.data();
-      
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as Club;
+      const result = await response.json();
+      return result.data;
     } catch (error) {
       console.error('Error getting public club:', error);
       throw new Error('Failed to get public club');
@@ -76,23 +52,20 @@ export class PublicService {
   // Get club teams
   async getClubTeams(clubSlug: string): Promise<Team[]> {
     try {
-      const q = query(
-        this.teamsCollection,
-        where('clubSlug', '==', clubSlug),
-        where('isPublic', '==', true),
-        orderBy('name', 'asc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/clubs/${clubSlug}/teams`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch club teams');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting club teams:', error);
       throw new Error('Failed to get club teams');
@@ -102,25 +75,20 @@ export class PublicService {
   // Get club events
   async getClubEvents(clubSlug: string): Promise<Event[]> {
     try {
-      const q = query(
-        this.eventsCollection,
-        where('clubSlug', '==', clubSlug),
-        where('isPublic', '==', true),
-        orderBy('startDate', 'desc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          startDate: data.startDate?.toDate() || new Date(),
-          endDate: data.endDate?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/clubs/${clubSlug}/events`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch club events');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting club events:', error);
       throw new Error('Failed to get club events');
@@ -132,13 +100,13 @@ export class PublicService {
     try {
       const [teams, events] = await Promise.all([
         this.getClubTeams(clubSlug),
-        this.getClubEvents(clubSlug)
+        this.getClubEvents(clubSlug),
       ]);
 
       const totalTeams = teams.length;
-      const totalPlayers = teams.reduce((sum, team) => sum + (team.playerCount || 0), 0);
+      const totalPlayers = teams.reduce((sum, team) => sum + (team.roster?.players?.length || 0), 0);
       const totalMatches = events.filter(event => event.type === 'match').length;
-      
+
       // Calculate wins, losses, draws from match events
       let totalWins = 0;
       let totalLosses = 0;
@@ -170,28 +138,23 @@ export class PublicService {
     }
   }
 
-  // Get public team by ID
+  // Get public team
   async getPublicTeam(teamId: string): Promise<Team> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      const docSnap = await getDoc(docRef);
-      
-      if (!docSnap.exists()) {
-        throw new Error('Team not found');
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/teams/${teamId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Team not found or not public');
       }
 
-      const data = docSnap.data();
-      
-      if (!data.isPublic) {
-        throw new Error('Team is not public');
-      }
-
-      return {
-        id: docSnap.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as Team;
+      const result = await response.json();
+      return result.data;
     } catch (error) {
       console.error('Error getting public team:', error);
       throw new Error('Failed to get public team');
@@ -201,24 +164,20 @@ export class PublicService {
   // Get team players
   async getTeamPlayers(teamId: string): Promise<Player[]> {
     try {
-      const q = query(
-        this.playersCollection,
-        where('teamIds', 'array-contains', teamId),
-        where('isPublic', '==', true),
-        orderBy('lastName', 'asc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          dateOfBirth: data.dateOfBirth?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Player;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/teams/${teamId}/players`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch team players');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting team players:', error);
       throw new Error('Failed to get team players');
@@ -228,25 +187,20 @@ export class PublicService {
   // Get team events
   async getTeamEvents(teamId: string): Promise<Event[]> {
     try {
-      const q = query(
-        this.eventsCollection,
-        where('teamIds', 'array-contains', teamId),
-        where('isPublic', '==', true),
-        orderBy('startDate', 'desc')
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          startDate: data.startDate?.toDate() || new Date(),
-          endDate: data.endDate?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/teams/${teamId}/events`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch team events');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting team events:', error);
       throw new Error('Failed to get team events');
@@ -260,53 +214,27 @@ export class PublicService {
     limit?: number;
   }): Promise<Club[]> {
     try {
-      let q = query(
-        this.clubsCollection,
-        where('isPublic', '==', true),
-        where('isActive', '==', true),
-        orderBy('name', 'asc')
-      );
-
-      if (filters?.limit) {
-        q = query(q, limit(filters.limit));
-      }
-
-      const querySnapshot = await getDocs(q);
-      let clubs = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Club;
+      // Note: This would need to be implemented in the backend API
+      const params = new URLSearchParams({
+        search: searchTerm,
+        ...(filters?.location && { location: filters.location }),
+        ...(filters?.sport && { sport: filters.sport }),
+        ...(filters?.limit && { limit: filters.limit.toString() }),
       });
 
-      // Filter by search term
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        clubs = clubs.filter(club =>
-          club.name.toLowerCase().includes(term) ||
-          club.description?.toLowerCase().includes(term) ||
-          club.location?.toLowerCase().includes(term)
-        );
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/clubs/search?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search clubs');
       }
 
-      // Filter by location
-      if (filters?.location) {
-        clubs = clubs.filter(club =>
-          club.location?.toLowerCase().includes(filters.location!.toLowerCase())
-        );
-      }
-
-      // Filter by sport
-      if (filters?.sport) {
-        clubs = clubs.filter(club =>
-          club.sport?.toLowerCase() === filters.sport!.toLowerCase()
-        );
-      }
-
-      return clubs;
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error searching public clubs:', error);
       throw new Error('Failed to search public clubs');
@@ -316,25 +244,20 @@ export class PublicService {
   // Get featured clubs
   async getFeaturedClubs(limit: number = 6): Promise<Club[]> {
     try {
-      const q = query(
-        this.clubsCollection,
-        where('isPublic', '==', true),
-        where('isActive', '==', true),
-        where('isFeatured', '==', true),
-        orderBy('name', 'asc'),
-        limit(limit)
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Club;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/clubs/featured?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch featured clubs');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting featured clubs:', error);
       throw new Error('Failed to get featured clubs');
@@ -344,78 +267,53 @@ export class PublicService {
   // Get upcoming public events
   async getUpcomingPublicEvents(limit: number = 10): Promise<Event[]> {
     try {
-      const now = new Date();
-      const q = query(
-        this.eventsCollection,
-        where('isPublic', '==', true),
-        where('startDate', '>', now),
-        orderBy('startDate', 'asc'),
-        limit(limit)
-      );
-
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          startDate: data.startDate?.toDate() || new Date(),
-          endDate: data.endDate?.toDate(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Event;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/public/events/upcoming?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch upcoming events');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error getting upcoming public events:', error);
       throw new Error('Failed to get upcoming public events');
     }
   }
 
-  // Subscribe to public club updates
+  // Real-time subscriptions (simplified for API-based approach)
   subscribeToPublicClub(clubSlug: string, callback: (club: Club) => void): () => void {
-    const q = query(
-      this.clubsCollection,
-      where('slug', '==', clubSlug),
-      where('isPublic', '==', true),
-      where('isActive', '==', true)
-    );
-    
-    return onSnapshot(q, (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        const data = doc.data();
-        const club: Club = {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Club;
-        
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const club = await this.getPublicClub(clubSlug);
         callback(club);
+      } catch (error) {
+        console.error('Error in public club subscription:', error);
       }
-    });
+    }, 30000); // Poll every 30 seconds for public data
+
+    return () => clearInterval(interval);
   }
 
-  // Subscribe to public team updates
   subscribeToPublicTeam(teamId: string, callback: (team: Team) => void): () => void {
-    const docRef = doc(this.teamsCollection, teamId);
-    
-    return onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        
-        if (data.isPublic) {
-          const team: Team = {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-          } as Team;
-          
-          callback(team);
-        }
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const team = await this.getPublicTeam(teamId);
+        callback(team);
+      } catch (error) {
+        console.error('Error in public team subscription:', error);
       }
-    });
+    }, 30000); // Poll every 30 seconds for public data
+
+    return () => clearInterval(interval);
   }
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup';
@@ -15,7 +15,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { signIn, signUp } = useFirebase();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,22 +1,26 @@
+// Shared types and utilities for KP5 Academy
+// This file exports common types and utilities used across web and mobile apps
+
 // Export all types
 export * from './types';
 
-// Export all utilities
+// Export services
+export * from './services/api';
+export { RealTimeService, RealTimeConfig, RealTimeCallback, MatchState } from './services/realTimeService';
+export * from './services/LiveMatchService';
+
+// Export hooks
+export * from './hooks/useApi';
+export * from './hooks/useRealTime';
+export * from './hooks/useLiveMatch';
+
+// Export providers
+export * from './providers/RealTimeProvider';
+
+// Export utilities
 export * from './utils/constants';
 export * from './utils/helpers';
-export * from './utils/firebase';
 
-// Export authentication types and utilities
-export type { AuthState, AuthContextType, FirebaseConfig, FirebaseServices, EmulatorConfig } from './utils/firebase';
-export { 
-  validateFirebaseConfig, 
-  getEmulatorConfig, 
-  isNotificationSupported, 
-  requestNotificationPermission,
-  checkFirebaseServices,
-  getFirebaseConfigFromEnv,
-  validateEnvironment,
-  getAuthErrorMessage,
-  isValidUserRole,
-  hasPermission
-} from './utils/firebase'; 
+// Statistics
+export { RealTimeStatisticsService, StatisticsUpdate, StatisticsSubscription } from './services/realTimeStatisticsService';
+export { useRealTimeStatistics, UseRealTimeStatisticsOptions, UseRealTimeStatisticsReturn } from './hooks/useRealTimeStatistics'; 

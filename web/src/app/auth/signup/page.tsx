@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocalAuth } from "@/hooks/useLocalApi";
+import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,7 +17,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { signUp } = useLocalAuth();
+  const { register } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +38,7 @@ export default function SignUpPage() {
     }
 
     try {
-      await signUp(email, password, displayName);
+      await register({ email, password, displayName });
       toast.success("Account created successfully!");
       router.push("/dashboard");
     } catch (error: any) {

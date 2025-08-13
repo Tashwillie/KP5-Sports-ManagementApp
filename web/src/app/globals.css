@@ -99,3 +99,289 @@ a {
     padding-right: 1rem;
   }
 } 
+
+/* WebSocket Status Styles */
+.websocket-status {
+  margin-bottom: 1rem;
+}
+
+.websocket-status-compact {
+  display: inline-block;
+}
+
+.websocket-status .alert {
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.websocket-status .btn {
+  border-radius: 6px;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+/* Spinning Animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Live Match Tracker Styles */
+.live-match-tracker {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.connection-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.connection-indicator.connected {
+  background-color: #28a745;
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.5);
+}
+
+.connection-indicator.disconnected {
+  background-color: #dc3545;
+  box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
+}
+
+.vs-divider {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #6c757d;
+  margin: 1rem 0;
+}
+
+.match-info {
+  margin-top: 0.5rem;
+}
+
+.match-timer {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.timer-display {
+  font-family: 'Courier New', monospace;
+}
+
+.injury-time {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.events-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.event-item {
+  transition: background-color 0.2s ease;
+}
+
+.event-item:hover {
+  background-color: #f8f9fa;
+}
+
+.event-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f8f9fa;
+}
+
+.event-details {
+  min-width: 0;
+}
+
+.event-description {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Button Styles */
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Badge Styles */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Alert Styles */
+.alert {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .live-match-tracker {
+    padding: 0 1rem;
+  }
+  
+  .match-timer {
+    font-size: 1.5rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Chart Styles */
+.real-time-chart {
+  transition: all 0.3s ease;
+}
+
+.real-time-chart:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container {
+  position: relative;
+  min-height: 400px;
+}
+
+.demo-selector {
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.demo-selector:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.demo-selector.border-primary {
+  border-color: #0d6efd !important;
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Analytics Dashboard Styles */
+.analytics-dashboard .card {
+  transition: all 0.3s ease;
+}
+
+.analytics-dashboard .card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart Controls */
+.chart-controls {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* Performance Metrics */
+.performance-metric {
+  text-align: center;
+  padding: 1rem;
+}
+
+.performance-metric .metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #0d6efd;
+}
+
+.performance-metric .metric-label {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* Chart Type Buttons */
+.chart-type-btn {
+  min-width: 80px;
+}
+
+/* Live Update Indicator */
+.live-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+} 

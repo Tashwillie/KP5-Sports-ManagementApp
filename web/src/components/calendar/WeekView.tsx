@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { DraggableEvent } from './DraggableEvent';
 import { DropZone } from './DropZone';
 import { Event } from '../../../../shared/src/types';

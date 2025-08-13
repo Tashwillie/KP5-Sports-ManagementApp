@@ -1,7 +1,10 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { FirebaseProvider } from '@/contexts/FirebaseContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/react-query';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { WebSocketProvider } from '@/contexts/WebSocketContext';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -9,8 +12,12 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <FirebaseProvider>
-      {children}
-    </FirebaseProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <WebSocketProvider>
+          {children}
+        </WebSocketProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 } 

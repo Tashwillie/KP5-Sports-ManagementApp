@@ -1,31 +1,7 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  serverTimestamp,
-  writeBatch,
-  QueryConstraint,
-  arrayUnion,
-  arrayRemove
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { Team, Player, TeamMember, TeamInvitation, TeamRole, TeamStats } from '../../../../shared/src/types';
+import { apiClient } from '../apiClient';
 
 export class TeamService {
-  private static teamsCollection = collection(db, 'teams');
-  private static playersCollection = collection(db, 'players');
-  private static teamMembersCollection = collection(db, 'team_members');
-  private static teamInvitationsCollection = collection(db, 'team_invitations');
-
   // Team Management
   static async createTeam(teamData: Partial<Team>): Promise<string> {
     try {
@@ -76,13 +52,8 @@ export class TeamService {
         isActive: true,
       };
 
-      const docRef = await addDoc(this.teamsCollection, {
-        ...team,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      const teamId = docRef.id;
+      const response = await apiClient.createTeam(team);
+      const teamId = response.data.id;
 
       // Add creator as team manager
       if (teamData.createdBy) {
@@ -104,32 +75,22 @@ export class TeamService {
 
   static async getTeam(teamId: string): Promise<Team | null> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
-      }
-
-      return null;
+      const response = await apiClient.getTeam(teamId);
+      return response.data;
     } catch (error) {
       console.error('Error fetching team:', error);
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
       throw new Error('Failed to fetch team');
     }
   }
 
   static async updateTeam(teamId: string, updates: Partial<Team>): Promise<void> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      await updateDoc(docRef, {
+      await apiClient.updateTeam(teamId, {
         ...updates,
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date(),
       });
     } catch (error) {
       console.error('Error updating team:', error);
@@ -139,8 +100,7 @@ export class TeamService {
 
   static async deleteTeam(teamId: string): Promise<void> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      await deleteDoc(docRef);
+      await apiClient.deleteTeam(teamId);
     } catch (error) {
       console.error('Error deleting team:', error);
       throw new Error('Failed to delete team');
@@ -153,38 +113,29 @@ export class TeamService {
     season?: string;
   }): Promise<Team[]> {
     try {
-      const constraints: QueryConstraint[] = [
-        where('clubId', '==', clubId),
-        orderBy('createdAt', 'desc')
-      ];
+      const response = await apiClient.getTeams();
+      let teams = response.data || [];
+      
+      // Filter by club
+      teams = teams.filter(team => team.clubId === clubId);
 
+      // Apply additional filters
       if (filters?.isActive !== undefined) {
-        constraints.push(where('isActive', '==', filters.isActive));
+        teams = teams.filter(team => team.isActive === filters.isActive);
       }
 
       if (filters?.division) {
-        constraints.push(where('division', '==', filters.division));
+        teams = teams.filter(team => team.division === filters.division);
       }
 
       if (filters?.season) {
-        constraints.push(where('season', '==', filters.season));
+        teams = teams.filter(team => team.season === filters.season);
       }
 
-      const q = query(this.teamsCollection, ...constraints);
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
-      });
+      return teams;
     } catch (error) {
-      console.error('Error fetching teams:', error);
-      throw new Error('Failed to fetch teams');
+      console.error('Error fetching teams by club:', error);
+      throw new Error('Failed to fetch teams by club');
     }
   }
 
@@ -194,22 +145,29 @@ export class TeamService {
       const member: Omit<TeamMember, 'id'> = {
         teamId: memberData.teamId,
         userId: memberData.userId,
-        role: memberData.role,
+        role: memberData.role || 'player',
         position: memberData.position || '',
         jerseyNumber: memberData.jerseyNumber || null,
         joinedAt: new Date(),
         isActive: true,
       };
 
-      const docRef = await addDoc(this.teamMembersCollection, {
-        ...member,
-        joinedAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${memberData.teamId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(member),
       });
 
-      // Update team roster
-      await this.updateTeamRoster(memberData.teamId, memberData.userId, memberData.role, 'add');
+      if (!response.ok) {
+        throw new Error('Failed to add team member');
+      }
 
-      return docRef.id;
+      const result = await response.json();
+      return result.data.id;
     } catch (error) {
       console.error('Error adding team member:', error);
       throw new Error('Failed to add team member');
@@ -218,27 +176,17 @@ export class TeamService {
 
   static async removeTeamMember(teamId: string, userId: string): Promise<void> {
     try {
-      // Get team member to determine role
-      const member = await this.getTeamMember(teamId, userId);
-      if (!member) {
-        throw new Error('Team member not found');
-      }
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${teamId}/members/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+      });
 
-      // Remove from team members collection
-      const memberQuery = query(
-        this.teamMembersCollection,
-        where('teamId', '==', teamId),
-        where('userId', '==', userId)
-      );
-      const memberSnapshot = await getDocs(memberQuery);
-      
-      if (!memberSnapshot.empty) {
-        const memberDoc = memberSnapshot.docs[0];
-        await deleteDoc(doc(this.teamMembersCollection, memberDoc.id));
+      if (!response.ok) {
+        throw new Error('Failed to remove team member');
       }
-
-      // Update team roster
-      await this.updateTeamRoster(teamId, userId, member.role, 'remove');
     } catch (error) {
       console.error('Error removing team member:', error);
       throw new Error('Failed to remove team member');
@@ -247,23 +195,20 @@ export class TeamService {
 
   static async getTeamMembers(teamId: string): Promise<TeamMember[]> {
     try {
-      const q = query(
-        this.teamMembersCollection,
-        where('teamId', '==', teamId),
-        where('isActive', '==', true),
-        orderBy('joinedAt', 'asc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          joinedAt: data.joinedAt?.toDate() || new Date(),
-        } as TeamMember;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${teamId}/members`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch team members');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error fetching team members:', error);
       throw new Error('Failed to fetch team members');
@@ -272,26 +217,23 @@ export class TeamService {
 
   static async getTeamMember(teamId: string, userId: string): Promise<TeamMember | null> {
     try {
-      const q = query(
-        this.teamMembersCollection,
-        where('teamId', '==', teamId),
-        where('userId', '==', userId),
-        where('isActive', '==', true)
-      );
-      
-      const querySnapshot = await getDocs(q);
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${teamId}/members/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+      });
 
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          joinedAt: data.joinedAt?.toDate() || new Date(),
-        } as TeamMember;
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('Failed to fetch team member');
       }
 
-      return null;
+      const result = await response.json();
+      return result.data;
     } catch (error) {
       console.error('Error fetching team member:', error);
       throw new Error('Failed to fetch team member');
@@ -300,19 +242,18 @@ export class TeamService {
 
   static async updateTeamMember(teamId: string, userId: string, updates: Partial<TeamMember>): Promise<void> {
     try {
-      const memberQuery = query(
-        this.teamMembersCollection,
-        where('teamId', '==', teamId),
-        where('userId', '==', userId)
-      );
-      const memberSnapshot = await getDocs(memberQuery);
-      
-      if (!memberSnapshot.empty) {
-        const memberDoc = memberSnapshot.docs[0];
-        await updateDoc(doc(this.teamMembersCollection, memberDoc.id), {
-          ...updates,
-          updatedAt: serverTimestamp(),
-        });
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${teamId}/members/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update team member');
       }
     } catch (error) {
       console.error('Error updating team member:', error);
@@ -320,26 +261,35 @@ export class TeamService {
     }
   }
 
-  // Team Invitations
+  // Team Invitation Management
   static async createTeamInvitation(invitationData: Omit<TeamInvitation, 'id'>): Promise<string> {
     try {
       const invitation: Omit<TeamInvitation, 'id'> = {
         teamId: invitationData.teamId,
         email: invitationData.email,
-        role: invitationData.role,
-        position: invitationData.position || '',
+        role: invitationData.role || 'player',
         invitedBy: invitationData.invitedBy,
         status: 'pending',
-        expiresAt: invitationData.expiresAt,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         createdAt: new Date(),
       };
 
-      const docRef = await addDoc(this.teamInvitationsCollection, {
-        ...invitation,
-        createdAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${invitationData.teamId}/invitations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(invitation),
       });
 
-      return docRef.id;
+      if (!response.ok) {
+        throw new Error('Failed to create team invitation');
+      }
+
+      const result = await response.json();
+      return result.data.id;
     } catch (error) {
       console.error('Error creating team invitation:', error);
       throw new Error('Failed to create team invitation');
@@ -348,23 +298,20 @@ export class TeamService {
 
   static async getTeamInvitations(teamId: string): Promise<TeamInvitation[]> {
     try {
-      const q = query(
-        this.teamInvitationsCollection,
-        where('teamId', '==', teamId),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          expiresAt: data.expiresAt?.toDate() || new Date(),
-        } as TeamInvitation;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/teams/${teamId}/invitations`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch team invitations');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error fetching team invitations:', error);
       throw new Error('Failed to fetch team invitations');
@@ -383,8 +330,8 @@ export class TeamService {
 
   static async calculateTeamStats(teamId: string): Promise<TeamStats> {
     try {
-      // This would typically calculate stats from match data
-      // For now, return default stats
+      // Note: This would need to be implemented in the backend API
+      // For now, we'll return a default stats object
       return {
         wins: 0,
         losses: 0,
@@ -400,62 +347,54 @@ export class TeamService {
     }
   }
 
-  // Real-time subscriptions
+  // Real-time subscriptions (simplified for API-based approach)
   static subscribeToTeam(teamId: string, callback: (team: Team | null) => void): () => void {
-    const docRef = doc(this.teamsCollection, teamId);
-    
-    return onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const team: Team = {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const team = await this.getTeam(teamId);
         callback(team);
-      } else {
+      } catch (error) {
+        console.error('Error in team subscription:', error);
         callback(null);
       }
-    });
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
   }
 
   static subscribeToTeamMembers(teamId: string, callback: (members: TeamMember[]) => void): () => void {
-    const q = query(
-      this.teamMembersCollection,
-      where('teamId', '==', teamId),
-      where('isActive', '==', true),
-      orderBy('joinedAt', 'asc')
-    );
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const members = await this.getTeamMembers(teamId);
+        callback(members);
+      } catch (error) {
+        console.error('Error in team members subscription:', error);
+        callback([]);
+      }
+    }, 5000); // Poll every 5 seconds
 
-    return onSnapshot(q, (querySnapshot) => {
-      const members = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          joinedAt: data.joinedAt?.toDate() || new Date(),
-        } as TeamMember;
-      });
-      callback(members);
-    });
+    return () => clearInterval(interval);
   }
 
-  // Utility methods
+  // Helper method to update team roster
   private static async updateTeamRoster(teamId: string, userId: string, role: TeamRole, action: 'add' | 'remove'): Promise<void> {
     try {
       const team = await this.getTeam(teamId);
-      if (!team) return;
+      if (!team) {
+        throw new Error('Team not found');
+      }
 
-      const roster = { ...team.roster };
+      const roster = team.roster || { players: [], coaches: [], managers: [] };
 
       if (action === 'add') {
-        if (role === 'player') {
-          roster.players = [...roster.players, userId];
-        } else if (role === 'coach') {
-          roster.coaches = [...roster.coaches, userId];
-        } else if (role === 'manager') {
-          roster.managers = [...roster.managers, userId];
+        if (role === 'player' && !roster.players.includes(userId)) {
+          roster.players.push(userId);
+        } else if (role === 'coach' && !roster.coaches.includes(userId)) {
+          roster.coaches.push(userId);
+        } else if (role === 'manager' && !roster.managers.includes(userId)) {
+          roster.managers.push(userId);
         }
       } else if (action === 'remove') {
         if (role === 'player') {
@@ -470,6 +409,7 @@ export class TeamService {
       await this.updateTeam(teamId, { roster });
     } catch (error) {
       console.error('Error updating team roster:', error);
+      throw new Error('Failed to update team roster');
     }
   }
 } 

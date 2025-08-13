@@ -1,35 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Search,
-  Filter,
-  Bell,
-  Home,
-  Users as UsersIcon,
-  Calendar as CalendarIcon,
-  Trophy as TrophyIcon,
-  MapPin as MapPinIcon,
-  FileText as FileTextIcon,
-  Settings as SettingsIcon,
-  BarChart3,
-  Target,
-  User,
-  Building,
-  Users,
-  MapPin,
-  Phone,
-  Mail,
-  Globe,
-  Star,
-  Award
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useClubs } from '@/hooks/useClubs';
 
 interface Club {
   id: string;
@@ -42,7 +16,7 @@ interface Club {
   foundedYear: number;
   totalTeams: number;
   totalMembers: number;
-  status: 'active' | 'inactive' | 'pending';
+  status: string;
   rating: number;
   logo?: string;
   address: string;
@@ -58,139 +32,53 @@ interface ClubWithStats extends Club {
 }
 
 export default function ClubsPage() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('clubs');
+  return (
+    <ProtectedRoute>
+      <ClubsContent />
+    </ProtectedRoute>
+  );
+}
+
+function ClubsContent() {
+  const { clubs, loading: loadingData, error, refetch } = useClubs();
+  const [filteredClubs, setFilteredClubs] = useState<ClubWithStats[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sportFilter, setSportFilter] = useState('all');
 
-  // Mock user data
-  const userData = {
-    id: 'user123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin'
-  };
+  // Filter clubs based on search and filters
+  useEffect(() => {
+    let filtered = clubs;
 
-  // Mock clubs data
-  const mockClubs: ClubWithStats[] = [
-    {
-      id: '1',
-      name: 'Elite Football Academy',
-      description: 'Premier football training and development academy',
-      location: 'Lagos, Nigeria',
-      contactEmail: 'info@elitefootball.com',
-      contactPhone: '+234 801 234 5678',
-      website: 'www.elitefootball.com',
-      foundedYear: 2015,
-      totalTeams: 12,
-      totalMembers: 180,
-      status: 'active',
-      rating: 4.8,
-      address: '123 Sports Complex, Victoria Island, Lagos',
-      sports: ['Football', 'Futsal'],
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z',
-      activeTeams: 10,
-      totalPlayers: 150,
-      upcomingEvents: 8
-    },
-    {
-      id: '2',
-      name: 'Basketball Stars Club',
-      description: 'Professional basketball training and competition',
-      location: 'Nairobi, Kenya',
-      contactEmail: 'contact@basketballstars.co.ke',
-      contactPhone: '+254 700 123 456',
-      website: 'www.basketballstars.co.ke',
-      foundedYear: 2018,
-      totalTeams: 8,
-      totalMembers: 120,
-      status: 'active',
-      rating: 4.6,
-      address: '456 Arena Street, Westlands, Nairobi',
-      sports: ['Basketball'],
-      createdAt: '2024-01-10T14:30:00Z',
-      updatedAt: '2024-01-10T14:30:00Z',
-      activeTeams: 7,
-      totalPlayers: 95,
-      upcomingEvents: 5
-    },
-    {
-      id: '3',
-      name: 'Cricket Champions',
-      description: 'Elite cricket development and training center',
-      location: 'Accra, Ghana',
-      contactEmail: 'info@cricketchampions.gh',
-      contactPhone: '+233 24 567 8901',
-      website: 'www.cricketchampions.gh',
-      foundedYear: 2020,
-      totalTeams: 6,
-      totalMembers: 80,
-      status: 'active',
-      rating: 4.4,
-      address: '789 Cricket Ground, East Legon, Accra',
-      sports: ['Cricket'],
-      createdAt: '2024-01-05T09:15:00Z',
-      updatedAt: '2024-01-05T09:15:00Z',
-      activeTeams: 5,
-      totalPlayers: 65,
-      upcomingEvents: 3
-    },
-    {
-      id: '4',
-      name: 'Tennis Excellence',
-      description: 'Professional tennis coaching and development',
-      location: 'Cape Town, South Africa',
-      contactEmail: 'hello@tennisexcellence.co.za',
-      contactPhone: '+27 21 123 4567',
-      website: 'www.tennisexcellence.co.za',
-      foundedYear: 2017,
-      totalTeams: 4,
-      totalMembers: 60,
-      status: 'inactive',
-      rating: 4.2,
-      address: '321 Tennis Court, Green Point, Cape Town',
-      sports: ['Tennis'],
-      createdAt: '2024-01-01T11:45:00Z',
-      updatedAt: '2024-01-01T11:45:00Z',
-      activeTeams: 0,
-      totalPlayers: 0,
-      upcomingEvents: 0
-    },
-    {
-      id: '5',
-      name: 'Swimming Dolphins',
-      description: 'Competitive swimming and water sports training',
-      location: 'Dar es Salaam, Tanzania',
-      contactEmail: 'swim@dolphins.co.tz',
-      contactPhone: '+255 22 987 6543',
-      website: 'www.dolphins.co.tz',
-      foundedYear: 2019,
-      totalTeams: 3,
-      totalMembers: 45,
-      status: 'pending',
-      rating: 4.0,
-      address: '654 Pool Complex, Masaki, Dar es Salaam',
-      sports: ['Swimming', 'Water Polo'],
-      createdAt: '2023-12-28T16:20:00Z',
-      updatedAt: '2023-12-28T16:20:00Z',
-      activeTeams: 2,
-      totalPlayers: 30,
-      upcomingEvents: 2
+    if (searchTerm) {
+      filtered = filtered.filter(club =>
+        club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        club.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        club.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-  ];
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(club => club.status === statusFilter);
+    }
+
+    if (sportFilter !== 'all') {
+      filtered = filtered.filter(club => club.sports.includes(sportFilter));
+    }
+
+    setFilteredClubs(filtered);
+  }, [clubs, searchTerm, statusFilter, sportFilter]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'active':
-        return 'badge bg-success';
+        return 'bg-success';
       case 'inactive':
-        return 'badge bg-secondary';
+        return 'bg-secondary';
       case 'pending':
-        return 'badge bg-warning text-dark';
+        return 'bg-warning';
       default:
-        return 'badge bg-secondary';
+        return 'bg-secondary';
     }
   };
 
@@ -208,316 +96,228 @@ export default function ClubsPage() {
   };
 
   const handleCreateClub = () => {
-    router.push('/clubs/create');
+    window.location.href = '/clubs/create';
   };
 
   const handleViewClub = (clubId: string) => {
-    router.push(`/clubs/${clubId}`);
+    window.location.href = `/clubs/${clubId}`;
   };
 
   const handleEditClub = (clubId: string) => {
-    router.push(`/clubs/${clubId}/edit`);
+    window.location.href = `/clubs/${clubId}/edit`;
   };
 
   const handleManageClub = (clubId: string) => {
-    router.push(`/clubs/${clubId}/manage`);
+    window.location.href = `/clubs/${clubId}/manage`;
   };
 
-  // Filter clubs based on search and filters
-  const filteredClubs = mockClubs.filter(club => {
-    const matchesSearch = club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         club.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         club.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || club.status === statusFilter;
-    const matchesSport = sportFilter === 'all' || club.sports.includes(sportFilter);
-    
-    return matchesSearch && matchesStatus && matchesSport;
-  });
+  if (loadingData) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading clubs...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Calculate stats
-  const totalClubs = mockClubs.length;
-  const activeClubs = mockClubs.filter(club => club.status === 'active').length;
-  const totalTeams = mockClubs.reduce((sum, club) => sum + club.totalTeams, 0);
-  const totalMembers = mockClubs.reduce((sum, club) => sum + club.totalMembers, 0);
+  if (error) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="alert alert-danger" role="alert">
+            <h4 className="alert-heading">Error loading clubs</h4>
+            <p>{error}</p>
+            <button className="btn btn-primary" onClick={refetch}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      <Sidebar activeTab="clubs" userData={userData} />
+    <div className="d-flex">
+      <Sidebar activeTab="clubs" />
 
       {/* Main Content */}
       <div className="flex-grow-1 bg-light">
-        {/* Header */}
+        {/* Top Header */}
         <div className="bg-white border-bottom p-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <h4 className="mb-0 me-3">Clubs Management</h4>
+          <div className="d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-3">
+              <button className="btn btn-link text-dark p-0">
+                <i className="bi bi-grid-3x3"></i>
+              </button>
+              <div>
+                <h5 className="mb-0">Clubs Management</h5>
+                <small className="text-muted">
+                  Manage sports clubs and organizations
+                </small>
+              </div>
             </div>
-            <div className="d-flex gap-2">
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Search size={16} className="me-1" />
-                Search
-              </button>
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Bell size={16} className="me-1" />
-                Notifications
-              </button>
-              <button 
-                className="btn text-white btn-sm d-flex align-items-center"
-                style={{backgroundColor: '#4169E1'}}
-                onClick={handleCreateClub}
-              >
-                <Plus size={16} className="me-1" />
-                Create Club
+            
+            <div className="d-flex align-items-center gap-3">
+              <button className="btn btn-sm" style={{backgroundColor: '#4169E1', borderColor: '#4169E1', color: 'white'}} onClick={handleCreateClub}>
+                <i className="bi bi-plus me-1"></i>
+                Add Club
               </button>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Main Content */}
         <div className="p-4">
-          <div className="row g-4 mb-4">
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Building size={24} style={{color: '#4169E1'}} />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Clubs</h6>
-                      <h4 className="mb-0 fw-bold">{totalClubs}</h4>
-                    </div>
-                  </div>
-                </div>
+          {/* Filters and Search */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-4">
+              <div className="input-group">
+                <span className="input-group-text">
+                  <i className="bi bi-search"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search clubs..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
-
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Star size={24} className="text-success" />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Active Clubs</h6>
-                      <h4 className="mb-0 fw-bold">{activeClubs}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-3">
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
+              </select>
             </div>
-
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Users size={24} className="text-warning" />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Teams</h6>
-                      <h4 className="mb-0 fw-bold">{totalTeams}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-xl-3 col-md-6">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-shrink-0">
-                      <div className="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Award size={24} className="text-info" />
-                      </div>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Members</h6>
-                      <h4 className="mb-0 fw-bold">{totalMembers}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="col-md-3">
+              <select
+                className="form-select"
+                value={sportFilter}
+                onChange={(e) => setSportFilter(e.target.value)}
+              >
+                <option value="all">All Sports</option>
+                <option value="Football">Football</option>
+                <option value="Basketball">Basketball</option>
+                <option value="Tennis">Tennis</option>
+                <option value="Athletics">Athletics</option>
+                <option value="Swimming">Swimming</option>
+                <option value="Volleyball">Volleyball</option>
+              </select>
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="card border-0 shadow-sm mb-4">
-            <div className="card-body">
-              <div className="row g-3">
-                <div className="col-md-4">
-                  <label htmlFor="search" className="form-label fw-medium">Search</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-white border-end-0">
-                      <Search size={16} className="text-muted" />
-                    </span>
-                    <input
-                      type="text"
-                      id="search"
-                      className="form-control border-start-0"
-                      placeholder="Search clubs..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <label htmlFor="statusFilter" className="form-label fw-medium">Status</label>
-                  <select
-                    id="statusFilter"
-                    className="form-select"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="pending">Pending</option>
-                  </select>
-                </div>
-
-                <div className="col-md-4">
-                  <label htmlFor="sportFilter" className="form-label fw-medium">Sport</label>
-                  <select
-                    id="sportFilter"
-                    className="form-select"
-                    value={sportFilter}
-                    onChange={(e) => setSportFilter(e.target.value)}
-                  >
-                    <option value="all">All Sports</option>
-                    <option value="Football">Football</option>
-                    <option value="Basketball">Basketball</option>
-                    <option value="Cricket">Cricket</option>
-                    <option value="Tennis">Tennis</option>
-                    <option value="Swimming">Swimming</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Clubs Table */}
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-0">
-              <div className="table-responsive">
-                <table className="table table-hover mb-0">
-                  <thead className="bg-light">
-                    <tr>
-                      <th className="border-0 px-4 py-3 fw-medium">Club</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Location</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Sports</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Teams</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Members</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Rating</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Status</th>
-                      <th className="border-0 px-4 py-3 fw-medium text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredClubs.map((club) => (
-                      <tr key={club.id}>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
-                              <Building size={20} className="text-muted" />
-                            </div>
-                            <div>
-                              <div className="fw-medium">{club.name}</div>
-                              <small className="text-muted">{club.foundedYear}</small>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <MapPin size={16} className="text-muted me-2" />
-                            <span>{club.location}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex flex-wrap gap-1">
-                            {club.sports.map((sport, index) => (
-                              <span key={index} className="badge bg-light text-dark border">
-                                {sport}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Users size={16} className="text-muted me-2" />
-                            <span>{club.activeTeams}/{club.totalTeams}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <User size={16} className="text-muted me-2" />
-                            <span>{club.totalMembers}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Star size={16} className="text-warning me-1" />
-                            <span>{club.rating}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={getStatusBadgeClass(club.status)}>
-                            {getStatusLabel(club.status)}
+          {/* Clubs Grid */}
+          <div className="row g-4">
+            {filteredClubs.map((club) => (
+              <div key={club.id} className="col-md-6 col-lg-4">
+                <div className="card border-0 shadow-sm h-100">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <span className={`badge ${getStatusBadgeClass(club.status)} me-2`}>
+                          {getStatusLabel(club.status)}
+                        </span>
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-star-fill text-warning me-1"></i>
+                          <span className="fw-bold">{club.rating}</span>
+                        </div>
+                      </div>
+                      <div className="dropdown">
+                        <button className="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                          <i className="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul className="dropdown-menu">
+                          <li><a className="dropdown-item" href="#" onClick={() => handleViewClub(club.id)}>
+                            <i className="bi bi-eye me-2"></i>View
+                          </a></li>
+                          <li><a className="dropdown-item" href="#" onClick={() => handleEditClub(club.id)}>
+                            <i className="bi bi-pencil me-2"></i>Edit
+                          </a></li>
+                          <li><a className="dropdown-item" href="#" onClick={() => handleManageClub(club.id)}>
+                            <i className="bi bi-gear me-2"></i>Manage
+                          </a></li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center mb-3">
+                      <div className="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style={{width: '60px', height: '60px'}}>
+                        <i className="bi bi-building text-primary fs-4"></i>
+                      </div>
+                      <h5 className="card-title mb-1">{club.name}</h5>
+                      <p className="text-muted small mb-0">{club.location}</p>
+                    </div>
+                    
+                    <p className="text-muted small mb-3">{club.description}</p>
+                    
+                    <div className="row text-center mb-3">
+                      <div className="col-4">
+                        <div className="text-primary fw-bold">{club.activeTeams}</div>
+                        <small className="text-muted">Teams</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-success fw-bold">{club.totalPlayers}</div>
+                        <small className="text-muted">Players</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-warning fw-bold">{club.upcomingEvents}</div>
+                        <small className="text-muted">Events</small>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <small className="text-muted">Sports</small>
+                      <div className="d-flex flex-wrap gap-1 mt-1">
+                        {club.sports.map((sport, index) => (
+                          <span key={index} className="badge bg-light text-dark border">
+                            {sport}
                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          <div className="btn-group" role="group">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleViewClub(club.id)}
-                              title="View Club"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleEditClub(club.id)}
-                              title="Edit Club"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleManageClub(club.id)}
-                              title="Manage Club"
-                            >
-                              <SettingsIcon size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {filteredClubs.length === 0 && (
-                <div className="text-center py-5">
-                  <Building size={48} className="text-muted mb-3" />
-                  <h5 className="text-muted">No clubs found</h5>
-                  <p className="text-muted">Try adjusting your search or filters</p>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <small className="text-muted">Founded</small>
+                        <div className="fw-bold">{club.foundedYear}</div>
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleViewClub(club.id)}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
+
+          {filteredClubs.length === 0 && (
+            <div className="text-center py-5">
+              <i className="bi bi-building display-1 text-muted"></i>
+              <h4 className="mt-3">No clubs found</h4>
+              <p className="text-muted">Try adjusting your search or filters</p>
+              <button 
+                className="btn btn-primary"
+                onClick={handleCreateClub}
+              >
+                Add Your First Club
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

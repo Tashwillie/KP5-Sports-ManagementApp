@@ -1,27 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  writeBatch,
-  serverTimestamp,
-  enableNetwork,
-  disableNetwork,
-  enableIndexedDbPersistence,
-  CACHE_SIZE_UNLIMITED
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { 
   LiveMatch, 
   LiveMatchEvent, 
   LiveMatchEventType, 

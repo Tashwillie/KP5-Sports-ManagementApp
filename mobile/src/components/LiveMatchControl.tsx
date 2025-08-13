@@ -9,11 +9,22 @@ import {
   Alert,
   Dimensions,
   Animated,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LiveMatchEventType, LiveMatchEventData } from '../../../shared/src/types';
 
 const { width, height } = Dimensions.get('window');
+
+interface MatchTimerState {
+  currentMinute: number;
+  currentPeriod: 'first_half' | 'halftime' | 'second_half' | 'extra_time' | 'penalties';
+  isTimerRunning: boolean;
+  totalPlayTime: number;
+  pausedTime: number;
+  injuryTime: number;
+  periodDuration: number;
+}
 
 interface LiveMatchControlProps {
   matchId: string;
@@ -30,6 +41,7 @@ interface LiveMatchControlProps {
     teamId: string;
     data: LiveMatchEventData;
   }) => Promise<boolean>;
+  onTimerControl: (action: string, additionalData?: any) => Promise<boolean>;
   homeTeam: {
     id: string;
     name: string;
@@ -41,6 +53,7 @@ interface LiveMatchControlProps {
     players: Array<{ id: string; name: string; number: number }>;
   };
   matchStatus: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  timerState?: MatchTimerState;
 }
 
 export default function LiveMatchControl({
@@ -52,19 +65,51 @@ export default function LiveMatchControl({
   onResumeMatch,
   onEndMatch,
   onAddEvent,
+  onTimerControl,
   homeTeam,
   awayTeam,
   matchStatus,
+  timerState
 }: LiveMatchControlProps) {
   const [selectedTeam, setSelectedTeam] = useState<'home' | 'away'>('home');
   const [selectedPlayer, setSelectedPlayer] = useState<string>('');
   const [showEventModal, setShowEventModal] = useState(false);
   const [showFieldModal, setShowFieldModal] = useState(false);
+  const [showTimerModal, setShowTimerModal] = useState(false);
   const [eventType, setEventType] = useState<LiveMatchEventType>('goal');
   const [fieldPosition, setFieldPosition] = useState({ x: 50, y: 50 });
   const [eventDescription, setEventDescription] = useState('');
   
+  // Timer control states
+  const [injuryTimeMinutes, setInjuryTimeMinutes] = useState(1);
+  const [customPeriodDuration, setCustomPeriodDuration] = useState(45);
+  const [selectedPeriod, setSelectedPeriod] = useState<'first_half' | 'halftime' | 'second_half' | 'extra_time' | 'penalties'>('first_half');
+  
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Initialize local timer state
+  const [localTimerState, setLocalTimerState] = useState<MatchTimerState>({
+    currentMinute: currentMinute,
+    currentPeriod: 'first_half',
+    isTimerRunning: isTimerRunning,
+    totalPlayTime: 0,
+    pausedTime: 0,
+    injuryTime: 0,
+    periodDuration: 45
+  });
+
+  // Update local timer state when props change
+  useEffect(() => {
+    if (timerState) {
+      setLocalTimerState(timerState);
+    } else {
+      setLocalTimerState(prev => ({
+        ...prev,
+        currentMinute,
+        isTimerRunning
+      }));
+    }
+  }, [timerState, currentMinute, isTimerRunning]);
 
   // Pulse animation for live indicator
   useEffect(() => {
@@ -92,6 +137,39 @@ export default function LiveMatchControl({
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+
+  const formatPeriodName = (period: string) => {
+    switch (period) {
+      case 'first_half': return '1st Half';
+      case 'halftime': return 'Halftime';
+      case 'second_half': return '2nd Half';
+      case 'extra_time': return 'Extra Time';
+      case 'penalties': return 'Penalties';
+      default: return period;
+    }
+  };
+
+  const getPeriodColor = (period: string) => {
+    switch (period) {
+      case 'first_half': return '#3B82F6';
+      case 'halftime': return '#F59E0B';
+      case 'second_half': return '#10B981';
+      case 'extra_time': return '#8B5CF6';
+      case 'penalties': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
+
+  const handleTimerControl = async (action: string, additionalData?: any) => {
+    try {
+      const success = await onTimerControl(action, additionalData);
+      if (success) {
+        console.log(`Timer control ${action} successful`);
+      }
+    } catch (error) {
+      console.error(`Timer control ${action} failed:`, error);
+    }
   };
 
   const handleQuickEvent = async (type: LiveMatchEventType) => {
@@ -197,7 +275,7 @@ export default function LiveMatchControl({
 
   return (
     <View style={styles.container}>
-      {/* Timer Display */}
+      {/* Enhanced Timer Display */}
       <View style={styles.timerContainer}>
         <Animated.View style={[styles.liveIndicator, { transform: [{ scale: pulseAnim }] }]}>
           <View style={[styles.liveDot, { backgroundColor: matchStatus === 'in_progress' ? '#EF4444' : '#6B7280' }]} />
@@ -206,11 +284,20 @@ export default function LiveMatchControl({
           </Text>
         </Animated.View>
         
-        <Text style={styles.timerText}>{formatTime(currentMinute)}</Text>
+        {/* Period Badge */}
+        <View style={[styles.periodBadge, { backgroundColor: getPeriodColor(localTimerState.currentPeriod) }]}>
+          <Text style={styles.periodText}>
+            {formatPeriodName(localTimerState.currentPeriod)}
+          </Text>
+        </View>
+        
+        <Text style={styles.timerText}>
+          {localTimerState.currentMinute}'{localTimerState.injuryTime > 0 ? `+${localTimerState.injuryTime}` : ''}
+        </Text>
         <Text style={styles.timerLabel}>Match Time</Text>
       </View>
 
-      {/* Match Controls */}
+      {/* Enhanced Match Controls */}
       <View style={styles.controlsContainer}>
         {matchStatus === 'scheduled' && (
           <TouchableOpacity style={styles.startButton} onPress={handleStartMatch}>
@@ -240,6 +327,15 @@ export default function LiveMatchControl({
           </View>
         )}
       </View>
+
+      {/* Timer Control Button */}
+      <TouchableOpacity
+        style={styles.timerControlButton}
+        onPress={() => setShowTimerModal(true)}
+      >
+        <Ionicons name="timer" size={24} color="#3B82F6" />
+        <Text style={styles.timerControlText}>Timer Controls</Text>
+      </TouchableOpacity>
 
       {/* Team Selection */}
       <View style={styles.teamSelection}>
@@ -306,6 +402,159 @@ export default function LiveMatchControl({
         <Ionicons name="add-circle" size={24} color="#3B82F6" />
         <Text style={styles.advancedButtonText}>Advanced Event Entry</Text>
       </TouchableOpacity>
+
+      {/* Timer Control Modal */}
+      <Modal
+        visible={showTimerModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Timer Controls</Text>
+            <TouchableOpacity onPress={() => setShowTimerModal(false)}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            {/* Timer Status */}
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Current Status</Text>
+              <View style={styles.timerStatusGrid}>
+                <View style={styles.timerStatusItem}>
+                  <Text style={styles.timerStatusValue}>{localTimerState.currentMinute}</Text>
+                  <Text style={styles.timerStatusLabel}>Minute</Text>
+                </View>
+                <View style={styles.timerStatusItem}>
+                  <Text style={styles.timerStatusValue}>{localTimerState.injuryTime}</Text>
+                  <Text style={styles.timerStatusLabel}>Injury Time</Text>
+                </View>
+                <View style={styles.timerStatusItem}>
+                  <Text style={styles.timerStatusValue}>{formatPeriodName(localTimerState.currentPeriod)}</Text>
+                  <Text style={styles.timerStatusLabel}>Period</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Timer Actions */}
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Timer Actions</Text>
+              <View style={styles.timerActionsGrid}>
+                <TouchableOpacity
+                  style={[styles.timerActionButton, { backgroundColor: '#10B981' }]}
+                  onPress={() => handleTimerControl('start')}
+                  disabled={localTimerState.isTimerRunning}
+                >
+                  <Ionicons name="play" size={20} color="white" />
+                  <Text style={styles.timerActionText}>Start</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.timerActionButton, { backgroundColor: '#F59E0B' }]}
+                  onPress={() => handleTimerControl('pause')}
+                  disabled={!localTimerState.isTimerRunning}
+                >
+                  <Ionicons name="pause" size={20} color="white" />
+                  <Text style={styles.timerActionText}>Pause</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.timerActionButton, { backgroundColor: '#10B981' }]}
+                  onPress={() => handleTimerControl('resume')}
+                  disabled={localTimerState.isTimerRunning}
+                >
+                  <Ionicons name="play" size={20} color="white" />
+                  <Text style={styles.timerActionText}>Resume</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.timerActionButton, { backgroundColor: '#EF4444' }]}
+                  onPress={() => handleTimerControl('stop')}
+                  disabled={!localTimerState.isTimerRunning}
+                >
+                  <Ionicons name="stop" size={20} color="white" />
+                  <Text style={styles.timerActionText}>Stop</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Period Navigation */}
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Period Navigation</Text>
+              <View style={styles.periodNavigationGrid}>
+                {(['first_half', 'halftime', 'second_half', 'extra_time', 'penalties'] as const).map((period) => (
+                  <TouchableOpacity
+                    key={period}
+                    style={[
+                      styles.periodButton,
+                      { backgroundColor: localTimerState.currentPeriod === period ? getPeriodColor(period) : '#E5E7EB' }
+                    ]}
+                    onPress={() => handleTimerControl('skip_to_period', { period })}
+                    disabled={localTimerState.isTimerRunning}
+                  >
+                    <Text style={[
+                      styles.periodButtonText,
+                      { color: localTimerState.currentPeriod === period ? 'white' : '#6B7280' }
+                    ]}>
+                      {formatPeriodName(period)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Injury Time Management */}
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Injury Time</Text>
+              <View style={styles.injuryTimeContainer}>
+                <TextInput
+                  style={styles.injuryTimeInput}
+                  value={injuryTimeMinutes.toString()}
+                  onChangeText={(text) => setInjuryTimeMinutes(parseInt(text) || 1)}
+                  keyboardType="numeric"
+                  placeholder="1"
+                />
+                <TouchableOpacity
+                  style={[styles.injuryTimeButton, { backgroundColor: '#10B981' }]}
+                  onPress={() => handleTimerControl('add_injury_time', { minutes: injuryTimeMinutes })}
+                >
+                  <Ionicons name="add" size={20} color="white" />
+                  <Text style={styles.injuryTimeButtonText}>Add</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.injuryTimeButton, { backgroundColor: '#EF4444' }]}
+                  onPress={() => handleTimerControl('end_injury_time')}
+                >
+                  <Ionicons name="remove" size={20} color="white" />
+                  <Text style={styles.injuryTimeButtonText}>End</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Custom Period Duration */}
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Custom Period Duration</Text>
+              <View style={styles.periodDurationContainer}>
+                <TextInput
+                  style={styles.periodDurationInput}
+                  value={customPeriodDuration.toString()}
+                  onChangeText={(text) => setCustomPeriodDuration(parseInt(text) || 45)}
+                  keyboardType="numeric"
+                  placeholder="45"
+                />
+                <TouchableOpacity
+                  style={[styles.periodDurationButton, { backgroundColor: '#3B82F6' }]}
+                  onPress={() => handleTimerControl('set_period_duration', { duration: customPeriodDuration })}
+                >
+                  <Ionicons name="settings" size={20} color="white" />
+                  <Text style={styles.periodDurationButtonText}>Set</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* Event Modal */}
       <Modal
@@ -463,6 +712,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
   },
+  periodBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  periodText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+  },
   timerText: {
     fontSize: 48,
     fontWeight: 'bold',
@@ -518,6 +778,22 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  timerControlButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    borderStyle: 'dashed',
+    marginBottom: 24,
+  },
+  timerControlText: {
+    color: '#3B82F6',
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -651,6 +927,111 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 12,
+  },
+  timerStatusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  timerStatusItem: {
+    alignItems: 'center',
+  },
+  timerStatusValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  timerStatusLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  timerActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timerActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  timerActionText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: 12,
+  },
+  periodNavigationGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  periodButton: {
+    padding: 8,
+    borderRadius: 6,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  periodButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  injuryTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  injuryTimeInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    width: 80,
+    textAlign: 'center',
+  },
+  injuryTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    minWidth: 60,
+    justifyContent: 'center',
+  },
+  injuryTimeButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: 12,
+  },
+  periodDurationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  periodDurationInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    width: 80,
+    textAlign: 'center',
+  },
+  periodDurationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    minWidth: 60,
+    justifyContent: 'center',
+  },
+  periodDurationButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: 12,
   },
   modalEventButton: {
     flexDirection: 'row',

@@ -1,3 +1,4 @@
+// Firebase imports removed - will be replaced with API calls
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import API from '../services/api';
@@ -9,7 +10,7 @@ export const useApi = () => {
   const api = (globalThis as any).api || (typeof globalThis !== 'undefined' && 'window' in globalThis ? (globalThis as any).window?.api : null);
   
   if (!api) {
-    throw new Error('API instance not found. Make sure Firebase is properly initialized.');
+    throw new Error('API instance not found. Make sure API is properly initialized.');
   }
   
   return api as API;
@@ -54,10 +55,10 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
+  const api = useApi();
 
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-    
     const initializeAuth = async () => {
       try {
         // Try to get the API instance
@@ -69,20 +70,9 @@ export const useAuth = () => {
           return;
         }
 
-        unsubscribe = api.auth.onAuthStateChanged(async (firebaseUser: any) => {
-          if (firebaseUser) {
-            try {
-              const userData = await api.users.getUser(firebaseUser.uid);
-              setUser(userData);
-            } catch (error) {
-              console.error('Error fetching user data:', error);
-              setUser(null);
-            }
-          } else {
-            setUser(null);
-          }
-          setLoading(false);
-        });
+        // For now, set loading to false without authentication
+        // TODO: Implement proper authentication when backend is ready
+        setLoading(false);
       } catch (error) {
         console.error('Error initializing auth:', error);
         setError('Failed to initialize authentication');
@@ -91,43 +81,37 @@ export const useAuth = () => {
     };
 
     initializeAuth();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      const api = useApi();
-      await api.auth.signIn(email, password);
-    } catch (error) {
-      throw error;
+      setLoading(true);
+      setError(null);
+      
+      const result = await api.auth.login(email, password);
+      
+      if (result.success && result.user) {
+        setUser(result.user);
+        setAuthenticated(true);
+        return { success: true, user: result.user };
+      } else {
+        setError(result.error || 'Sign in failed');
+        return { success: false, error: result.error };
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Sign in failed';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [api.auth]);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     try {
       const api = useApi();
-      const firebaseUser = await api.auth.signUp(email, password, displayName);
-      // Create user document
-      await api.users.createUser({
-        id: firebaseUser.uid,
-        email: firebaseUser.email!,
-        displayName: displayName,
-        role: 'player',
-        teamIds: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isActive: true,
-        preferences: {
-          notifications: { email: true, push: true, sms: false },
-          language: 'en',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        }
-      });
+      // TODO: Implement proper signup when backend is ready
+      console.log('Signup not implemented yet');
     } catch (error) {
       throw error;
     }
@@ -135,12 +119,16 @@ export const useAuth = () => {
 
   const signOut = useCallback(async () => {
     try {
-      const api = useApi();
-      await api.auth.signOut();
-    } catch (error) {
-      throw error;
+      await api.auth.logout();
+      setUser(null);
+      setAuthenticated(false);
+      return { success: true };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Sign out failed';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     }
-  }, []);
+  }, [api.auth]);
 
   const resetPassword = useCallback(async (email: string) => {
     try {
@@ -360,23 +348,59 @@ export const useCreateEvent = () => {
 
 // Match hooks
 export const useMatch = (matchId: string) => {
-  const api = useApi();
-  
-  return useQuery({
-    queryKey: ['match', matchId],
-    queryFn: () => api.matches.getMatch(matchId),
-    enabled: !!matchId
-  });
+  const [match, setMatch] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMatch = useCallback(async () => {
+    if (!matchId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Here you would make an API call to fetch the match
+      // For now, we'll simulate success
+      setMatch({ id: matchId, status: 'not_started' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch match');
+    } finally {
+      setLoading(false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    fetchMatch();
+  }, [fetchMatch]);
+
+  return { match, loading, error, refetch: fetchMatch };
 };
 
 export const useMatches = (constraints: Array<{ field: string; operator: any; value: any }> = []) => {
-  const api = useApi();
-  
-  return useQuery({
-    queryKey: ['matches', constraints],
-    queryFn: () => api.matches.getMatches(constraints),
-    enabled: true // Allow queries without constraints to fetch all matches
-  });
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMatches = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Here you would make an API call to fetch matches with constraints
+      // For now, we'll simulate success with empty array
+      setMatches([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch matches');
+    } finally {
+      setLoading(false);
+    }
+  }, [constraints]);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
+  return { matches, loading, error, refetch: fetchMatches };
 };
 
 export const useRealtimeMatch = (matchId: string) => {

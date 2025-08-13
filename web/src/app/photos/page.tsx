@@ -1,209 +1,49 @@
 'use client';
 
-import { useFirebase } from '@/contexts/FirebaseContext';
 import { useState, useEffect } from 'react';
+import {
+  Image, Upload, Settings, Search, Grid, Grid3X3, Eye, Download, Camera,
+  Users, Trophy, MapPin, X, User, Calendar, SortAsc, MoreHorizontal
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import useMedia from '@/hooks/useMedia';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface Photo {
   id: string;
-  title: string;
+  name: string;
   description?: string;
   url: string;
-  thumbnailUrl: string;
-  size: number;
-  uploadedBy: string;
+  thumbnail?: string;
+  type: 'image' | 'video' | 'document' | 'audio';
+  category?: string;
+  metadata?: Record<string, any>;
+  uploadedBy?: string;
   uploadedAt: Date;
-  tags: string[];
-  category: 'team_photos' | 'game_photos' | 'training_photos' | 'events' | 'tournaments' | 'awards';
-  isPublic: boolean;
-  views: number;
-  downloads: number;
-  dimensions: { width: number; height: number };
-  location?: string;
-  dateTaken?: Date;
 }
 
 export default function PhotosPage() {
-  const { userData, loading } = useFirebase();
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const { user, loading } = useAuth();
+  const { items: photos, loading: loadingPhotos, error } = useMedia();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loadingPhotos, setLoadingPhotos] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('grid');
-  const [sortBy, setSortBy] = useState<'date' | 'name' | 'size' | 'views'>('date');
-
-  // Mock data for photos
-  useEffect(() => {
-    if (!loading) {
-      const mockPhotos: Photo[] = [
-        {
-          id: '1',
-          title: 'Championship Team Photo',
-          description: 'Official team photo after winning the championship',
-          url: '/photos/championship-team.jpg',
-          thumbnailUrl: '/photos/thumbnails/championship-team-thumb.jpg',
-          size: 2048000,
-          uploadedBy: 'Club Photographer',
-          uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          tags: ['championship', 'team', 'victory', 'celebration'],
-          category: 'team_photos',
-          isPublic: true,
-          views: 456,
-          downloads: 89,
-          dimensions: { width: 4000, height: 3000 },
-          location: 'Main Stadium',
-          dateTaken: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '2',
-          title: 'Goal Celebration',
-          description: 'Amazing goal celebration moment during the final game',
-          url: '/photos/goal-celebration.jpg',
-          thumbnailUrl: '/photos/thumbnails/goal-celebration-thumb.jpg',
-          size: 1536000,
-          uploadedBy: 'Sports Photographer',
-          uploadedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          tags: ['goal', 'celebration', 'moment', 'excitement'],
-          category: 'game_photos',
-          isPublic: true,
-          views: 234,
-          downloads: 45,
-          dimensions: { width: 3000, height: 2000 },
-          location: 'Main Stadium',
-          dateTaken: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '3',
-          title: 'Training Session',
-          description: 'Team training session focusing on passing drills',
-          url: '/photos/training-session.jpg',
-          thumbnailUrl: '/photos/thumbnails/training-session-thumb.jpg',
-          size: 1024000,
-          uploadedBy: 'Coach Johnson',
-          uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          tags: ['training', 'practice', 'drills', 'teamwork'],
-          category: 'training_photos',
-          isPublic: false,
-          views: 123,
-          downloads: 23,
-          dimensions: { width: 2500, height: 1800 },
-          location: 'Training Ground',
-          dateTaken: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '4',
-          title: 'Tournament Trophy Presentation',
-          description: 'Trophy presentation ceremony at the tournament',
-          url: '/photos/trophy-presentation.jpg',
-          thumbnailUrl: '/photos/thumbnails/trophy-presentation-thumb.jpg',
-          size: 3072000,
-          uploadedBy: 'Event Photographer',
-          uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-          tags: ['trophy', 'presentation', 'ceremony', 'achievement'],
-          category: 'tournaments',
-          isPublic: true,
-          views: 345,
-          downloads: 67,
-          dimensions: { width: 3500, height: 2500 },
-          location: 'Tournament Venue',
-          dateTaken: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '5',
-          title: 'Team Building Event',
-          description: 'Team building activities during the off-season',
-          url: '/photos/team-building.jpg',
-          thumbnailUrl: '/photos/thumbnails/team-building-thumb.jpg',
-          size: 2048000,
-          uploadedBy: 'Club Administrator',
-          uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          tags: ['team-building', 'off-season', 'activities', 'bonding'],
-          category: 'events',
-          isPublic: true,
-          views: 189,
-          downloads: 34,
-          dimensions: { width: 3000, height: 2000 },
-          location: 'Team Retreat Center',
-          dateTaken: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '6',
-          title: 'Player of the Month Award',
-          description: 'Player receiving the monthly award recognition',
-          url: '/photos/player-award.jpg',
-          thumbnailUrl: '/photos/thumbnails/player-award-thumb.jpg',
-          size: 1536000,
-          uploadedBy: 'Club Director',
-          uploadedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-          tags: ['award', 'recognition', 'player', 'achievement'],
-          category: 'awards',
-          isPublic: true,
-          views: 278,
-          downloads: 56,
-          dimensions: { width: 2800, height: 2100 },
-          location: 'Club House',
-          dateTaken: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '7',
-          title: 'Pre-Game Warm-up',
-          description: 'Team warming up before an important match',
-          url: '/photos/pre-game-warmup.jpg',
-          thumbnailUrl: '/photos/thumbnails/pre-game-warmup-thumb.jpg',
-          size: 1024000,
-          uploadedBy: 'Sports Photographer',
-          uploadedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-          tags: ['warm-up', 'pre-game', 'preparation', 'focus'],
-          category: 'game_photos',
-          isPublic: false,
-          views: 145,
-          downloads: 28,
-          dimensions: { width: 2400, height: 1600 },
-          location: 'Stadium',
-          dateTaken: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '8',
-          title: 'Coaching Session',
-          description: 'Coach providing tactical instructions to the team',
-          url: '/photos/coaching-session.jpg',
-          thumbnailUrl: '/photos/thumbnails/coaching-session-thumb.jpg',
-          size: 2048000,
-          uploadedBy: 'Assistant Coach',
-          uploadedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-          tags: ['coaching', 'tactics', 'instruction', 'learning'],
-          category: 'training_photos',
-          isPublic: false,
-          views: 98,
-          downloads: 19,
-          dimensions: { width: 3200, height: 2400 },
-          location: 'Training Ground',
-          dateTaken: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-        },
-      ];
-      setPhotos(mockPhotos);
-      setLoadingPhotos(false);
-    }
-  }, [loading]);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
 
   const filteredPhotos = photos.filter(photo => {
-    const matchesSearch = photo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         photo.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         photo.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesTab = activeTab === 'all' || photo.category === activeTab;
-    return matchesSearch && matchesTab;
+    const matchesSearch = photo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (photo.description && photo.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = activeCategory === 'all' || photo.category === activeCategory;
+    return matchesSearch && matchesCategory;
   });
 
   const sortedPhotos = [...filteredPhotos].sort((a, b) => {
     switch (sortBy) {
-      case 'date':
-        return b.uploadedAt.getTime() - a.uploadedAt.getTime();
       case 'name':
-        return a.title.localeCompare(b.title);
-      case 'size':
-        return b.size - a.size;
-      case 'views':
-        return b.views - a.views;
+        return a.name.localeCompare(b.name);
+      case 'date':
+        return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
       default:
         return 0;
     }
@@ -230,13 +70,13 @@ export default function PhotosPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'team_photos': return 'primary';
-      case 'game_photos': return 'success';
-      case 'training_photos': return 'info';
-      case 'events': return 'warning';
-      case 'tournaments': return 'danger';
-      case 'awards': return 'secondary';
-      default: return 'secondary';
+      case 'team-photos': return 'primary';
+      case 'game-highlights': return 'success';
+      case 'tournament': return 'warning';
+      case 'training': return 'info';
+      case 'events': return 'danger';
+      case 'portraits': return 'secondary';
+      default: return 'light';
     }
   };
 
@@ -252,12 +92,51 @@ export default function PhotosPage() {
     );
   };
 
+  // Show loading state while Firebase is initializing or photos are loading
   if (loading || loadingPhotos) {
     return (
-      <div className="container-fluid">
-        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <div className="d-flex">
+        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+          <div className="p-3">
+            <div className="d-flex align-items-center mb-4">
+              <div className="bg-primary rounded p-2 me-3">
+                <Image size={24} className="text-white" />
+              </div>
+              <h5 className="mb-0">KP5 Academy</h5>
+            </div>
+          </div>
+        </div>
+        <div className="flex-grow-1 bg-light">
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if no user data
+  if (!user) {
+    return (
+      <div className="d-flex">
+        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+          <div className="p-3">
+            <div className="d-flex align-items-center mb-4">
+              <div className="bg-primary rounded p-2 me-3">
+                <Image size={24} className="text-white" />
+              </div>
+              <h5 className="mb-0">KP5 Academy</h5>
+            </div>
+          </div>
+        </div>
+        <div className="flex-grow-1 bg-light">
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+            <div className="text-center">
+              <h5 className="text-muted">Access Denied</h5>
+              <p className="text-muted">Please log in to view photos.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -265,276 +144,336 @@ export default function PhotosPage() {
   }
 
   return (
-    <div className="container-fluid">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="h3 mb-0">Photo Gallery</h1>
-          <p className="text-muted mb-0">Browse and manage team photos and memories</p>
-        </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-primary">
-            <i className="bi bi-cloud-upload me-2"></i>
-            Upload Photos
-          </button>
-          <button className="btn btn-outline-secondary">
-            <i className="bi bi-gear me-2"></i>
-            Settings
-          </button>
+    <div className="d-flex">
+      {/* Sidebar */}
+      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+        <div className="p-3">
+          <div className="d-flex align-items-center mb-4">
+            <div className="bg-primary rounded p-2 me-3">
+              <Image size={24} className="text-white" />
+            </div>
+            <h5 className="mb-0">KP5 Academy</h5>
+          </div>
+          
+          {/* User Profile */}
+          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
+            <div className="bg-primary rounded-circle p-2 me-3">
+              <User size={20} className="text-white" />
+            </div>
+            <div>
+              <h6 className="mb-0">{user.displayName || 'User'}</h6>
+              <small className="text-muted">{user.role}</small>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="nav flex-column">
+            <a className="nav-link" href="/dashboard">
+              <Image size={20} className="me-2" />
+              Dashboard
+            </a>
+            <a className="nav-link" href="/announcements">
+              <Image size={20} className="me-2" />
+              Announcements
+            </a>
+            <a className="nav-link" href="/messages">
+              <Image size={20} className="me-2" />
+              Messages
+            </a>
+            <a className="nav-link" href="/notifications">
+              <Image size={20} className="me-2" />
+              Notifications
+            </a>
+            <a className="nav-link" href="/teams">
+              <Image size={20} className="me-2" />
+              Teams
+            </a>
+            <a className="nav-link" href="/tournaments">
+              <Image size={20} className="me-2" />
+              Tournaments
+            </a>
+            <a className="nav-link" href="/schedule">
+              <Image size={20} className="me-2" />
+              Schedule
+            </a>
+            <a className="nav-link" href="/media">
+              <Image size={20} className="me-2" />
+              Media
+            </a>
+            <a className="nav-link" href="/documents">
+              <Image size={20} className="me-2" />
+              Documents
+            </a>
+            <a className="nav-link active" href="/photos">
+              <Image size={20} className="me-2" />
+              Photos
+            </a>
+          </nav>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-primary bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-images text-primary fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Total Photos</h6>
-                  <h4 className="mb-0">{photos.length}</h4>
-                </div>
-              </div>
+      {/* Main Content */}
+      <div className="flex-grow-1 bg-light">
+        {/* Top Header */}
+        <div className="bg-white border-bottom p-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 className="mb-0">Photo Gallery</h4>
+              <p className="text-muted mb-0">Browse and manage your photo collection</p>
+            </div>
+            <div className="d-flex gap-2">
+              <button className="btn btn-primary">
+                <Upload size={20} className="me-2" />
+                Upload Photos
+              </button>
+              <button className="btn btn-outline-secondary">
+                <Settings size={20} className="me-2" />
+                Settings
+              </button>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-success bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-camera text-success fs-4"></i>
+
+        {/* Main Content */}
+        <div className="p-4">
+          {/* Stats Cards */}
+          <div className="row mb-4">
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-primary bg-opacity-10 rounded-circle p-3">
+                        <Image size={24} className="text-primary" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Total Photos</h6>
+                      <h4 className="mb-0">{photos.length}</h4>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Game Photos</h6>
-                  <h4 className="mb-0">{photos.filter(photo => photo.category === 'game_photos').length}</h4>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-success bg-opacity-10 rounded-circle p-3">
+                        <Camera size={24} className="text-success" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Photographers</h6>
+                      <h4 className="mb-0">{new Set(photos.map(p => p.photographer)).size}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-warning bg-opacity-10 rounded-circle p-3">
+                        <Users size={24} className="text-warning" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Total Views</h6>
+                      <h4 className="mb-0">{photos.reduce((sum, photo) => sum + photo.views, 0)}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center">
+                    <div className="flex-shrink-0">
+                      <div className="bg-info bg-opacity-10 rounded-circle p-3">
+                        <Trophy size={24} className="text-info" />
+                      </div>
+                    </div>
+                    <div className="flex-grow-1 ms-3">
+                      <h6 className="card-title mb-1">Total Downloads</h6>
+                      <h4 className="mb-0">{photos.reduce((sum, photo) => sum + photo.downloads, 0)}</h4>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
+
+          {/* Filters and Controls */}
+          <div className="card border-0 shadow-sm mb-4">
             <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-info bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-people text-info fs-4"></i>
+              <div className="row align-items-center">
+                <div className="col-md-4">
+                  <div className="btn-group" role="group">
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'all' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('all')}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'team-photos' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('team-photos')}
+                    >
+                      Team
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'game-highlights' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('game-highlights')}
+                    >
+                      Highlights
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-primary ${activeCategory === 'tournament' ? 'active' : ''}`}
+                      onClick={() => setActiveCategory('tournament')}
+                    >
+                      Tournament
+                    </button>
                   </div>
                 </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Team Photos</h6>
-                  <h4 className="mb-0">{photos.filter(photo => photo.category === 'team_photos').length}</h4>
+                <div className="col-md-4">
+                  <div className="input-group">
+                    <span className="input-group-text bg-light border-end-0">
+                      <Search size={20} className="text-muted" />
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control border-start-0"
+                      placeholder="Search photos..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-2">
+                  <select 
+                    className="form-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                  >
+                    <option value="date">Sort by Date</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="size">Sort by Size</option>
+                    <option value="views">Sort by Views</option>
+                  </select>
+                </div>
+                <div className="col-md-2 text-end">
+                  <div className="btn-group" role="group">
+                    <button
+                      type="button"
+                      className={`btn btn-outline-secondary ${viewMode === 'grid' ? 'active' : ''}`}
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <Grid size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-outline-secondary ${viewMode === 'masonry' ? 'active' : ''}`}
+                      onClick={() => setViewMode('masonry')}
+                    >
+                      <Grid3X3 size={20} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-warning bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-trophy text-warning fs-4"></i>
+
+          {/* Photos Grid */}
+          <div className="row">
+            {sortedPhotos.map((photo) => (
+              <div key={photo.id} className="col-md-6 col-lg-4 col-xl-3 mb-4">
+                <div className="card border-0 shadow-sm h-100">
+                  <div className="position-relative">
+                    <img
+                      src={photo.thumbnailUrl}
+                      className="card-img-top"
+                      alt={photo.title}
+                      style={{ height: '200px', objectFit: 'cover' }}
+                    />
+                    <div className="position-absolute top-0 start-0 m-2">
+                      <span className={`badge bg-${getCategoryColor(photo.category)}`}>
+                        {photo.category.replace('-', ' ')}
+                      </span>
+                    </div>
+                    <div className="position-absolute top-0 end-0 m-2">
+                      <div className="d-flex gap-1">
+                        <button 
+                          className="btn btn-sm btn-light btn-sm"
+                          onClick={() => {
+                            incrementViews(photo.id);
+                            setSelectedPhoto(photo);
+                          }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-light btn-sm"
+                          onClick={() => incrementDownloads(photo.id)}
+                        >
+                          <Download size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <h6 className="card-title mb-2">{photo.title}</h6>
+                    <p className="card-text text-muted small mb-3">{photo.description}</p>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <small className="text-muted">{formatFileSize(photo.size)}</small>
+                      <small className="text-muted">{formatTimeAgo(photo.takenAt)}</small>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div className="d-flex align-items-center gap-2">
+                        <small className="text-muted">
+                          <Camera size={14} className="me-1" />
+                          {photo.photographer}
+                        </small>
+                        {photo.location && (
+                          <small className="text-muted">
+                            <MapPin size={14} className="me-1" />
+                            {photo.location}
+                          </small>
+                        )}
+                      </div>
+                      <div className="d-flex gap-2 text-muted">
+                        <small>{photo.views} views</small>
+                        <small>{photo.downloads} downloads</small>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Awards</h6>
-                  <h4 className="mb-0">{photos.filter(photo => photo.category === 'awards').length}</h4>
-                </div>
               </div>
-            </div>
+            ))}
           </div>
+
+          {/* Empty State */}
+          {sortedPhotos.length === 0 && (
+            <div className="text-center py-5">
+              <Image size={64} className="text-muted mb-3" />
+              <h5 className="text-muted">No photos found</h5>
+              <p className="text-muted">There are no photos matching your current filters.</p>
+              <button className="btn btn-primary">
+                <Upload size={20} className="me-2" />
+                Upload Your First Photo
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Filters and Controls */}
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body">
-          <div className="row align-items-center">
-            <div className="col-md-4">
-              <div className="btn-group" role="group">
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'all' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('all')}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'team_photos' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('team_photos')}
-                >
-                  Team
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'game_photos' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('game_photos')}
-                >
-                  Games
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline-primary ${activeTab === 'training_photos' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('training_photos')}
-                >
-                  Training
-                </button>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-search text-muted"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control border-start-0"
-                  placeholder="Search photos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="d-flex gap-2 justify-content-end">
-                <select 
-                  className="form-select" 
-                  style={{ width: 'auto' }}
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                >
-                  <option value="date">Sort by Date</option>
-                  <option value="name">Sort by Name</option>
-                  <option value="size">Sort by Size</option>
-                  <option value="views">Sort by Views</option>
-                </select>
-                <div className="btn-group" role="group">
-                  <button
-                    type="button"
-                    className={`btn btn-outline-secondary ${viewMode === 'grid' ? 'active' : ''}`}
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <i className="bi bi-grid"></i>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline-secondary ${viewMode === 'masonry' ? 'active' : ''}`}
-                    onClick={() => setViewMode('masonry')}
-                  >
-                    <i className="bi bi-grid-3x3"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Photos Grid */}
-      <div className="row">
-        {sortedPhotos.map((photo) => (
-          <div key={photo.id} className="col-md-6 col-lg-4 col-xl-3 mb-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="position-relative">
-                <img
-                  src={photo.thumbnailUrl}
-                  className="card-img-top"
-                  alt={photo.title}
-                  style={{ height: '250px', objectFit: 'cover' }}
-                  onClick={() => {
-                    setSelectedPhoto(photo);
-                    incrementViews(photo.id);
-                  }}
-                  role="button"
-                />
-                <div className="position-absolute top-0 end-0 m-2">
-                  <span className={`badge bg-${getCategoryColor(photo.category)} rounded-pill`}>
-                    {photo.category.replace('_', ' ')}
-                  </span>
-                </div>
-                <div className="position-absolute bottom-0 start-0 end-0 p-3" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }}>
-                  <h6 className="text-white mb-1">{photo.title}</h6>
-                  {photo.location && (
-                    <small className="text-white-50">
-                      <i className="bi bi-geo-alt me-1"></i>
-                      {photo.location}
-                    </small>
-                  )}
-                </div>
-              </div>
-              <div className="card-body">
-                {photo.description && (
-                  <p className="text-muted small mb-3">{photo.description.substring(0, 100)}...</p>
-                )}
-                
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <small className="text-muted">
-                    <i className="bi bi-eye me-1"></i>
-                    {photo.views} views
-                  </small>
-                  <small className="text-muted">
-                    <i className="bi bi-download me-1"></i>
-                    {photo.downloads} downloads
-                  </small>
-                </div>
-                
-                <div className="d-flex gap-2">
-                  <button 
-                    className="btn btn-sm btn-outline-primary flex-fill"
-                    onClick={() => {
-                      setSelectedPhoto(photo);
-                      incrementViews(photo.id);
-                    }}
-                  >
-                    <i className="bi bi-eye me-1"></i>
-                    View
-                  </button>
-                  <button 
-                    className="btn btn-sm btn-outline-success flex-fill"
-                    onClick={() => incrementDownloads(photo.id)}
-                  >
-                    <i className="bi bi-download me-1"></i>
-                    Download
-                  </button>
-                </div>
-              </div>
-              <div className="card-footer bg-transparent">
-                <div className="d-flex justify-content-between align-items-center">
-                  <small className="text-muted">
-                    <i className="bi bi-person me-1"></i>
-                    {photo.uploadedBy}
-                  </small>
-                  <small className="text-muted">{formatTimeAgo(photo.uploadedAt)}</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {sortedPhotos.length === 0 && (
-        <div className="text-center py-5">
-          <i className="bi bi-images fs-1 text-muted mb-3"></i>
-          <h5 className="text-muted">No photos found</h5>
-          <p className="text-muted">There are no photos matching your current filters.</p>
-          <button className="btn btn-primary">
-            <i className="bi bi-cloud-upload me-2"></i>
-            Upload Your First Photo
-          </button>
-        </div>
-      )}
 
       {/* Photo Detail Modal */}
       {selectedPhoto && (
@@ -547,86 +486,56 @@ export default function PhotosPage() {
                   type="button" 
                   className="btn-close" 
                   onClick={() => setSelectedPhoto(null)}
-                ></button>
+                >
+                  <X size={20} />
+                </button>
               </div>
               <div className="modal-body">
+                <div className="text-center mb-4">
+                  <img 
+                    src={selectedPhoto.url} 
+                    alt={selectedPhoto.title}
+                    className="img-fluid rounded"
+                    style={{ maxHeight: '500px' }}
+                  />
+                </div>
+                
                 <div className="row">
-                  <div className="col-md-8">
-                    <img 
-                      src={selectedPhoto.url} 
-                      alt={selectedPhoto.title}
-                      className="img-fluid rounded"
-                    />
+                  <div className="col-md-6">
+                    <h6>Photo Details</h6>
+                    <ul className="list-unstyled">
+                      <li><strong>Title:</strong> {selectedPhoto.title}</li>
+                      <li><strong>Category:</strong> {selectedPhoto.category.replace('-', ' ')}</li>
+                      <li><strong>Size:</strong> {formatFileSize(selectedPhoto.size)}</li>
+                      <li><strong>Dimensions:</strong> {selectedPhoto.width} x {selectedPhoto.height}</li>
+                      <li><strong>Photographer:</strong> {selectedPhoto.photographer}</li>
+                      {selectedPhoto.location && (
+                        <li><strong>Location:</strong> {selectedPhoto.location}</li>
+                      )}
+                      <li><strong>Taken:</strong> {formatTimeAgo(selectedPhoto.takenAt)}</li>
+                      <li><strong>Uploaded:</strong> {formatTimeAgo(selectedPhoto.uploadedAt)}</li>
+                    </ul>
                   </div>
-                  <div className="col-md-4">
-                    <div className="card">
-                      <div className="card-body">
-                        <h6>Details</h6>
-                        <dl className="row mb-0">
-                          <dt className="col-sm-4">Category:</dt>
-                          <dd className="col-sm-8">
-                            <span className={`badge bg-${getCategoryColor(selectedPhoto.category)} rounded-pill`}>
-                              {selectedPhoto.category.replace('_', ' ')}
-                            </span>
-                          </dd>
-                          
-                          <dt className="col-sm-4">Size:</dt>
-                          <dd className="col-sm-8">{formatFileSize(selectedPhoto.size)}</dd>
-                          
-                          <dt className="col-sm-4">Dimensions:</dt>
-                          <dd className="col-sm-8">{selectedPhoto.dimensions.width} × {selectedPhoto.dimensions.height}</dd>
-                          
-                          <dt className="col-sm-4">Views:</dt>
-                          <dd className="col-sm-8">{selectedPhoto.views}</dd>
-                          
-                          <dt className="col-sm-4">Downloads:</dt>
-                          <dd className="col-sm-8">{selectedPhoto.downloads}</dd>
-                          
-                          <dt className="col-sm-4">Uploaded:</dt>
-                          <dd className="col-sm-8">{formatTimeAgo(selectedPhoto.uploadedAt)}</dd>
-                          
-                          <dt className="col-sm-4">By:</dt>
-                          <dd className="col-sm-8">{selectedPhoto.uploadedBy}</dd>
-                          
-                          {selectedPhoto.location && (
-                            <>
-                              <dt className="col-sm-4">Location:</dt>
-                              <dd className="col-sm-8">{selectedPhoto.location}</dd>
-                            </>
-                          )}
-                          
-                          {selectedPhoto.dateTaken && (
-                            <>
-                              <dt className="col-sm-4">Date Taken:</dt>
-                              <dd className="col-sm-8">{formatTimeAgo(selectedPhoto.dateTaken)}</dd>
-                            </>
-                          )}
-                        </dl>
-                        
-                        {selectedPhoto.description && (
-                          <>
-                            <hr />
-                            <h6>Description</h6>
-                            <p className="text-muted">{selectedPhoto.description}</p>
-                          </>
-                        )}
-                        
-                        {selectedPhoto.tags.length > 0 && (
-                          <>
-                            <hr />
-                            <h6>Tags</h6>
-                            <div className="d-flex flex-wrap gap-1">
-                              {selectedPhoto.tags.map((tag, index) => (
-                                <span key={index} className="badge bg-light text-dark rounded-pill">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
+                  <div className="col-md-6">
+                    <h6>Statistics</h6>
+                    <ul className="list-unstyled">
+                      <li><strong>Views:</strong> {selectedPhoto.views}</li>
+                      <li><strong>Downloads:</strong> {selectedPhoto.downloads}</li>
+                      <li><strong>Public:</strong> {selectedPhoto.isPublic ? 'Yes' : 'No'}</li>
+                    </ul>
+                    
+                    <h6 className="mt-3">Tags</h6>
+                    <div className="d-flex flex-wrap gap-1">
+                      {selectedPhoto.tags.map((tag, index) => (
+                        <span key={index} className="badge bg-light text-dark">{tag}</span>
+                      ))}
                     </div>
                   </div>
+                </div>
+                
+                <div className="mt-4">
+                  <h6>Description</h6>
+                  <p>{selectedPhoto.description}</p>
                 </div>
               </div>
               <div className="modal-footer">
@@ -638,10 +547,14 @@ export default function PhotosPage() {
                   Close
                 </button>
                 <button 
+                  type="button" 
                   className="btn btn-primary"
-                  onClick={() => incrementDownloads(selectedPhoto.id)}
+                  onClick={() => {
+                    incrementDownloads(selectedPhoto.id);
+                    setSelectedPhoto(null);
+                  }}
                 >
-                  <i className="bi bi-download me-2"></i>
+                  <Download size={16} className="me-1" />
                   Download
                 </button>
               </div>

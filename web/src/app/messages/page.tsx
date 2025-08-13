@@ -1,116 +1,47 @@
 'use client';
 
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useState, useEffect } from 'react';
-
-interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar: string;
-  recipientIds: string[];
-  type: 'direct' | 'team' | 'club' | 'announcement' | 'system';
-  content: string;
-  attachments: MessageAttachment[];
-  readBy: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface MessageAttachment {
-  id: string;
-  name: string;
-  url: string;
-  type: 'image' | 'document' | 'video';
-  size: number;
-}
+import React, { useState, useEffect } from 'react';
+import Sidebar from '@/components/layout/Sidebar';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { 
+  Users, Calendar, Trophy, Target, TrendingUp, Clock, MapPin, Plus, Activity, BarChart3, Settings,
+  Bell, Search, Grid3X3, MessageCircle, ChevronDown, MoreVertical, Home, Folder, GraduationCap,
+  ShoppingCart, Cloud, HelpCircle, Mail, Flag, Maximize2, User, CheckCircle, AlertCircle, XCircle,
+  GitBranch, Shield, Award, Zap, Heart, Play, Pause, Square, AlertTriangle, TrendingDown, DollarSign,
+  FileText, ImageIcon, Send, Paperclip, Smile, Phone, Video, Edit, Trash2, Archive, Star, Reply, Forward
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMessages } from '@/hooks/useMessages';
 
 export default function MessagesPage() {
-  const { userData, loading } = useFirebase();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  return (
+    <ProtectedRoute>
+      <MessagesContent />
+    </ProtectedRoute>
+  );
+}
+
+function MessagesContent() {
+  const { userData, loading  } = useAuth();
+  const { messages, loading: loadingMessages, error, refetch } = useMessages();
+  const [selectedMessage, setSelectedMessage] = useState<typeof messages[number] | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [loadingMessages, setLoadingMessages] = useState(true);
-
-  // Mock data for messages
-  useEffect(() => {
-    if (!loading) {
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          senderId: 'coach-1',
-          senderName: 'Coach Johnson',
-          senderAvatar: '/api/placeholder/40/40',
-          recipientIds: ['player-1', 'player-2'],
-          type: 'team',
-          content: 'Great practice today! Remember to work on your passing drills this weekend.',
-          attachments: [],
-          readBy: ['player-1'],
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        },
-        {
-          id: '2',
-          senderId: 'admin-1',
-          senderName: 'Club Admin',
-          senderAvatar: '/api/placeholder/40/40',
-          recipientIds: ['all-players'],
-          type: 'announcement',
-          content: 'Important: Team photos will be taken this Saturday at 10 AM. Please arrive 15 minutes early.',
-          attachments: [
-            {
-              id: 'att-1',
-              name: 'photo-schedule.pdf',
-              url: '/documents/photo-schedule.pdf',
-              type: 'document',
-              size: 245760,
-            }
-          ],
-          readBy: ['player-1', 'player-2'],
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-          updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '3',
-          senderId: 'player-2',
-          senderName: 'Alex Smith',
-          senderAvatar: '/api/placeholder/40/40',
-          recipientIds: ['player-1'],
-          type: 'direct',
-          content: 'Hey! Are you coming to the extra practice session tomorrow?',
-          attachments: [],
-          readBy: ['player-1'],
-          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-          updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        },
-        {
-          id: '4',
-          senderId: 'system',
-          senderName: 'System',
-          senderAvatar: '/api/placeholder/40/40',
-          recipientIds: ['all-users'],
-          type: 'system',
-          content: 'Your account has been successfully verified. Welcome to KP5 Academy!',
-          attachments: [],
-          readBy: ['player-1'],
-          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-          updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        },
-      ];
-      setMessages(mockMessages);
-      setLoadingMessages(false);
-    }
-  }, [loading]);
+  const [newMessage, setNewMessage] = useState('');
+  const [showCompose, setShowCompose] = useState(false);
 
   const filteredMessages = messages.filter(message => {
     const matchesSearch = message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          message.senderName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTab = activeTab === 'all' || message.type === activeTab;
-    return matchesSearch && matchesTab;
+    
+    if (activeTab === 'all') return matchesSearch;
+    if (activeTab === 'unread') return matchesSearch; // backend read state not wired yet
+    if (activeTab === 'direct') return matchesSearch && message.type === 'direct';
+    if (activeTab === 'team') return matchesSearch && message.type === 'team';
+    if (activeTab === 'announcements') return matchesSearch && message.type === 'announcement';
+    
+    return matchesSearch;
   });
-
-  const unreadCount = messages.filter(m => !m.readBy.includes(userData?.id || '')).length;
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -131,134 +62,213 @@ export default function MessagesPage() {
     return 'Just now';
   };
 
+  const getMessageTypeIcon = (type: string) => {
+    switch (type) {
+      case 'direct': return <User className="h-4 w-4" />;
+      case 'team': return <Users className="h-4 w-4" />;
+      case 'club': return <GraduationCap className="h-4 w-4" />;
+      case 'announcement': return <Bell className="h-4 w-4" />;
+      case 'system': return <Settings className="h-4 w-4" />;
+      default: return <MessageCircle className="h-4 w-4" />;
+    }
+  };
+
+  const getMessageTypeColor = (type: string) => {
+    switch (type) {
+      case 'direct': return 'text-primary';
+      case 'team': return 'text-success';
+      case 'club': return 'text-info';
+      case 'announcement': return 'text-warning';
+      case 'system': return 'text-secondary';
+      default: return 'text-muted';
+    }
+  };
+
   if (loading || loadingMessages) {
     return (
-      <div className="container-fluid">
-        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <div className="d-flex">
+        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+          <div className="p-3">
+            <div className="placeholder-glow">
+              <div className="placeholder col-8 mb-4"></div>
+              <div className="placeholder col-6 mb-3"></div>
+              <div className="placeholder col-10 mb-2"></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-grow-1 bg-light">
+          <div className="p-4">
+            <div className="placeholder-glow">
+              <div className="placeholder col-4 mb-4"></div>
+              <div className="placeholder col-8 mb-3"></div>
+              <div className="placeholder col-6 mb-2"></div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <p className="text-danger mb-3">{error}</p>
+          <button className="btn btn-primary" onClick={refetch}>Try Again</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <h2 className="h2 fw-bold text-dark mb-3">Access Denied</h2>
+          <p className="text-muted">Please sign in to access messages.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container-fluid">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="h3 mb-0">Messages</h1>
-          <p className="text-muted mb-0">Communicate with your team and club members</p>
-        </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-primary">
-            <i className="bi bi-plus-circle me-2"></i>
-            New Message
-          </button>
-          <button className="btn btn-outline-secondary">
-            <i className="bi bi-gear me-2"></i>
-            Settings
-          </button>
+    <div className="d-flex">
+      {/* Sidebar */}
+      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
+        <div className="p-3">
+          {/* Logo and Top Icons */}
+          <div className="d-flex align-items-center justify-content-between mb-4">
+            <div className="d-flex align-items-center">
+              <img 
+                src="/images/logo.png" 
+                alt="KP5 Academy" 
+                width={120} 
+                height={45} 
+                className="me-2"
+                style={{maxWidth: '120px'}}
+              />
+            </div>
+            <div className="d-flex gap-2">
+              <Bell className="h-4 w-4 text-muted position-relative">
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success" style={{fontSize: '0.6rem'}}>3</span>
+              </Bell>
+              <Search className="h-4 w-4 text-muted" />
+            </div>
+          </div>
+
+          {/* User Profile */}
+          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
+            <div className="rounded-circle p-2 me-3" style={{backgroundColor: '#4169E1', opacity: 0.1}}>
+              <User className="h-4 w-4" style={{color: '#4169E1'}} />
+            </div>
+            <div>
+              <div className="fw-medium text-dark">{userData.displayName || 'User'}</div>
+              <small className="text-muted">{userData.email}</small>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="mb-4">
+            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Sports Management</small>
+            <div className="d-flex flex-column gap-1">
+              <a href="/dashboard" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <BarChart3 className="h-4 w-4 me-2" />
+                Dashboard
+              </a>
+              <a href="/teams" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Users className="h-4 w-4 me-2" />
+                Teams
+              </a>
+              <a href="/matches" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Calendar className="h-4 w-4 me-2" />
+                Matches
+              </a>
+              <a href="/tournaments" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Trophy className="h-4 w-4 me-2" />
+                Tournaments
+              </a>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Management</small>
+            <div className="d-flex flex-column gap-1">
+              <a href="/clubs" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <GraduationCap className="h-4 w-4 me-2" />
+                Clubs
+              </a>
+              <a href="/players" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Users className="h-4 w-4 me-2" />
+                Players
+              </a>
+              <a href="/coaches" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Shield className="h-4 w-4 me-2" />
+                Coaches
+              </a>
+              <a href="/referees" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Shield className="h-4 w-4 me-2" />
+                Referees
+              </a>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Communication</small>
+            <div className="d-flex flex-column gap-1">
+              <a href="/messages" className={`btn btn-sm text-start ${activeTab === 'messages' ? 'text-white' : 'text-muted'} border-0 text-decoration-none`} style={{backgroundColor: activeTab === 'messages' ? '#4169E1' : 'transparent'}}>
+                <MessageCircle className="h-4 w-4 me-2" />
+                Messages
+              </a>
+              <a href="/notifications" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Mail className="h-4 w-4 me-2" />
+                Notifications
+              </a>
+              <a href="/announcements" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Bell className="h-4 w-4 me-2" />
+                Announcements
+              </a>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Content</small>
+            <div className="d-flex flex-column gap-1">
+              <a href="/media" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <Cloud className="h-4 w-4 me-2" />
+                Media Library
+              </a>
+              <a href="/documents" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <FileText className="h-4 w-4 me-2" />
+                Documents
+              </a>
+              <a href="/photos" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
+                <ImageIcon className="h-4 w-4 me-2" />
+                Photos
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-primary bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-envelope text-primary fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Total Messages</h6>
-                  <h4 className="mb-0">{messages.length}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-warning bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-envelope-exclamation text-warning fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Unread</h6>
-                  <h4 className="mb-0">{unreadCount}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-success bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-people text-success fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Team Messages</h6>
-                  <h4 className="mb-0">{messages.filter(m => m.type === 'team').length}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-info bg-opacity-10 rounded-circle p-3">
-                    <i className="bi bi-megaphone text-info fs-4"></i>
-                  </div>
-                </div>
-                <div className="flex-grow-1 ms-3">
-                  <h6 className="card-title mb-1">Announcements</h6>
-                  <h4 className="mb-0">{messages.filter(m => m.type === 'announcement').length}</h4>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="row">
-        {/* Message List */}
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-white border-0">
-              <div className="d-flex justify-content-between align-items-center mb-3">
+      {/* Main Content */}
+      <div className="flex-grow-1 bg-light">
+        {/* Top Header */}
+        <div className="bg-white border-bottom p-3">
+          <div className="d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-3">
+              <div>
                 <h5 className="mb-0">Messages</h5>
-                <div className="dropdown">
-                  <button className="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i className="bi bi-funnel me-1"></i>
-                    Filter
-                  </button>
-                  <ul className="dropdown-menu">
-                    <li><button className="dropdown-item" onClick={() => setActiveTab('all')}>All Messages</button></li>
-                    <li><button className="dropdown-item" onClick={() => setActiveTab('direct')}>Direct Messages</button></li>
-                    <li><button className="dropdown-item" onClick={() => setActiveTab('team')}>Team Messages</button></li>
-                    <li><button className="dropdown-item" onClick={() => setActiveTab('announcement')}>Announcements</button></li>
-                    <li><button className="dropdown-item" onClick={() => setActiveTab('system')}>System Messages</button></li>
-                  </ul>
-                </div>
+                <small className="text-muted">
+                  <MessageCircle className="h-3 w-3 me-1" />
+                  {filteredMessages.length} messages
+                </small>
               </div>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-search text-muted"></i>
+            </div>
+            
+            <div className="d-flex align-items-center gap-3">
+              <div className="input-group" style={{width: '300px'}}>
+                <span className="input-group-text bg-white border-end-0">
+                  <Search className="h-4 w-4 text-muted" />
                 </span>
                 <input
                   type="text"
@@ -268,141 +278,205 @@ export default function MessagesPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-            </div>
-            <div className="card-body p-0">
-              <div className="list-group list-group-flush">
-                {filteredMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`list-group-item list-group-item-action border-0 px-3 py-3 cursor-pointer ${
-                      selectedMessage?.id === message.id ? 'bg-light' : ''
-                    } ${!message.readBy.includes(userData?.id || '') ? 'fw-bold' : ''}`}
-                    onClick={() => setSelectedMessage(message)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="d-flex align-items-start">
-                      <div className="flex-shrink-0">
-                        <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
-                          <i className="bi bi-person text-white"></i>
-                        </div>
-                      </div>
-                      <div className="flex-grow-1 ms-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h6 className="mb-1">{message.senderName}</h6>
-                          <small className="text-muted">{formatTimeAgo(message.createdAt)}</small>
-                        </div>
-                        <p className="mb-1 text-truncate" style={{ maxWidth: '200px' }}>
-                          {message.content}
-                        </p>
-                        <div className="d-flex align-items-center gap-2">
-                          <span className={`badge bg-${message.type === 'direct' ? 'primary' : message.type === 'team' ? 'success' : message.type === 'announcement' ? 'warning' : 'secondary'} rounded-pill`}>
-                            {message.type}
-                          </span>
-                          {message.attachments.length > 0 && (
-                            <small className="text-muted">
-                              <i className="bi bi-paperclip me-1"></i>
-                              {message.attachments.length}
-                            </small>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <button 
+                className="btn btn-sm" 
+                style={{backgroundColor: '#4169E1', borderColor: '#4169E1', color: 'white'}}
+                onClick={() => setShowCompose(true)}
+              >
+                <Plus className="h-4 w-4 me-1" />
+                New Message
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Message Detail */}
-        <div className="col-md-8">
-          <div className="card border-0 shadow-sm">
-            {selectedMessage ? (
-              <>
-                <div className="card-header bg-white border-0">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="d-flex align-items-center">
-                      <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '50px', height: '50px' }}>
-                        <i className="bi bi-person text-white fs-5"></i>
-                      </div>
-                      <div>
-                        <h5 className="mb-1">{selectedMessage.senderName}</h5>
-                        <p className="text-muted mb-0">
-                          {formatTimeAgo(selectedMessage.createdAt)} • {selectedMessage.type}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="dropdown">
-                      <button className="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i className="bi bi-three-dots"></i>
+        {/* Main Messages Content */}
+        <div className="p-4">
+          <div className="row">
+            {/* Message List */}
+            <div className="col-lg-4">
+              <div className="card border-0 shadow-sm">
+                <div className="card-header bg-transparent border-0">
+                  <ul className="nav nav-tabs card-header-tabs" role="tablist">
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link ${activeTab === 'all' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('all')}
+                      >
+                        All
                       </button>
-                      <ul className="dropdown-menu">
-                        <li><button className="dropdown-item">Reply</button></li>
-                        <li><button className="dropdown-item">Forward</button></li>
-                        <li><button className="dropdown-item">Mark as Read</button></li>
-                        <li><hr className="dropdown-divider" /></li>
-                        <li><button className="dropdown-item text-danger">Delete</button></li>
-                      </ul>
-                    </div>
-                  </div>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link ${activeTab === 'unread' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('unread')}
+                      >
+                        Unread
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link ${activeTab === 'direct' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('direct')}
+                      >
+                        Direct
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link ${activeTab === 'team' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('team')}
+                      >
+                        Team
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link ${activeTab === 'announcements' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('announcements')}
+                      >
+                        Announcements
+                      </button>
+                    </li>
+                  </ul>
                 </div>
-                <div className="card-body">
-                  <div className="mb-4">
-                    <p className="mb-0">{selectedMessage.content}</p>
-                  </div>
-
-                  {selectedMessage.attachments.length > 0 && (
-                    <div className="mb-4">
-                      <h6 className="mb-3">Attachments</h6>
-                      <div className="row">
-                        {selectedMessage.attachments.map((attachment) => (
-                          <div key={attachment.id} className="col-md-6 mb-3">
-                            <div className="card border">
-                              <div className="card-body p-3">
-                                <div className="d-flex align-items-center">
-                                  <div className="flex-shrink-0">
-                                    <i className={`bi bi-${attachment.type === 'image' ? 'image' : attachment.type === 'document' ? 'file-earmark-text' : 'play-circle'} fs-4 text-primary`}></i>
-                                  </div>
-                                  <div className="flex-grow-1 ms-3">
-                                    <h6 className="mb-1">{attachment.name}</h6>
-                                    <small className="text-muted">{formatFileSize(attachment.size)}</small>
-                                  </div>
-                                  <div className="flex-shrink-0">
-                                    <button className="btn btn-sm btn-outline-primary">
-                                      <i className="bi bi-download"></i>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
+                <div className="card-body p-0">
+                  <div className="list-group list-group-flush">
+                    {filteredMessages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`list-group-item list-group-item-action border-0 ${
+                          selectedMessage?.id === message.id ? 'active' : ''
+                        }`}
+                        onClick={() => setSelectedMessage(message)}
+                        style={{cursor: 'pointer'}}
+                      >
+                        <div className="d-flex align-items-start">
+                          <div className="flex-shrink-0 me-3">
+                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center" style={{width: '40px', height: '40px'}}>
+                              {getMessageTypeIcon(message.type)}
                             </div>
                           </div>
-                        ))}
+                          <div className="flex-grow-1 min-w-0">
+                            <div className="d-flex justify-content-between align-items-start">
+                              <h6 className="mb-1 text-truncate">{message.senderName}</h6>
+                              <small className="text-muted">{formatTimeAgo(message.createdAt)}</small>
+                            </div>
+                            <p className="mb-1 text-truncate" style={{fontSize: '0.875rem'}}>
+                              {message.content}
+                            </p>
+                            <div className="d-flex align-items-center gap-2">
+                              <span className={`badge ${getMessageTypeColor(message.type)}`}>
+                                {message.type}
+                              </span>
+                              {message.attachments.length > 0 && (
+                                <Paperclip className="h-3 w-3 text-muted" />
+                              )}
+                              {!message.readBy.includes(userData?.id || '') && (
+                                <div className="bg-primary rounded-circle" style={{width: '8px', height: '8px'}}></div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Message Detail */}
+            <div className="col-lg-8">
+              {selectedMessage ? (
+                <div className="card border-0 shadow-sm">
+                  <div className="card-header bg-transparent border-0">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="bg-light rounded-circle d-flex align-items-center justify-content-center" style={{width: '40px', height: '40px'}}>
+                          {getMessageTypeIcon(selectedMessage.type)}
+                        </div>
+                        <div>
+                          <h6 className="mb-0">{selectedMessage.senderName}</h6>
+                          <small className="text-muted">
+                            {formatTimeAgo(selectedMessage.createdAt)} • {selectedMessage.type}
+                          </small>
+                        </div>
+                      </div>
+                      <div className="btn-group btn-group-sm">
+                        <button className="btn btn-outline-secondary">
+                          <Reply className="h-4 w-4" />
+                        </button>
+                        <button className="btn btn-outline-secondary">
+                          <Forward className="h-4 w-4" />
+                        </button>
+                        <button className="btn btn-outline-secondary">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                  )}
+                  </div>
+                  <div className="card-body">
+                    <div className="mb-4">
+                      <p className="mb-3">{selectedMessage.content}</p>
+                      
+                      {selectedMessage.attachments.length > 0 && (
+                        <div className="mb-3">
+                          <h6 className="mb-2">Attachments</h6>
+                          {selectedMessage.attachments.map((attachment) => (
+                            <div key={attachment.id} className="d-flex align-items-center p-2 bg-light rounded">
+                              <Paperclip className="h-4 w-4 me-2 text-muted" />
+                              <div className="flex-grow-1">
+                                <div className="fw-medium">{attachment.name}</div>
+                                <small className="text-muted">{formatFileSize(attachment.size)}</small>
+                              </div>
+                              <button className="btn btn-sm btn-outline-primary">Download</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="border-top pt-3">
-                    <div className="d-flex gap-2">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Type your reply..."
-                      />
-                      <button className="btn btn-primary">
-                        <i className="bi bi-send me-2"></i>
-                        Send
-                      </button>
+                    {/* Reply Section */}
+                    <div className="border-top pt-3">
+                      <div className="d-flex gap-2 mb-3">
+                        <button className="btn btn-outline-secondary btn-sm">
+                          <Paperclip className="h-4 w-4" />
+                        </button>
+                        <button className="btn btn-outline-secondary btn-sm">
+                          <Smile className="h-4 w-4" />
+                        </button>
+                        <button className="btn btn-outline-secondary btn-sm">
+                          <Phone className="h-4 w-4" />
+                        </button>
+                        <button className="btn btn-outline-secondary btn-sm">
+                          <Video className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="input-group">
+                        <textarea
+                          className="form-control"
+                          rows={3}
+                          placeholder="Type your reply..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                        />
+                        <button className="btn btn-primary">
+                          <Send className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="card-body text-center py-5">
-                <i className="bi bi-envelope fs-1 text-muted mb-3"></i>
-                <h5 className="text-muted">Select a message to view</h5>
-                <p className="text-muted">Choose a message from the list to read its content and reply.</p>
-              </div>
-            )}
+              ) : (
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body text-center py-5">
+                    <MessageCircle className="h-12 w-12 text-muted mb-3" />
+                    <h5 className="text-muted">Select a message to view</h5>
+                    <p className="text-muted">Choose a message from the list to read and reply</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

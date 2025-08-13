@@ -25,11 +25,11 @@ import {
   Bell,
   Search
 } from 'lucide-react';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, userData, loading, logout } = useFirebase();
+  const { user, loading, logout } = useAuth();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Trophy },

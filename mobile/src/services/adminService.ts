@@ -1,25 +1,4 @@
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
-  increment,
-} from 'firebase/firestore';
-import { db } from '@shared/utils/firebase';
-import {
   AdminDashboard,
   AdminAnalytics,
   AdminUser,
@@ -41,7 +20,7 @@ export class AdminService {
   // Admin Dashboard Management
   async getAdminDashboard(userId: string): Promise<AdminDashboard | null> {
     const q = query(
-      collection(db, 'adminDashboards'),
+      null,
       where('userId', '==', userId),
       limit(1)
     );
@@ -65,7 +44,7 @@ export class AdminService {
     permissions: AdminPermissions,
     settings: AdminSettings
   ): Promise<string> {
-    const dashboardRef = await addDoc(collection(db, 'adminDashboards'), {
+    const dashboardRef = await addDoc(null, {
       userId,
       role,
       permissions,
@@ -103,7 +82,7 @@ export class AdminService {
     const dateString = targetDate.toISOString().split('T')[0];
 
     const q = query(
-      collection(db, 'adminAnalytics'),
+      null,
       where('period', '==', period),
       where('date', '==', dateString),
       limit(1)
@@ -137,11 +116,11 @@ export class AdminService {
         paymentsSnapshot,
         systemHealthSnapshot
       ] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'clubs')),
-        getDocs(collection(db, 'teams')),
-        getDocs(collection(db, 'events')),
-        getDocs(collection(db, 'payments')),
+        getDocs(null),
+        getDocs(null),
+        getDocs(null),
+        getDocs(null),
+        getDocs(null),
         this.getSystemHealth()
       ]);
 
@@ -198,7 +177,7 @@ export class AdminService {
         insights,
       };
 
-      const analyticsRef = await addDoc(collection(db, 'adminAnalytics'), {
+      const analyticsRef = await addDoc(null, {
         ...analytics,
         generatedAt: serverTimestamp(),
       });
@@ -407,31 +386,31 @@ export class AdminService {
 
       // Add users
       sampleUsers.forEach(user => {
-        const userRef = doc(collection(db, 'users'));
+        const userRef = doc(null);
         batch.set(userRef, user);
       });
 
       // Add clubs
       sampleClubs.forEach(club => {
-        const clubRef = doc(collection(db, 'clubs'));
+        const clubRef = doc(null);
         batch.set(clubRef, club);
       });
 
       // Add teams
       sampleTeams.forEach(team => {
-        const teamRef = doc(collection(db, 'teams'));
+        const teamRef = doc(null);
         batch.set(teamRef, team);
       });
 
       // Add events
       sampleEvents.forEach(event => {
-        const eventRef = doc(collection(db, 'events'));
+        const eventRef = doc(null);
         batch.set(eventRef, event);
       });
 
       // Add payments
       samplePayments.forEach(payment => {
-        const paymentRef = doc(collection(db, 'payments'));
+        const paymentRef = doc(null);
         batch.set(paymentRef, payment);
       });
 
@@ -787,7 +766,7 @@ export class AdminService {
   // Admin User Management
   async getAdminUsers(limit: number = 50): Promise<AdminUser[]> {
     const q = query(
-      collection(db, 'adminUsers'),
+      null,
       orderBy('createdAt', 'desc'),
       limit(limit)
     );
@@ -834,7 +813,7 @@ export class AdminService {
   }
 
   async createAdminUser(userData: Omit<AdminUser, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const userRef = await addDoc(collection(db, 'adminUsers'), {
+    const userRef = await addDoc(null, {
       ...userData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -870,7 +849,7 @@ export class AdminService {
     success: boolean,
     errorMessage?: string
   ): Promise<string> {
-    const auditRef = await addDoc(collection(db, 'adminAuditLogs'), {
+    const auditRef = await addDoc(null, {
       userId,
       userEmail,
       action,
@@ -898,7 +877,7 @@ export class AdminService {
     },
     limit: number = 100
   ): Promise<AdminAuditLog[]> {
-    let q = query(collection(db, 'adminAuditLogs'), orderBy('timestamp', 'desc'));
+    let q = query(null, orderBy('timestamp', 'desc'));
 
     if (filters?.userId) {
       q = query(q, where('userId', '==', filters.userId));
@@ -926,7 +905,7 @@ export class AdminService {
   // System Health Monitoring
   async getSystemHealth(): Promise<AdminSystemHealth | null> {
     const q = query(
-      collection(db, 'adminSystemHealth'),
+      null,
       orderBy('timestamp', 'desc'),
       limit(1)
     );
@@ -977,7 +956,7 @@ export class AdminService {
   }
 
   async updateSystemHealth(healthData: Partial<AdminSystemHealth>): Promise<string> {
-    const healthRef = await addDoc(collection(db, 'adminSystemHealth'), {
+    const healthRef = await addDoc(null, {
       ...healthData,
       timestamp: serverTimestamp(),
     });
@@ -988,7 +967,7 @@ export class AdminService {
   // Report Management
   async getReports(limit: number = 50): Promise<AdminReport[]> {
     const q = query(
-      collection(db, 'adminReports'),
+      null,
       orderBy('createdAt', 'desc'),
       limit(limit)
     );
@@ -1005,7 +984,7 @@ export class AdminService {
   }
 
   async createReport(reportData: Omit<AdminReport, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const reportRef = await addDoc(collection(db, 'adminReports'), {
+    const reportRef = await addDoc(null, {
       ...reportData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -1034,7 +1013,7 @@ export class AdminService {
     limit: number = 50
   ): Promise<AdminNotification[]> {
     const q = query(
-      collection(db, 'adminNotifications'),
+      null,
       where('recipients', 'array-contains', userId),
       orderBy('createdAt', 'desc'),
       limit(limit)
@@ -1053,7 +1032,7 @@ export class AdminService {
   async createNotification(
     notificationData: Omit<AdminNotification, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const notificationRef = await addDoc(collection(db, 'adminNotifications'), {
+    const notificationRef = await addDoc(null, {
       ...notificationData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -1075,7 +1054,7 @@ export class AdminService {
   // Backup Management
   async getBackups(limit: number = 50): Promise<AdminBackup[]> {
     const q = query(
-      collection(db, 'adminBackups'),
+      null,
       orderBy('createdAt', 'desc'),
       limit(limit)
     );
@@ -1093,7 +1072,7 @@ export class AdminService {
   async createBackup(
     backupData: Omit<AdminBackup, 'id' | 'createdAt' | 'completedAt' | 'expiresAt'>
   ): Promise<string> {
-    const backupRef = await addDoc(collection(db, 'adminBackups'), {
+    const backupRef = await addDoc(null, {
       ...backupData,
       createdAt: serverTimestamp(),
       expiresAt: new Date(Date.now() + backupData.retentionDays * 24 * 60 * 60 * 1000),
@@ -1105,7 +1084,7 @@ export class AdminService {
   // Maintenance Management
   async getMaintenanceSchedules(limit: number = 50): Promise<AdminMaintenance[]> {
     const q = query(
-      collection(db, 'adminMaintenance'),
+      null,
       orderBy('startTime', 'desc'),
       limit(limit)
     );
@@ -1125,7 +1104,7 @@ export class AdminService {
   async createMaintenance(
     maintenanceData: Omit<AdminMaintenance, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const maintenanceRef = await addDoc(collection(db, 'adminMaintenance'), {
+    const maintenanceRef = await addDoc(null, {
       ...maintenanceData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -1137,7 +1116,7 @@ export class AdminService {
   // Billing Management
   async getBillingHistory(limit: number = 50): Promise<AdminBilling[]> {
     const q = query(
-      collection(db, 'adminBilling'),
+      null,
       orderBy('createdAt', 'desc'),
       limit(limit)
     );
@@ -1155,7 +1134,7 @@ export class AdminService {
 
   // Settings Management
   async getSettingsConfig(category?: string): Promise<AdminSettingsConfig[]> {
-    let q = query(collection(db, 'adminSettingsConfig'), orderBy('category'));
+    let q = query(null, orderBy('category'));
 
     if (category) {
       q = query(q, where('category', '==', category));
@@ -1184,7 +1163,7 @@ export class AdminService {
   // Dashboard Widgets
   async getDashboardWidgets(): Promise<AdminDashboardWidget[]> {
     const q = query(
-      collection(db, 'adminDashboardWidgets'),
+      null,
       orderBy('createdAt', 'asc')
     );
 
@@ -1200,7 +1179,7 @@ export class AdminService {
   async createDashboardWidget(
     widgetData: Omit<AdminDashboardWidget, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
-    const widgetRef = await addDoc(collection(db, 'adminDashboardWidgets'), {
+    const widgetRef = await addDoc(null, {
       ...widgetData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -1215,7 +1194,7 @@ export class AdminService {
     callback: (analytics: AdminAnalytics | null) => void
   ): () => void {
     const q = query(
-      collection(db, 'adminAnalytics'),
+      null,
       where('period', '==', period),
       orderBy('date', 'desc'),
       limit(1)
@@ -1242,7 +1221,7 @@ export class AdminService {
     callback: (health: AdminSystemHealth | null) => void
   ): () => void {
     const q = query(
-      collection(db, 'adminSystemHealth'),
+      null,
       orderBy('timestamp', 'desc'),
       limit(1)
     );
@@ -1268,7 +1247,7 @@ export class AdminService {
     callback: (notifications: AdminNotification[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'adminNotifications'),
+      null,
       where('recipients', 'array-contains', userId),
       orderBy('createdAt', 'desc'),
       limit(50)

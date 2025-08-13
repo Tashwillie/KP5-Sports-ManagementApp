@@ -1,28 +1,4 @@
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  QuerySnapshot,
-  DocumentData,
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@shared/utils/firebase';
-import {
   Message,
   MessageType,
   MessageAttachment,
@@ -267,7 +243,7 @@ export class CommunicationService {
       createdBy: user.uid,
     };
 
-    const chatRoomRef = await addDoc(collection(db, 'chatRooms'), {
+    const chatRoomRef = await addDoc(null, {
       ...chatRoomData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -293,7 +269,7 @@ export class CommunicationService {
     if (!user) throw new Error('User not authenticated');
 
     const q = query(
-      collection(db, 'chatRooms'),
+      null,
       where('participants', 'array-contains', user.uid),
       orderBy('updatedAt', 'desc')
     );
@@ -399,7 +375,7 @@ export class CommunicationService {
       createdBy: user.uid,
     };
 
-    const announcementRef = await addDoc(collection(db, 'announcements'), {
+    const announcementRef = await addDoc(null, {
       ...announcementData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -416,7 +392,7 @@ export class CommunicationService {
     limitCount: number = 20
   ): Promise<Announcement[]> {
     const q = query(
-      collection(db, 'announcements'),
+      null,
       where('recipientIds', 'array-contains-any', recipientIds),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
@@ -482,7 +458,7 @@ export class CommunicationService {
       actionData: options?.actionData,
     };
 
-    const notificationRef = await addDoc(collection(db, 'notifications'), {
+    const notificationRef = await addDoc(null, {
       ...notificationData,
       createdAt: serverTimestamp(),
     });
@@ -498,7 +474,7 @@ export class CommunicationService {
     if (!user) throw new Error('User not authenticated');
 
     let q = query(
-      collection(db, 'notifications'),
+      null,
       where('userId', '==', user.uid),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
@@ -506,7 +482,7 @@ export class CommunicationService {
 
     if (unreadOnly) {
       q = query(
-        collection(db, 'notifications'),
+        null,
         where('userId', '==', user.uid),
         where('isRead', '==', false),
         orderBy('createdAt', 'desc'),
@@ -587,7 +563,7 @@ export class CommunicationService {
     };
 
     const pushNotificationRef = await addDoc(
-      collection(db, 'pushNotifications'),
+      null,
       {
         ...pushNotificationData,
         createdAt: serverTimestamp(),
@@ -653,7 +629,7 @@ export class CommunicationService {
     if (!user) return () => {};
 
     const q = query(
-      collection(db, 'notifications'),
+      null,
       where('userId', '==', user.uid),
       orderBy('createdAt', 'desc'),
       limit(20)
@@ -677,7 +653,7 @@ export class CommunicationService {
     callback: (announcements: Announcement[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'announcements'),
+      null,
       where('recipientIds', 'array-contains-any', recipientIds),
       orderBy('createdAt', 'desc'),
       limit(10)
@@ -869,7 +845,7 @@ export class CommunicationService {
     endDate: Date
   ): Promise<ChatAnalytics[]> {
     const q = query(
-      collection(db, 'chatAnalytics'),
+      null,
       where('chatRoomId', '==', chatRoomId),
       where('date', '>=', startDate),
       where('date', '<=', endDate),

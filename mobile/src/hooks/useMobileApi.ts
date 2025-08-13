@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAPI } from '../lib/firebase';
 import { 
   User, 
   Club, 

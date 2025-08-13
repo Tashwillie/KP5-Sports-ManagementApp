@@ -1,29 +1,8 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  onSnapshot,
-  serverTimestamp,
-  writeBatch,
-  QueryConstraint
-} from 'firebase/firestore';
-import { db } from '../firebase';
+// Firebase imports removed - will be replaced with API calls
 import { Club, Team, ClubMember, ClubInvitation, ClubRole, ClubPermission } from '../../../../shared/src/types';
+import { apiClient } from '../apiClient';
 
 export class ClubService {
-  private static clubsCollection = collection(db, 'clubs');
-  private static teamsCollection = collection(db, 'teams');
-  private static membersCollection = collection(db, 'club_members');
-  private static invitationsCollection = collection(db, 'club_invitations');
-
   // Club Management
   static async createClub(clubData: Partial<Club>): Promise<string> {
     try {
@@ -64,13 +43,8 @@ export class ClubService {
         isActive: true,
       };
 
-      const docRef = await addDoc(this.clubsCollection, {
-        ...club,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      return docRef.id;
+      const response = await apiClient.createClub(club);
+      return response.data.id;
     } catch (error) {
       console.error('Error creating club:', error);
       throw new Error('Failed to create club');
@@ -79,32 +53,22 @@ export class ClubService {
 
   static async getClub(clubId: string): Promise<Club | null> {
     try {
-      const docRef = doc(this.clubsCollection, clubId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Club;
-      }
-
-      return null;
+      const response = await apiClient.getClub(clubId);
+      return response.data;
     } catch (error) {
       console.error('Error fetching club:', error);
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
       throw new Error('Failed to fetch club');
     }
   }
 
   static async updateClub(clubId: string, updates: Partial<Club>): Promise<void> {
     try {
-      const docRef = doc(this.clubsCollection, clubId);
-      await updateDoc(docRef, {
+      await apiClient.updateClub(clubId, {
         ...updates,
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date(),
       });
     } catch (error) {
       console.error('Error updating club:', error);
@@ -114,8 +78,7 @@ export class ClubService {
 
   static async deleteClub(clubId: string): Promise<void> {
     try {
-      const docRef = doc(this.clubsCollection, clubId);
-      await deleteDoc(docRef);
+      await apiClient.deleteClub(clubId);
     } catch (error) {
       console.error('Error deleting club:', error);
       throw new Error('Failed to delete club');
@@ -128,34 +91,23 @@ export class ClubService {
     limit?: number;
   }): Promise<Club[]> {
     try {
-      const constraints: QueryConstraint[] = [];
-      
+      const response = await apiClient.getClubs();
+      let clubs = response.data || [];
+
+      // Apply filters
       if (filters?.isPublic !== undefined) {
-        constraints.push(where('settings.isPublic', '==', filters.isPublic));
+        clubs = clubs.filter(club => club.settings?.isPublic === filters.isPublic);
       }
-      
+
       if (filters?.createdBy) {
-        constraints.push(where('createdBy', '==', filters.createdBy));
+        clubs = clubs.filter(club => club.createdBy === filters.createdBy);
       }
-      
-      constraints.push(orderBy('createdAt', 'desc'));
-      
+
       if (filters?.limit) {
-        constraints.push(limit(filters.limit));
+        clubs = clubs.slice(0, filters.limit);
       }
 
-      const q = query(this.clubsCollection, ...constraints);
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Club;
-      });
+      return clubs;
     } catch (error) {
       console.error('Error fetching clubs:', error);
       throw new Error('Failed to fetch clubs');
@@ -166,37 +118,24 @@ export class ClubService {
   static async createTeam(teamData: Partial<Team>): Promise<string> {
     try {
       const team: Omit<Team, 'id'> = {
-        clubId: teamData.clubId || '',
         name: teamData.name || '',
         description: teamData.description || '',
         logoURL: teamData.logoURL || '',
-        jerseyColors: teamData.jerseyColors || {
-          primary: '#000000',
-          secondary: '#ffffff',
-        },
-        ageGroup: teamData.ageGroup || {
-          minAge: 0,
-          maxAge: 100,
-          category: 'Adult',
-        },
-        division: teamData.division || 'Recreation',
-        season: teamData.season || '2024',
-        roster: {
-          players: [],
-          coaches: [],
-          managers: [],
-        },
+        clubId: teamData.clubId || '',
+        sport: teamData.sport || 'soccer',
+        ageGroup: teamData.ageGroup || '',
+        gender: teamData.gender || 'mixed',
+        level: teamData.level || 'recreational',
+        season: teamData.season || '',
+        year: teamData.year || new Date().getFullYear(),
+        roster: teamData.roster || [],
+        coaches: teamData.coaches || [],
         stats: {
           wins: 0,
           losses: 0,
           draws: 0,
           goalsFor: 0,
           goalsAgainst: 0,
-          points: 0,
-        },
-        schedule: {
-          practices: [],
-          games: [],
         },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -204,18 +143,8 @@ export class ClubService {
         isActive: true,
       };
 
-      const docRef = await addDoc(this.teamsCollection, {
-        ...team,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      const teamId = docRef.id;
-
-      // Update club stats
-      await this.updateClubStats(team.clubId);
-
-      return teamId;
+      const response = await apiClient.createTeam(team);
+      return response.data.id;
     } catch (error) {
       console.error('Error creating team:', error);
       throw new Error('Failed to create team');
@@ -224,32 +153,22 @@ export class ClubService {
 
   static async getTeam(teamId: string): Promise<Team | null> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
-      }
-
-      return null;
+      const response = await apiClient.getTeam(teamId);
+      return response.data;
     } catch (error) {
       console.error('Error fetching team:', error);
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
       throw new Error('Failed to fetch team');
     }
   }
 
   static async updateTeam(teamId: string, updates: Partial<Team>): Promise<void> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      await updateDoc(docRef, {
+      await apiClient.updateTeam(teamId, {
         ...updates,
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date(),
       });
     } catch (error) {
       console.error('Error updating team:', error);
@@ -259,8 +178,7 @@ export class ClubService {
 
   static async deleteTeam(teamId: string): Promise<void> {
     try {
-      const docRef = doc(this.teamsCollection, teamId);
-      await deleteDoc(docRef);
+      await apiClient.deleteTeam(teamId);
     } catch (error) {
       console.error('Error deleting team:', error);
       throw new Error('Failed to delete team');
@@ -269,27 +187,12 @@ export class ClubService {
 
   static async getTeamsByClub(clubId: string): Promise<Team[]> {
     try {
-      const q = query(
-        this.teamsCollection,
-        where('clubId', '==', clubId),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
-      });
+      const response = await apiClient.getTeams();
+      const teams = response.data || [];
+      return teams.filter(team => team.clubId === clubId);
     } catch (error) {
-      console.error('Error fetching teams:', error);
-      throw new Error('Failed to fetch teams');
+      console.error('Error fetching teams by club:', error);
+      throw new Error('Failed to fetch teams by club');
     }
   }
 
@@ -299,19 +202,29 @@ export class ClubService {
       const member: Omit<ClubMember, 'id'> = {
         clubId: memberData.clubId,
         userId: memberData.userId,
-        role: memberData.role,
-        teamIds: memberData.teamIds || [],
+        role: memberData.role || 'member',
         permissions: memberData.permissions || [],
         joinedAt: new Date(),
         isActive: true,
       };
 
-      const docRef = await addDoc(this.membersCollection, {
-        ...member,
-        joinedAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      // For now, we'll use a generic API call
+      const response = await fetch(`${apiClient.baseURL}/clubs/${memberData.clubId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(member),
       });
 
-      return docRef.id;
+      if (!response.ok) {
+        throw new Error('Failed to add club member');
+      }
+
+      const result = await response.json();
+      return result.data.id;
     } catch (error) {
       console.error('Error adding club member:', error);
       throw new Error('Failed to add club member');
@@ -320,97 +233,93 @@ export class ClubService {
 
   static async getClubMembers(clubId: string): Promise<ClubMember[]> {
     try {
-      const q = query(
-        this.membersCollection,
-        where('clubId', '==', clubId),
-        where('isActive', '==', true)
-      );
-      
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          joinedAt: data.joinedAt?.toDate() || new Date(),
-        } as ClubMember;
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/clubs/${clubId}/members`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch club members');
+      }
+
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
       console.error('Error fetching club members:', error);
       throw new Error('Failed to fetch club members');
     }
   }
 
-  // Club Invitations
+  // Club Invitation Management
   static async createClubInvitation(invitationData: Omit<ClubInvitation, 'id'>): Promise<string> {
     try {
       const invitation: Omit<ClubInvitation, 'id'> = {
         clubId: invitationData.clubId,
-        teamId: invitationData.teamId,
         email: invitationData.email,
-        role: invitationData.role,
+        role: invitationData.role || 'member',
         invitedBy: invitationData.invitedBy,
         status: 'pending',
-        expiresAt: invitationData.expiresAt,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         createdAt: new Date(),
       };
 
-      const docRef = await addDoc(this.invitationsCollection, {
-        ...invitation,
-        createdAt: serverTimestamp(),
+      // Note: This would need to be implemented in the backend API
+      const response = await fetch(`${apiClient.baseURL}/clubs/${invitationData.clubId}/invitations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiClient.getToken()}`,
+        },
+        body: JSON.stringify(invitation),
       });
 
-      return docRef.id;
+      if (!response.ok) {
+        throw new Error('Failed to create club invitation');
+      }
+
+      const result = await response.json();
+      return result.data.id;
     } catch (error) {
       console.error('Error creating club invitation:', error);
       throw new Error('Failed to create club invitation');
     }
   }
 
-  // Real-time subscriptions
+  // Real-time subscriptions (simplified for API-based approach)
   static subscribeToClub(clubId: string, callback: (club: Club | null) => void): () => void {
-    const docRef = doc(this.clubsCollection, clubId);
-    
-    return onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const club: Club = {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Club;
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const club = await this.getClub(clubId);
         callback(club);
-      } else {
+      } catch (error) {
+        console.error('Error in club subscription:', error);
         callback(null);
       }
-    });
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
   }
 
   static subscribeToClubTeams(clubId: string, callback: (teams: Team[]) => void): () => void {
-    const q = query(
-      this.teamsCollection,
-      where('clubId', '==', clubId),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc')
-    );
+    // For API-based approach, we'll use polling instead of real-time subscriptions
+    const interval = setInterval(async () => {
+      try {
+        const teams = await this.getTeamsByClub(clubId);
+        callback(teams);
+      } catch (error) {
+        console.error('Error in club teams subscription:', error);
+        callback([]);
+      }
+    }, 5000); // Poll every 5 seconds
 
-    return onSnapshot(q, (querySnapshot) => {
-      const teams = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Team;
-      });
-      callback(teams);
-    });
+    return () => clearInterval(interval);
   }
 
-  // Utility methods
+  // Helper method to update club statistics
   private static async updateClubStats(clubId: string): Promise<void> {
     try {
       const teams = await this.getTeamsByClub(clubId);
@@ -418,9 +327,9 @@ export class ClubService {
 
       const stats = {
         totalTeams: teams.length,
-        totalPlayers: teams.reduce((acc, team) => acc + team.roster.players.length, 0),
-        totalCoaches: teams.reduce((acc, team) => acc + team.roster.coaches.length, 0),
-        totalMatches: 0, // This would be calculated from matches collection
+        totalPlayers: teams.reduce((sum, team) => sum + (team.roster?.length || 0), 0),
+        totalCoaches: teams.reduce((sum, team) => sum + (team.coaches?.length || 0), 0),
+        totalMatches: teams.reduce((sum, team) => sum + (team.stats?.wins || 0) + (team.stats?.losses || 0) + (team.stats?.draws || 0), 0),
       };
 
       await this.updateClub(clubId, { stats });

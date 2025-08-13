@@ -2,8 +2,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Sports Management',
-  slug: 'sports-management',
+  name: 'KP5 Academy',
+  slug: 'kp5-academy',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -11,64 +11,66 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#ffffff'
+    backgroundColor: '#3b82f6'
   },
   assetBundlePatterns: [
     '**/*'
   ],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.sportsmanagement.app',
-    infoPlist: {
-      NSPhotoLibraryUsageDescription: 'This app accesses your photo library to upload images for profiles and match content.'
-    }
+    bundleIdentifier: 'com.kp5academy.app'
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#FFFFFF'
+      backgroundColor: '#3b82f6'
     },
-    package: 'com.sportsmanagement.app',
-    permissions: [
-      'android.permission.READ_EXTERNAL_STORAGE',
-      'android.permission.WRITE_EXTERNAL_STORAGE',
-      'android.permission.INTERNET',
-      'android.permission.WAKE_LOCK',
-      'android.permission.VIBRATE'
-    ]
+    package: 'com.kp5academy.app'
   },
   web: {
     favicon: './assets/favicon.png'
   },
   plugins: [
-    [
-      'expo-notifications',
-      {
-        icon: './assets/notification-icon.png',
-        color: '#ffffff',
-        sounds: ['./assets/notification-sound.wav']
-      }
-    ],
-    [
-      'expo-image-picker',
-      {
-        photosPermission: 'Allow Sports Management to access your photo library to upload images for profiles and match content.'
-      }
-    ]
+    'expo-router',
+    'expo-secure-store',
+    'expo-file-system',
+    'expo-image-picker',
+    'expo-media-library',
+    'expo-camera',
+    'expo-location',
+    'expo-notifications',
+    'expo-device',
+    'expo-constants',
+    'expo-linking',
+    'expo-splash-screen',
+    'expo-status-bar',
+    'expo-updates'
   ],
   extra: {
-    // Firebase configuration
-    firebaseApiKey: process.env.FIREBASE_API_KEY || "your-api-key",
-    firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN || "your-project.firebaseapp.com",
-    firebaseProjectId: process.env.FIREBASE_PROJECT_ID || "your-project-id",
-    firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || "your-project.appspot.com",
-    firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "123456789",
-    firebaseAppId: process.env.FIREBASE_APP_ID || "your-app-id",
-    
     // App configuration
     eas: {
       projectId: "your-eas-project-id"
-    }
+    },
+    
+    // API Configuration
+    apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://your-api-url.com",
+    websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL || "wss://your-api-url.com",
+    
+    // File Upload Configuration
+    fileUploadUrl: process.env.EXPO_PUBLIC_FILE_UPLOAD_URL || "https://your-api-url.com/api/upload",
+    cloudStorageUrl: process.env.EXPO_PUBLIC_CLOUD_STORAGE_URL || "https://your-storage-bucket.s3.amazonaws.com",
+    
+    // Feature Flags
+    enablePushNotifications: process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS === 'true',
+    enableOfflineMode: process.env.EXPO_PUBLIC_ENABLE_OFFLINE_MODE === 'true',
+    enableLocationFeatures: process.env.EXPO_PUBLIC_ENABLE_LOCATION_FEATURES === 'true',
+    enableCameraFeatures: process.env.EXPO_PUBLIC_ENABLE_CAMERA_FEATURES === 'true',
+    enableRealTime: process.env.EXPO_PUBLIC_ENABLE_REAL_TIME === 'true',
+    
+    // App Settings
+    appName: process.env.EXPO_PUBLIC_APP_NAME || "KP5 Academy",
+    appVersion: "1.0.0",
+    debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true'
   },
   owner: 'your-expo-username',
   runtimeVersion: {

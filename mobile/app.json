@@ -18,16 +18,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kp5academy.app",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.kp5academy.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#3b82f6"
       },
-      "package": "com.kp5academy.app",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.kp5academy.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,36 +33,28 @@
     "scheme": "kp5-academy",
     "plugins": [
       "expo-auth-session",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      "@react-native-firebase/firestore",
-      "@react-native-firebase/storage",
-      "@react-native-firebase/functions",
-      "@react-native-firebase/messaging"
+      "expo-notifications",
+      "expo-image-picker",
+      "expo-camera",
+      "expo-location",
+      "expo-file-system",
+      "expo-media-library"
     ],
     "extra": {
       "eas": {
         "projectId": "YOUR_EAS_PROJECT_ID"
       },
-      "firebaseApiKey": "YOUR_FIREBASE_API_KEY",
-      "firebaseAuthDomain": "YOUR_FIREBASE_AUTH_DOMAIN",
-      "firebaseProjectId": "YOUR_FIREBASE_PROJECT_ID",
-      "firebaseStorageBucket": "YOUR_FIREBASE_STORAGE_BUCKET",
-      "firebaseMessagingSenderId": "YOUR_FIREBASE_MESSAGING_SENDER_ID",
-      "firebaseAppId": "YOUR_FIREBASE_APP_ID",
-      "firebaseVapidKey": "YOUR_FIREBASE_VAPID_KEY",
-      "useFirebaseEmulators": false,
-      "firebaseAuthEmulatorHost": "localhost:9099",
-      "firebaseFirestoreEmulatorHost": "8080",
-      "firebaseStorageEmulatorHost": "9199",
-      "firebaseFunctionsEmulatorHost": "5001",
-      "stripePublishableKey": "pk_test_YOUR_STRIPE_PUBLISHABLE_KEY",
+      "apiUrl": "https://your-api-url.com",
+      "websocketUrl": "wss://your-api-url.com",
+      "fileUploadUrl": "https://your-api-url.com/api/upload",
+      "cloudStorageUrl": "https://your-storage-bucket.s3.amazonaws.com",
       "appUrl": "http://localhost:3002",
       "appName": "KP5 Academy",
       "appVersion": "1.0.0",
       "enablePushNotifications": true,
       "enableAnalytics": true,
       "enableOfflineSupport": true,
+      "enableRealTime": true,
       "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY",
       "sentryDsn": "YOUR_SENTRY_DSN",
       "googleClientId": "YOUR_GOOGLE_CLIENT_ID"
