@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { AdminService } from '@/lib/services/adminService';
 import { AdminAnalytics, AdminSystemHealth } from '@kp5-academy/shared';
 
@@ -15,7 +15,7 @@ export interface UseAdminDashboardReturn {
 }
 
 export const useAdminDashboard = (): UseAdminDashboardReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
   const [systemHealth, setSystemHealth] = useState<AdminSystemHealth | null>(null);
   const [loading, setLoading] = useState(false);

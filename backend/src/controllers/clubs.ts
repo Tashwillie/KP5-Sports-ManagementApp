@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 
 // Get all clubs with pagination and filtering
-export const getClubs = async (req: Request, res: Response): Promise<void> => {
+export const getClubs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -77,15 +77,12 @@ export const getClubs = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Get clubs error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch clubs.',
-    });
+    next(error);
   }
 };
 
 // Get single club by ID
-export const getClub = async (req: Request, res: Response): Promise<void> => {
+export const getClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -161,15 +158,12 @@ export const getClub = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Get club error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch club.',
-    });
+    next(error);
   }
 };
 
 // Create new club
-export const createClub = async (req: Request, res: Response): Promise<void> => {
+export const createClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       name,
@@ -245,15 +239,12 @@ export const createClub = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Create club error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create club.',
-    });
+    next(error);
   }
 };
 
 // Update club
-export const updateClub = async (req: Request, res: Response): Promise<void> => {
+export const updateClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -329,15 +320,12 @@ export const updateClub = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Update club error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update club.',
-    });
+    next(error);
   }
 };
 
 // Delete club
-export const deleteClub = async (req: Request, res: Response): Promise<void> => {
+export const deleteClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -374,15 +362,12 @@ export const deleteClub = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Delete club error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete club.',
-    });
+    next(error);
   }
 };
 
 // Get club members
-export const getClubMembers = async (req: Request, res: Response): Promise<void> => {
+export const getClubMembers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: clubId } = req.params;
 
@@ -449,15 +434,12 @@ export const getClubMembers = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     logger.error('Get club members error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch club members.',
-    });
+    next(error);
   }
 };
 
 // Add club member
-export const addClubMember = async (req: Request, res: Response): Promise<void> => {
+export const addClubMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: clubId } = req.params;
 
@@ -543,15 +525,12 @@ export const addClubMember = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Add club member error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add member.',
-    });
+    next(error);
   }
 };
 
 // Update club member
-export const updateClubMember = async (req: Request, res: Response): Promise<void> => {
+export const updateClubMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { clubId, userId } = req.params;
 
@@ -618,15 +597,12 @@ export const updateClubMember = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Update club member error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update member.',
-    });
+    next(error);
   }
 };
 
 // Remove club member
-export const removeClubMember = async (req: Request, res: Response): Promise<void> => {
+export const removeClubMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { clubId, userId } = req.params;
 
@@ -672,9 +648,6 @@ export const removeClubMember = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Remove club member error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove member.',
-    });
+    next(error);
   }
 };

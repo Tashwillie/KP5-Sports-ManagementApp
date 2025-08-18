@@ -377,10 +377,10 @@ export class StatisticsService {
       const homeTeamStats = {
         goals: homeTeamEvents.filter(e => e.type === 'GOAL').length,
         assists: homeTeamEvents.filter(e => e.type === 'ASSIST').length,
-        shots: homeTeamEvents.filter(e => e.type === 'SHOT').length,
-        shotsOnTarget: homeTeamEvents.filter(e => e.type === 'SHOT' && e.data?.onTarget).length,
-        corners: homeTeamEvents.filter(e => e.type === 'CORNER').length,
-        fouls: homeTeamEvents.filter(e => e.type === 'FOUL').length,
+        shots: homeTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('shot')).length,
+        shotsOnTarget: homeTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('shot on target')).length,
+        corners: homeTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('corner')).length,
+        fouls: homeTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('foul')).length,
         yellowCards: homeTeamEvents.filter(e => e.type === 'YELLOW_CARD').length,
         redCards: homeTeamEvents.filter(e => e.type === 'RED_CARD').length,
         possession: this.calculatePossession(homeTeamEvents, awayTeamEvents)
@@ -389,10 +389,10 @@ export class StatisticsService {
       const awayTeamStats = {
         goals: awayTeamEvents.filter(e => e.type === 'GOAL').length,
         assists: awayTeamEvents.filter(e => e.type === 'ASSIST').length,
-        shots: awayTeamEvents.filter(e => e.type === 'SHOT').length,
-        shotsOnTarget: awayTeamEvents.filter(e => e.type === 'SHOT' && e.data?.onTarget).length,
-        corners: awayTeamEvents.filter(e => e.type === 'CORNER').length,
-        fouls: awayTeamEvents.filter(e => e.type === 'FOUL').length,
+        shots: awayTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('shot')).length,
+        shotsOnTarget: awayTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('shot on target')).length,
+        corners: awayTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('corner')).length,
+        fouls: awayTeamEvents.filter(e => e.type === 'OTHER' && e.description?.includes('foul')).length,
         yellowCards: awayTeamEvents.filter(e => e.type === 'YELLOW_CARD').length,
         redCards: awayTeamEvents.filter(e => e.type === 'RED_CARD').length,
         possession: 100 - homeTeamStats.possession
@@ -655,9 +655,9 @@ export class StatisticsService {
     return this.getCachedStats(`match:${matchId}`, async () => {
       return await prisma.matchStatistics.findUnique({
         where: { matchId },
-        include: {
-          playerStats: true
-        }
+        // include: {
+        //   playerStats: true // Property not available in current schema
+        // }
       });
     });
   }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import usersService, { UiUser } from '@/lib/services/usersService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export const useUsers = (params?: { role?: string; isActive?: boolean; search?: string }) => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [users, setUsers] = useState<UiUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

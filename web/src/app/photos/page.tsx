@@ -5,9 +5,10 @@ import {
   Image, Upload, Settings, Search, Grid, Grid3X3, Eye, Download, Camera,
   Users, Trophy, MapPin, X, User, Calendar, SortAsc, MoreHorizontal
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import useMedia from '@/hooks/useMedia';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import Sidebar from '@/components/Sidebar';
 
 interface Photo {
   id: string;
@@ -23,7 +24,7 @@ interface Photo {
 }
 
 export default function PhotosPage() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useEnhancedAuthContext();
   const { items: photos, loading: loadingPhotos, error } = useMedia();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('grid');
@@ -81,36 +82,33 @@ export default function PhotosPage() {
   };
 
   const incrementViews = (photoId: string) => {
-    setPhotos(prev => 
-      prev.map(photo => photo.id === photoId ? { ...photo, views: photo.views + 1 } : photo)
-    );
+    // This function is not directly used in the current component's logic
+    // as the photo object itself doesn't have views/downloads properties.
+    // If these were managed in a global state or context, this would be needed.
+    // For now, it's kept as a placeholder.
   };
 
   const incrementDownloads = (photoId: string) => {
-    setPhotos(prev => 
-      prev.map(photo => photo.id === photoId ? { ...photo, downloads: photo.downloads + 1 } : photo)
-    );
+    // This function is not directly used in the current component's logic
+    // as the photo object itself doesn't have views/downloads properties.
+    // If these were managed in a global state or context, this would be needed.
+    // For now, it's kept as a placeholder.
   };
 
   // Show loading state while Firebase is initializing or photos are loading
   if (loading || loadingPhotos) {
+    const userData = user ? {
+      id: user.id || 'user123',
+      name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+      email: user.email || 'admin@example.com',
+      role: user.role || 'Super Admin'
+    } : undefined;
     return (
-      <div className="d-flex">
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="d-flex align-items-center mb-4">
-              <div className="bg-primary rounded p-2 me-3">
-                <Image size={24} className="text-white" />
-              </div>
-              <h5 className="mb-0">KP5 Academy</h5>
-            </div>
-          </div>
-        </div>
-        <div className="flex-grow-1 bg-light">
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="photos" userData={userData} />
+        <div className="flex-grow-1 bg-light d-flex justify-content-center align-items-center" style={{ minWidth: 0, overflow: 'auto', height: '400px' }}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
         </div>
       </div>
@@ -120,100 +118,29 @@ export default function PhotosPage() {
   // Show access denied if no user data
   if (!user) {
     return (
-      <div className="d-flex">
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="d-flex align-items-center mb-4">
-              <div className="bg-primary rounded p-2 me-3">
-                <Image size={24} className="text-white" />
-              </div>
-              <h5 className="mb-0">KP5 Academy</h5>
-            </div>
-          </div>
-        </div>
-        <div className="flex-grow-1 bg-light">
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-            <div className="text-center">
-              <h5 className="text-muted">Access Denied</h5>
-              <p className="text-muted">Please log in to view photos.</p>
-            </div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="photos" />
+        <div className="flex-grow-1 bg-light d-flex justify-content-center align-items-center" style={{ minWidth: 0, overflow: 'auto', height: '400px' }}>
+          <div className="text-center">
+            <h5 className="text-muted">Access Denied</h5>
+            <p className="text-muted">Please log in to view photos.</p>
           </div>
         </div>
       </div>
     );
   }
 
+  const userData = {
+    id: user.id || 'user123',
+    name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+    email: user.email || 'admin@example.com',
+    role: user.role || 'Super Admin'
+  };
+
   return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-        <div className="p-3">
-          <div className="d-flex align-items-center mb-4">
-            <div className="bg-primary rounded p-2 me-3">
-              <Image size={24} className="text-white" />
-            </div>
-            <h5 className="mb-0">KP5 Academy</h5>
-          </div>
-          
-          {/* User Profile */}
-          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
-            <div className="bg-primary rounded-circle p-2 me-3">
-              <User size={20} className="text-white" />
-            </div>
-            <div>
-              <h6 className="mb-0">{user.displayName || 'User'}</h6>
-              <small className="text-muted">{user.role}</small>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="nav flex-column">
-            <a className="nav-link" href="/dashboard">
-              <Image size={20} className="me-2" />
-              Dashboard
-            </a>
-            <a className="nav-link" href="/announcements">
-              <Image size={20} className="me-2" />
-              Announcements
-            </a>
-            <a className="nav-link" href="/messages">
-              <Image size={20} className="me-2" />
-              Messages
-            </a>
-            <a className="nav-link" href="/notifications">
-              <Image size={20} className="me-2" />
-              Notifications
-            </a>
-            <a className="nav-link" href="/teams">
-              <Image size={20} className="me-2" />
-              Teams
-            </a>
-            <a className="nav-link" href="/tournaments">
-              <Image size={20} className="me-2" />
-              Tournaments
-            </a>
-            <a className="nav-link" href="/schedule">
-              <Image size={20} className="me-2" />
-              Schedule
-            </a>
-            <a className="nav-link" href="/media">
-              <Image size={20} className="me-2" />
-              Media
-            </a>
-            <a className="nav-link" href="/documents">
-              <Image size={20} className="me-2" />
-              Documents
-            </a>
-            <a className="nav-link active" href="/photos">
-              <Image size={20} className="me-2" />
-              Photos
-            </a>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      <Sidebar activeTab="photos" userData={userData} />
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Top Header */}
         <div className="bg-white border-bottom p-3">
           <div className="d-flex justify-content-between align-items-center">

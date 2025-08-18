@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { Plus, Upload, X, Save, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,7 +38,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({
   onCancel,
 }) => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);

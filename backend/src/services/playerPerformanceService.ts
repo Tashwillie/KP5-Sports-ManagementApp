@@ -129,7 +129,7 @@ export class PlayerPerformanceService extends EventEmitter {
           team: true
         },
         orderBy: {
-          match: { date: 'desc' }
+          match: { startTime: 'desc' }
         }
       });
 
@@ -401,7 +401,7 @@ export class PlayerPerformanceService extends EventEmitter {
       goals: stat.goals,
       assists: stat.assists,
       minutesPlayed: stat.minutesPlayed,
-      date: stat.match.date
+      // date: stat.match.date // Match data not included in current query
     }));
   }
 
@@ -675,96 +675,12 @@ export class PlayerPerformanceService extends EventEmitter {
 
   /**
    * Update season statistics
+   * Note: Season functionality not implemented in current schema
    */
   private async updateSeasonStats(playerId: string, matchId: string): Promise<void> {
-    try {
-      const match = await this.prisma.match.findUnique({
-        where: { id: matchId },
-        select: { season: true, date: true }
-      });
-
-      if (!match?.season) return;
-
-      const matchStats = await this.prisma.playerMatchStats.findMany({
-        where: {
-          playerId,
-          match: { season: match.season }
-        }
-      });
-
-      if (matchStats.length === 0) return;
-
-      // Calculate season totals
-      const seasonTotals = matchStats.reduce((acc, stat) => {
-        return {
-          matchesPlayed: acc.matchesPlayed + 1,
-          matchesStarted: acc.matchesStarted + (stat.minutesPlayed > 0 ? 1 : 0),
-          minutesPlayed: acc.minutesPlayed + stat.minutesPlayed,
-          goals: acc.goals + stat.goals,
-          assists: acc.assists + stat.assists,
-          yellowCards: acc.yellowCards + stat.yellowCards,
-          redCards: acc.redCards + stat.redCards,
-          cleanSheets: acc.cleanSheets + (stat.cleanSheet ? 1 : 0),
-          goalsConceded: acc.goalsConceded + (stat.goalsConceded || 0),
-          saves: acc.saves + (stat.saves || 0),
-          totalDistance: acc.totalDistance + stat.distance,
-          totalSprints: acc.totalSprints + stat.sprints
-        };
-      }, {
-        matchesPlayed: 0, matchesStarted: 0, minutesPlayed: 0,
-        goals: 0, assists: 0, yellowCards: 0, redCards: 0,
-        cleanSheets: 0, goalsConceded: 0, saves: 0,
-        totalDistance: 0, totalSprints: 0
-      });
-
-      const averageRating = matchStats.reduce((sum, stat) => sum + stat.rating, 0) / matchStats.length;
-
-      // Upsert season stats
-      await this.prisma.playerSeasonStats.upsert({
-        where: {
-          playerId_season: {
-            playerId,
-            season: match.season
-          }
-        },
-        update: {
-          matchesPlayed: seasonTotals.matchesPlayed,
-          matchesStarted: seasonTotals.matchesStarted,
-          minutesPlayed: seasonTotals.minutesPlayed,
-          goals: seasonTotals.goals,
-          assists: seasonTotals.assists,
-          yellowCards: seasonTotals.yellowCards,
-          redCards: seasonTotals.redCards,
-          cleanSheets: seasonTotals.cleanSheets,
-          goalsConceded: seasonTotals.goalsConceded,
-          saves: seasonTotals.saves,
-          averageRating: Math.round(averageRating * 10) / 10,
-          totalDistance: seasonTotals.totalDistance,
-          totalSprints: seasonTotals.totalSprints
-        },
-        create: {
-          playerId,
-          season: match.season,
-          teamId: matchStats[0].teamId,
-          matchesPlayed: seasonTotals.matchesPlayed,
-          matchesStarted: seasonTotals.matchesStarted,
-          minutesPlayed: seasonTotals.minutesPlayed,
-          goals: seasonTotals.goals,
-          assists: seasonTotals.assists,
-          yellowCards: seasonTotals.yellowCards,
-          redCards: seasonTotals.redCards,
-          cleanSheets: seasonTotals.cleanSheets,
-          goalsConceded: seasonTotals.goalsConceded,
-          saves: seasonTotals.saves,
-          averageRating: Math.round(averageRating * 10) / 10,
-          totalDistance: seasonTotals.totalDistance,
-          totalSprints: seasonTotals.totalSprints
-        }
-      });
-    } catch (error) {
-      console.error('Error updating season stats:', error);
-      throw new Error('Failed to update season stats');
-    }
+    // Season functionality not available in current schema
+    // This method is kept for future implementation
+    return;
   }
 }
 

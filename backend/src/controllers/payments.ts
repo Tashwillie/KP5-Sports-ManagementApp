@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 import { PaymentStatus, PaymentMethod } from '@prisma/client';
 
 // Get all payments with pagination and filtering
-export const getPayments = async (req: Request, res: Response): Promise<void> => {
+export const getPayments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -77,15 +77,12 @@ export const getPayments = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     logger.error('Error fetching payments:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payments',
-    });
+    next(error);
   }
 };
 
 // Get single payment by ID
-export const getPayment = async (req: Request, res: Response): Promise<void> => {
+export const getPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -139,15 +136,12 @@ export const getPayment = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Error fetching payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payment',
-    });
+    next(error);
   }
 };
 
 // Create new payment
-export const createPayment = async (req: Request, res: Response): Promise<void> => {
+export const createPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       amount,
@@ -187,15 +181,12 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error creating payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create payment',
-    });
+    next(error);
   }
 };
 
 // Update payment
-export const updatePayment = async (req: Request, res: Response): Promise<void> => {
+export const updatePayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -254,15 +245,12 @@ export const updatePayment = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error updating payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update payment',
-    });
+    next(error);
   }
 };
 
 // Delete payment (soft delete by setting status to CANCELLED)
-export const deletePayment = async (req: Request, res: Response): Promise<void> => {
+export const deletePayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -303,15 +291,12 @@ export const deletePayment = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error deleting payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete payment',
-    });
+    next(error);
   }
 };
 
 // Process Stripe payment
-export const processStripePayment = async (req: Request, res: Response): Promise<void> => {
+export const processStripePayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       amount,
@@ -357,15 +342,12 @@ export const processStripePayment = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     logger.error('Error processing Stripe payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to process payment',
-    });
+    next(error);
   }
 };
 
 // Refund payment
-export const refundPayment = async (req: Request, res: Response): Promise<void> => {
+export const refundPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -431,15 +413,12 @@ export const refundPayment = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error refunding payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to refund payment',
-    });
+    next(error);
   }
 };
 
 // Get payment history and analytics
-export const getPaymentHistory = async (req: Request, res: Response): Promise<void> => {
+export const getPaymentHistory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).user.id;
 
@@ -500,9 +479,6 @@ export const getPaymentHistory = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.error('Error fetching payment history:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payment history',
-    });
+    next(error);
   }
 };

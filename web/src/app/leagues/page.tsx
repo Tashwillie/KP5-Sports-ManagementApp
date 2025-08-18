@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
@@ -55,7 +55,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Sidebar from '@/components/layout/Sidebar';
-import apiClient from '@/lib/apiClient';
+import enhancedApiClient from '@/lib/enhancedApiClient';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface League {
   id: string;
@@ -86,8 +87,16 @@ interface LeagueWithStats extends League {
 }
 
 export default function LeaguesPage() {
+  return (
+    <ProtectedRoute>
+      <LeaguesContent />
+    </ProtectedRoute>
+  );
+}
+
+function LeaguesContent() {
   const router = useRouter();
-  const { userData, loading  } = useAuth();
+  const { user, loading } = useEnhancedAuthContext();
   const [activeTab, setActiveTab] = useState('leagues');
   const [leagues, setLeagues] = useState<LeagueWithStats[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -101,7 +110,7 @@ export default function LeaguesPage() {
       if (loading) return;
       try {
         setLoadingData(true);
-        const resp = await apiClient.getTournaments();
+        const resp = await enhancedApiClient.get('/tournaments');
         const items = (resp.data.tournaments || []).map((t: any) => ({
           id: t.id,
           name: t.name,
@@ -136,15 +145,7 @@ export default function LeaguesPage() {
     load();
   }, [loading]);
 
-  useEffect(() => {
-    // Simulate API call
-    const fetchLeagues = async () => {
-      setLoadingData(true);
-    // data loads via effect now
-    };
-
-    fetchLeagues();
-  }, []);
+  // Remove this redundant useEffect since data loading is handled above
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -221,93 +222,55 @@ export default function LeaguesPage() {
   };
 
   if (loading || loadingData) {
+    const userData = user ? {
+      id: user.id || 'user123',
+      name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+      email: user.email || 'admin@example.com',
+      role: user.role || 'Super Admin'
+    } : undefined;
     return (
-      <div className="d-flex">
-        {/* Sidebar Skeleton */}
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="placeholder-glow">
-              <div className="placeholder col-8 mb-4"></div>
-              <div className="placeholder col-6 mb-3"></div>
-              <div className="placeholder col-10 mb-2"></div>
-              <div className="placeholder col-8 mb-2"></div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="leagues" userData={userData} />
+        <div className="flex-grow-1 bg-light d-flex align-items-center justify-content-center" style={{ minWidth: 0, overflow: 'auto' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary mb-3" role="status">
+              <span className="visually-hidden">Loading...</span>
             </div>
-          </div>
-        </div>
-        
-        {/* Main Content Skeleton */}
-        <div className="flex-grow-1 bg-light">
-          <div className="p-4">
-            <div className="placeholder-glow">
-              <div className="placeholder col-4 mb-4"></div>
-              <div className="row g-4 mb-4">
-                <div className="col-md-3">
-                  <div className="card placeholder-glow">
-                    <div className="card-body">
-                      <div className="placeholder col-8 mb-2"></div>
-                      <div className="placeholder col-4"></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card placeholder-glow">
-                    <div className="card-body">
-                      <div className="placeholder col-8 mb-2"></div>
-                      <div className="placeholder col-4"></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card placeholder-glow">
-                    <div className="card-body">
-                      <div className="placeholder col-8 mb-2"></div>
-                      <div className="placeholder col-4"></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card placeholder-glow">
-                    <div className="card-body">
-                      <div className="placeholder col-8 mb-2"></div>
-                      <div className="placeholder col-4"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="card placeholder-glow">
-                <div className="card-body">
-                  <div className="placeholder col-8 mb-3"></div>
-                  <div className="placeholder col-6 mb-2"></div>
-                  <div className="placeholder col-10 mb-2"></div>
-                </div>
-              </div>
-            </div>
+            <div className="text-muted">Loading leagues...</div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!userData) {
+  if (!user) {
     return (
-      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
-        <div className="text-center">
-          <h2 className="h2 fw-bold text-dark mb-3">Access Denied</h2>
-          <p className="text-muted mb-4">Please sign in to view leagues.</p>
-          <Link href="/firebase-test" className="btn" style={{backgroundColor: '#4169E1', borderColor: '#4169E1', color: 'white'}}>
-            Sign In
-          </Link>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="leagues" />
+        <div className="flex-grow-1 bg-light d-flex align-items-center justify-content-center" style={{ minWidth: 0, overflow: 'auto' }}>
+          <div className="text-center">
+            <h2 className="h2 fw-bold text-dark mb-3">Access Denied</h2>
+            <p className="text-muted mb-4">Please sign in to view leagues.</p>
+            <Link href="/auth/signin" className="btn" style={{backgroundColor: '#4169E1', borderColor: '#4169E1', color: 'white'}}>
+              Sign In
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
+
+  const userData = {
+    id: user.id || 'user123',
+    name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+    email: user.email || 'admin@example.com',
+    role: user.role || 'Super Admin'
+  };
 
   return (
-    <div className="d-flex">
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
       <Sidebar activeTab="leagues" userData={userData} />
-
-      {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Top Header */}
         <div className="bg-white border-bottom p-3">
           <div className="d-flex align-items-center justify-content-between">

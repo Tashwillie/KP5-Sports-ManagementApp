@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import {
   Video, Upload, Settings, Search, Grid, List, Eye, Download, Image, FileText, Music, File,
   X, User, Calendar, Play
@@ -38,7 +38,7 @@ export default function MediaPage() {
 }
 
 function MediaContent() {
-  const { user, loading  } = useAuth();
+  const { user, loading  } = useEnhancedAuthContext();
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -147,23 +147,18 @@ function MediaContent() {
 
   // Show loading state while Firebase is initializing or media is loading
   if (loading || loadingMedia) {
+    const userData = user ? {
+      id: user.id || 'user123',
+      name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+      email: user.email || 'admin@example.com',
+      role: user.role || 'Super Admin'
+    } : undefined;
     return (
-      <div className="d-flex">
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="d-flex align-items-center mb-4">
-              <div className="bg-primary rounded p-2 me-3">
-                <Video size={24} className="text-white" />
-              </div>
-              <h5 className="mb-0">KP5 Academy</h5>
-            </div>
-          </div>
-        </div>
-        <div className="flex-grow-1 bg-light">
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="media" userData={userData} />
+        <div className="flex-grow-1 bg-light d-flex justify-content-center align-items-center" style={{ minWidth: 0, overflow: 'auto', height: '400px' }}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
         </div>
       </div>
@@ -173,100 +168,29 @@ function MediaContent() {
   // Show access denied if no user data
   if (!user) {
     return (
-      <div className="d-flex">
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="d-flex align-items-center mb-4">
-              <div className="bg-primary rounded p-2 me-3">
-                <Video size={24} className="text-white" />
-              </div>
-              <h5 className="mb-0">KP5 Academy</h5>
-            </div>
-          </div>
-        </div>
-        <div className="flex-grow-1 bg-light">
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-            <div className="text-center">
-              <h5 className="text-muted">Access Denied</h5>
-              <p className="text-muted">Please log in to view media library.</p>
-            </div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="media" />
+        <div className="flex-grow-1 bg-light d-flex justify-content-center align-items-center" style={{ minWidth: 0, overflow: 'auto', height: '400px' }}>
+          <div className="text-center">
+            <h5 className="text-muted">Access Denied</h5>
+            <p className="text-muted">Please log in to view media library.</p>
           </div>
         </div>
       </div>
     );
   }
 
+  const userData = {
+    id: user.id || 'user123',
+    name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+    email: user.email || 'admin@example.com',
+    role: user.role || 'Super Admin'
+  };
+
   return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-        <div className="p-3">
-          <div className="d-flex align-items-center mb-4">
-            <div className="bg-primary rounded p-2 me-3">
-              <Video size={24} className="text-white" />
-            </div>
-            <h5 className="mb-0">KP5 Academy</h5>
-          </div>
-          
-          {/* User Profile */}
-          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
-            <div className="bg-primary rounded-circle p-2 me-3">
-              <User size={20} className="text-white" />
-            </div>
-            <div>
-              <h6 className="mb-0">{user?.displayName || 'User'}</h6>
-              <small className="text-muted">{user?.role}</small>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="nav flex-column">
-            <a className="nav-link" href="/dashboard">
-              <Video size={20} className="me-2" />
-              Dashboard
-            </a>
-            <a className="nav-link" href="/announcements">
-              <Video size={20} className="me-2" />
-              Announcements
-            </a>
-            <a className="nav-link" href="/messages">
-              <Video size={20} className="me-2" />
-              Messages
-            </a>
-            <a className="nav-link" href="/notifications">
-              <Video size={20} className="me-2" />
-              Notifications
-            </a>
-            <a className="nav-link" href="/teams">
-              <Video size={20} className="me-2" />
-              Teams
-            </a>
-            <a className="nav-link" href="/tournaments">
-              <Video size={20} className="me-2" />
-              Tournaments
-            </a>
-            <a className="nav-link" href="/schedule">
-              <Video size={20} className="me-2" />
-              Schedule
-            </a>
-            <a className="nav-link active" href="/media">
-              <Video size={20} className="me-2" />
-              Media
-            </a>
-            <a className="nav-link" href="/documents">
-              <Video size={20} className="me-2" />
-              Documents
-            </a>
-            <a className="nav-link" href="/photos">
-              <Video size={20} className="me-2" />
-              Photos
-            </a>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      <Sidebar activeTab="media" userData={userData} />
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Top Header */}
         <div className="bg-white border-bottom p-3">
           <div className="d-flex justify-content-between align-items-center">

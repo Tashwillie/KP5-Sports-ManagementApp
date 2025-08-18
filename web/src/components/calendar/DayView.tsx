@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Event } from '../../../../shared/src/types';
+import { Event } from '@shared/types';
 import { CalendarService } from '../../lib/services/calendarService';
 import { EventService } from '../../lib/services/eventService';
 

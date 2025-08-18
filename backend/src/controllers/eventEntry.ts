@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import eventEntryService, { EventEntryFormData } from '../services/eventEntryService';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 export class EventEntryController {
   // Start a new event entry session
-  async startEventEntrySession(req: Request, res: Response) {
+  async startEventEntrySession(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId } = req.body;
       const userId = (req as any).user.userId;
@@ -28,12 +28,12 @@ export class EventEntryController {
       });
     } catch (error) {
       logger.error('Error starting event entry session:', error);
-      res.status(500).json({ error: 'Failed to start event entry session' });
+      next(error);
     }
   }
 
   // End an event entry session
-  async endEventEntrySession(req: Request, res: Response) {
+  async endEventEntrySession(req: Request, res: Response, next: NextFunction) {
     try {
       const { sessionId } = req.params;
       const userId = (req as any).user.userId;
@@ -50,12 +50,12 @@ export class EventEntryController {
       });
     } catch (error) {
       logger.error('Error ending event entry session:', error);
-      res.status(500).json({ error: 'Failed to end event entry session' });
+      next(error);
     }
   }
 
   // Submit an event entry
-  async submitEventEntry(req: Request, res: Response) {
+  async submitEventEntry(req: Request, res: Response, next: NextFunction) {
     try {
       const eventData: EventEntryFormData = req.body;
       const userId = (req as any).user.userId;
@@ -86,12 +86,12 @@ export class EventEntryController {
       }
     } catch (error) {
       logger.error('Error submitting event entry:', error);
-      res.status(500).json({ error: 'Failed to submit event entry' });
+      next(error);
     }
   }
 
   // Validate event entry data
-  async validateEventEntry(req: Request, res: Response) {
+  async validateEventEntry(req: Request, res: Response, next: NextFunction) {
     try {
       const eventData: EventEntryFormData = req.body;
 
@@ -112,12 +112,12 @@ export class EventEntryController {
       });
     } catch (error) {
       logger.error('Error validating event entry:', error);
-      res.status(500).json({ error: 'Failed to validate event entry' });
+      next(error);
     }
   }
 
   // Get event entry suggestions
-  async getEventSuggestions(req: Request, res: Response) {
+  async getEventSuggestions(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId, eventType, context } = req.query;
 
@@ -134,12 +134,12 @@ export class EventEntryController {
       res.json({ suggestions });
     } catch (error) {
       logger.error('Error getting event suggestions:', error);
-      res.status(500).json({ error: 'Failed to get event suggestions' });
+      next(error);
     }
   }
 
   // Get event entry session status
-  async getEventEntryStatus(req: Request, res: Response) {
+  async getEventEntryStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId } = req.params;
       const userId = (req as any).user.userId;
@@ -163,12 +163,12 @@ export class EventEntryController {
       }
     } catch (error) {
       logger.error('Error getting event entry status:', error);
-      res.status(500).json({ error: 'Failed to get event entry status' });
+      next(error);
     }
   }
 
   // Get event entry session statistics
-  async getEventEntryStats(req: Request, res: Response) {
+  async getEventEntryStats(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId } = req.params;
 
@@ -181,12 +181,12 @@ export class EventEntryController {
       res.json(stats);
     } catch (error) {
       logger.error('Error getting event entry stats:', error);
-      res.status(500).json({ error: 'Failed to get event entry stats' });
+      next(error);
     }
   }
 
   // Get all active event entry sessions for a match
-  async getActiveEventEntrySessions(req: Request, res: Response) {
+  async getActiveEventEntrySessions(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId } = req.params;
 
@@ -208,12 +208,12 @@ export class EventEntryController {
       });
     } catch (error) {
       logger.error('Error getting active event entry sessions:', error);
-      res.status(500).json({ error: 'Failed to get active event entry sessions' });
+      next(error);
     }
   }
 
   // Force end an event entry session (admin only)
-  async forceEndEventEntrySession(req: Request, res: Response) {
+  async forceEndEventEntrySession(req: Request, res: Response, next: NextFunction) {
     try {
       const { sessionId } = req.params;
       const userRole = (req as any).user.userRole;
@@ -242,12 +242,12 @@ export class EventEntryController {
       }
     } catch (error) {
       logger.error('Error force ending event entry session:', error);
-      res.status(500).json({ error: 'Failed to force end event entry session' });
+      next(error);
     }
   }
 
   // Get event entry form configuration
-  async getEventEntryFormConfig(req: Request, res: Response) {
+  async getEventEntryFormConfig(req: Request, res: Response, next: NextFunction) {
     try {
       const config = {
         eventTypes: [
@@ -322,7 +322,7 @@ export class EventEntryController {
       res.json(config);
     } catch (error) {
       logger.error('Error getting event entry form config:', error);
-      res.status(500).json({ error: 'Failed to get event entry form config' });
+      next(error);
     }
   }
 }

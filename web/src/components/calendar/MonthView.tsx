@@ -3,17 +3,17 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PerformanceOptimizedTouchDraggableEvent } from './PerformanceOptimizedTouchDraggableEvent';
-import { TouchDropZone } from './TouchDropZone';
-import { AdvancedPerformanceMonitor } from './AdvancedPerformanceMonitor';
-import { Event } from '../../../../shared/src/types';
-import { CalendarService } from '../../lib/services/calendarService';
-import { EventService } from '../../lib/services/eventService';
-import { PerformanceOptimizedTouchService } from '../../lib/services/performanceOptimizedTouchService';
-import { AdvancedPerformanceTuningService } from '../../lib/services/advancedPerformanceTuningService';
-import { PerformanceTestingPanel } from './PerformanceTestingPanel';
-import { ParameterOptimizationService, OptimizationResult } from '../../lib/services/parameterOptimizationService';
-import { PerformanceTestingService } from '../../lib/services/performanceTestingService';
+import { PerformanceOptimizedTouchDraggableEvent } from '@web/components/calendar/PerformanceOptimizedTouchDraggableEvent';
+import { TouchDropZone } from '@web/components/calendar/TouchDropZone';
+import { AdvancedPerformanceMonitor } from '@web/components/calendar/AdvancedPerformanceMonitor';
+import { Event } from '@shared/types';
+import { CalendarService } from '@web/lib/services/calendarService';
+import { EventService } from '@web/lib/services/eventService';
+import { PerformanceOptimizedTouchService } from '@web/lib/services/performanceOptimizedTouchService';
+import { AdvancedPerformanceTuningService } from '@web/lib/services/advancedPerformanceTuningService';
+import { PerformanceTestingPanel } from '@web/components/calendar/PerformanceTestingPanel';
+import { ParameterOptimizationService, OptimizationResult } from '@web/lib/services/parameterOptimizationService';
+import { PerformanceTestingService } from '@web/lib/services/performanceTestingService';
 
 interface MonthViewProps {
   events: Event[];

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Badge, Button } from 'react-bootstrap';
 import { Target, TrendingUp, BarChart3, PieChart } from 'lucide-react';
-import RealTimeChart, { ChartConfig } from './RealTimeChart';
+import RealTimeChart, { ChartConfig } from '@web/components/charts/RealTimeChart';
 
 interface MatchPerformanceData {
   matchId: string;

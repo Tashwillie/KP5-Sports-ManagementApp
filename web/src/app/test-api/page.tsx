@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export default function TestApiPage() {
-  const { user, login, isAuthenticated } = useAuth();
+  const { user, login, isAuthenticated } = useEnhancedAuthContext();
   const [email, setEmail] = useState('admin@kp5academy.com');
   const [password, setPassword] = useState('password123');
   const [testResult, setTestResult] = useState<string>('');

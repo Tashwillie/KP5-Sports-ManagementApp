@@ -204,6 +204,7 @@ import {
   FileWarning as FileWarningIcon,
   FileInfo as FileInfoIcon
 } from 'lucide-react';
+import Sidebar from '@/components/layout/Sidebar';
 
 interface SystemMetric {
   id: string;
@@ -508,90 +509,9 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <div className="bg-white border-end" style={{ width: '280px', minHeight: '100vh' }}>
-        <div className="p-3 border-bottom">
-          <img 
-            src="/images/logo.png" 
-            alt="KP5 Academy" 
-            className="img-fluid" 
-            style={{ maxHeight: '50px' }}
-          />
-        </div>
-        
-        <div className="p-3 border-bottom">
-          <div className="d-flex align-items-center">
-            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
-              <Crown size={20} className="text-warning" />
-            </div>
-            <div>
-              <div className="fw-medium">{userData.name}</div>
-              <small className="text-muted">{userData.role}</small>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-3">
-          <div className="nav flex-column">
-            <a href="/dashboard" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'dashboard' ? 'text-white' : 'text-muted'}`} style={activeTab === 'dashboard' ? {backgroundColor: '#4169E1'} : {}}>
-              <Home size={18} className="me-3" />
-              Dashboard
-            </a>
-            <a href="/teams" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'teams' ? 'text-white' : 'text-muted'}`} style={activeTab === 'teams' ? {backgroundColor: '#4169E1'} : {}}>
-              <UsersIcon size={18} className="me-3" />
-              Teams
-            </a>
-            <a href="/matches" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'matches' ? 'text-white' : 'text-muted'}`} style={activeTab === 'matches' ? {backgroundColor: '#4169E1'} : {}}>
-              <Target size={18} className="me-3" />
-              Matches
-            </a>
-            <a href="/tournaments" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'tournaments' ? 'text-white' : 'text-muted'}`} style={activeTab === 'tournaments' ? {backgroundColor: '#4169E1'} : {}}>
-              <TrophyIcon size={18} className="me-3" />
-              Tournaments
-            </a>
-            <a href="/leagues" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'leagues' ? 'text-white' : 'text-muted'}`} style={activeTab === 'leagues' ? {backgroundColor: '#4169E1'} : {}}>
-              <BarChart3 size={18} className="me-3" />
-              Leagues
-            </a>
-            <a href="/events" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'events' ? 'text-white' : 'text-muted'}`} style={activeTab === 'events' ? {backgroundColor: '#4169E1'} : {}}>
-              <CalendarIcon size={18} className="me-3" />
-              Events
-            </a>
-            <a href="/clubs" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'clubs' ? 'text-white' : 'text-muted'}`} style={activeTab === 'clubs' ? {backgroundColor: '#4169E1'} : {}}>
-              <Building size={18} className="me-3" />
-              Clubs
-            </a>
-            <a href="/players" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'players' ? 'text-white' : 'text-muted'}`} style={activeTab === 'players' ? {backgroundColor: '#4169E1'} : {}}>
-              <UserCheck size={18} className="me-3" />
-              Players
-            </a>
-            <a href="/coaches" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'coaches' ? 'text-white' : 'text-muted'}`} style={activeTab === 'coaches' ? {backgroundColor: '#4169E1'} : {}}>
-              <GraduationCap size={18} className="me-3" />
-              Coaches
-            </a>
-            <a href="/referees" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'referees' ? 'text-white' : 'text-muted'}`} style={activeTab === 'referees' ? {backgroundColor: '#4169E1'} : {}}>
-              <Award size={18} className="me-3" />
-              Referees
-            </a>
-            <a href="/registration" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'registration' ? 'text-white' : 'text-muted'}`} style={activeTab === 'registration' ? {backgroundColor: '#4169E1'} : {}}>
-              <FileTextIcon size={18} className="me-3" />
-              Registration
-            </a>
-            <a href="/payments" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'payments' ? 'text-white' : 'text-muted'}`} style={activeTab === 'payments' ? {backgroundColor: '#4169E1'} : {}}>
-              <DollarSign size={18} className="me-3" />
-              Payments
-            </a>
-            <a href="/settings" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'settings' ? 'text-white' : 'text-muted'}`} style={activeTab === 'settings' ? {backgroundColor: '#4169E1'} : {}}>
-              <SettingsIcon size={18} className="me-3" />
-              Settings
-            </a>
-          </div>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      <Sidebar activeTab="admin" userData={userData} />
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Header */}
         <div className="bg-white border-bottom p-3">
           <div className="d-flex justify-content-between align-items-center">

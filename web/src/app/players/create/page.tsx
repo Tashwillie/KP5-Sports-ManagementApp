@@ -2,45 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Save,
-  Users,
-  Calendar,
-  MapPin,
-  Trophy,
-  DollarSign,
-  FileText,
-  Settings,
-  Bell,
-  Search,
-  Home,
-  Users as UsersIcon,
-  Calendar as CalendarIcon,
-  Trophy as TrophyIcon,
-  MapPin as MapPinIcon,
-  FileText as FileTextIcon,
-  Settings as SettingsIcon,
-  LogOut,
-  User,
-  Plus,
-  Eye,
-  Edit,
-  BarChart3,
-  Target,
-  TrendingUp,
-  Building,
-  Phone,
-  Mail,
-  Globe,
-  Star,
-  Award,
-  UserCheck,
-  Activity,
-  Upload,
-  Heart,
-  Shield
-} from 'lucide-react';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import Sidebar from '@/components/layout/Sidebar';
+import { ChevronLeft, User, Save } from 'lucide-react';
 
 interface PlayerFormData {
   firstName: string;
@@ -104,8 +68,15 @@ const NATIONALITIES = [
 ];
 
 export default function CreatePlayerPage() {
+  return (
+    <ProtectedRoute>
+      <CreatePlayerContent />
+    </ProtectedRoute>
+  );
+}
+
+function CreatePlayerContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('players');
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -133,13 +104,7 @@ export default function CreatePlayerPage() {
     isActive: true,
   });
 
-  // Mock user data
-  const userData = {
-    id: 'user123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin'
-  };
+
 
   // Mock teams and clubs data
   const mockTeams = [
@@ -262,7 +227,6 @@ export default function CreatePlayerPage() {
       const playerData = {
         ...formData,
         age: new Date().getFullYear() - new Date(formData.dateOfBirth).getFullYear(),
-        createdBy: userData.id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -279,104 +243,56 @@ export default function CreatePlayerPage() {
   };
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <div className="bg-white border-end" style={{ width: '280px', minHeight: '100vh' }}>
-        <div className="p-3 border-bottom">
-          <img 
-            src="/images/logo.png" 
-            alt="KP5 Academy" 
-            className="img-fluid" 
-            style={{ maxHeight: '50px' }}
-          />
-        </div>
-        
-        <div className="p-3 border-bottom">
-          <div className="d-flex align-items-center">
-            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
-              <User size={20} className="text-muted" />
-            </div>
-            <div>
-              <div className="fw-medium">{userData.name}</div>
-              <small className="text-muted">{userData.role}</small>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-3">
-          <div className="nav flex-column">
-            <a href="/dashboard" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'dashboard' ? 'text-white' : 'text-muted'}`} style={activeTab === 'dashboard' ? {backgroundColor: '#4169E1'} : {}}>
-              <Home size={18} className="me-3" />
-              Dashboard
-            </a>
-            <a href="/teams" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'teams' ? 'text-white' : 'text-muted'}`} style={activeTab === 'teams' ? {backgroundColor: '#4169E1'} : {}}>
-              <UsersIcon size={18} className="me-3" />
-              Teams
-            </a>
-            <a href="/matches" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'matches' ? 'text-white' : 'text-muted'}`} style={activeTab === 'matches' ? {backgroundColor: '#4169E1'} : {}}>
-              <Target size={18} className="me-3" />
-              Matches
-            </a>
-            <a href="/tournaments" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'tournaments' ? 'text-white' : 'text-muted'}`} style={activeTab === 'tournaments' ? {backgroundColor: '#4169E1'} : {}}>
-              <TrophyIcon size={18} className="me-3" />
-              Tournaments
-            </a>
-            <a href="/leagues" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'leagues' ? 'text-white' : 'text-muted'}`} style={activeTab === 'leagues' ? {backgroundColor: '#4169E1'} : {}}>
-              <BarChart3 size={18} className="me-3" />
-              Leagues
-            </a>
-            <a href="/events" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'events' ? 'text-white' : 'text-muted'}`} style={activeTab === 'events' ? {backgroundColor: '#4169E1'} : {}}>
-              <CalendarIcon size={18} className="me-3" />
-              Events
-            </a>
-            <a href="/clubs" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'clubs' ? 'text-white' : 'text-muted'}`} style={activeTab === 'clubs' ? {backgroundColor: '#4169E1'} : {}}>
-              <Building size={18} className="me-3" />
-              Clubs
-            </a>
-            <a href="/players" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'players' ? 'text-white' : 'text-muted'}`} style={activeTab === 'players' ? {backgroundColor: '#4169E1'} : {}}>
-              <UserCheck size={18} className="me-3" />
-              Players
-            </a>
-            <a href="/settings" className={`nav-link d-flex align-items-center py-2 px-3 rounded ${activeTab === 'settings' ? 'text-white' : 'text-muted'}`} style={activeTab === 'settings' ? {backgroundColor: '#4169E1'} : {}}>
-              <SettingsIcon size={18} className="me-3" />
-              Settings
-            </a>
-          </div>
-        </nav>
-      </div>
-
-      {/* Main Content */}
+    <div className="d-flex">
+      <Sidebar activeTab="players" />
       <div className="flex-grow-1 bg-light">
-        {/* Header */}
-        <div className="bg-white border-bottom p-3">
-          <div className="d-flex justify-content-between align-items-center">
+        <div className="container-fluid p-4">
+          {/* Header */}
+          <div className="d-flex align-items-center justify-content-between mb-4">
             <div className="d-flex align-items-center">
-              <h4 className="mb-0 me-3">Add New Player</h4>
-            </div>
-            <div className="d-flex gap-2">
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Search size={16} className="me-1" />
-                Search
-              </button>
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Bell size={16} className="me-1" />
-                Notifications
-              </button>
-              <button 
-                className="btn btn-outline-secondary btn-sm d-flex align-items-center"
-                onClick={() => router.push('/players')}
+              <button
+                onClick={() => router.back()}
+                className="btn btn-link text-decoration-none p-0 me-3"
+                style={{ color: '#6c757d' }}
               >
-                <ArrowLeft size={16} className="me-1" />
-                Back to Players
+                <ChevronLeft size={20} />
+              </button>
+              <div>
+                <nav aria-label="breadcrumb" className="mb-1">
+                  <ol className="breadcrumb mb-0" style={{ fontSize: '14px' }}>
+                    <li className="breadcrumb-item">
+                      <a href="/dashboard" className="text-decoration-none">Dashboard</a>
+                    </li>
+                    <li className="breadcrumb-item">
+                      <a href="/players" className="text-decoration-none">Players</a>
+                    </li>
+                    <li className="breadcrumb-item active" aria-current="page">Create</li>
+                  </ol>
+                </nav>
+                <h1 className="h3 mb-0 d-flex align-items-center">
+                  <User className="me-2 text-primary" size={24} />
+                  Create New Player
+                </h1>
+                <p className="text-muted mb-0" style={{ fontSize: '14px' }}>
+                  Add a new player to the system
+                </p>
+              </div>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <button
+                onClick={() => router.push('/players')}
+                className="btn btn-outline-secondary btn-sm"
+              >
+                Cancel
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Form Content */}
-        <div className="p-4">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-4">
+          {/* Form Container */}
+          <div className="row">
+            <div className="col-12">
+              <div className="card shadow-sm">
+                <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="row g-4">
                   {/* Basic Information */}
@@ -810,6 +726,8 @@ export default function CreatePlayerPage() {
                   </div>
                 </div>
               </form>
+                </div>
+              </div>
             </div>
           </div>
         </div>

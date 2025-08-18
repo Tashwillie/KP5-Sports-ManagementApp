@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import websocketService, { 
   MatchEvent, 
   MatchState, 
@@ -33,7 +33,7 @@ interface WebSocketProviderProps {
 }
 
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useEnhancedAuthContext();
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED'>('CLOSED');
   const [error, setError] = useState<string | null>(null);

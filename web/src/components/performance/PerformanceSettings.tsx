@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AdvancedPerformanceTuningService, PerformanceTuningProfile } from '../../lib/services/advancedPerformanceTuningService';
-import { ParameterValidationService, DeviceCategory } from '../../lib/services/parameterValidationService';
-import { HapticFeedbackService, HapticPattern } from '../../lib/services/hapticFeedbackService';
-import { CrossDeviceLearningService } from '../../lib/services/crossDeviceLearningService';
+import { AdvancedPerformanceTuningService, PerformanceTuningProfile } from '@web/lib/services/advancedPerformanceTuningService';
+import { ParameterValidationService, DeviceCategory } from '@web/lib/services/parameterValidationService';
+import { HapticFeedbackService, HapticPattern } from '@web/lib/services/hapticFeedbackService';
+import { CrossDeviceLearningService } from '@web/lib/services/crossDeviceLearningService';
 
 interface PerformanceSettingsProps {
   onSettingsChange?: (settings: any) => void;

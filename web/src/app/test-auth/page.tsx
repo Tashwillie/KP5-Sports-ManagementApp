@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function TestAuthPage() {
-  const { user, loading, error, login, register, logout } = useAuth();
+  const { user, loading, error, login, register, logout } = useEnhancedAuthContext();
   const router = useRouter();
   
   const [email, setEmail] = useState('test@example.com');

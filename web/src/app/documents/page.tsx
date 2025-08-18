@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import apiClient from '@/lib/apiClient';
 import {
   FileText, Upload, Settings, Search, Grid, List, Eye, Download, File,
   FileSpreadsheet, Presentation, FileType, X, User, Calendar, SortAsc, MoreHorizontal
 } from 'lucide-react';
+import Sidebar from '@/components/layout/Sidebar';
 
 interface Document {
   id: string;
@@ -29,7 +30,13 @@ interface Document {
 }
 
 export default function DocumentsPage() {
-  const { user: userData, loading  } = useAuth();
+  const { user, loading  } = useEnhancedAuthContext();
+  const userData = user ? {
+    id: user.id || 'user123',
+    name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+    email: user.email || 'admin@example.com',
+    role: user.role || 'Super Admin'
+  } : undefined;
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -154,22 +161,11 @@ export default function DocumentsPage() {
   // Show loading state while Firebase is initializing or documents are loading
   if (loading || loadingDocuments) {
     return (
-      <div className="d-flex">
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="d-flex align-items-center mb-4">
-              <div className="bg-primary rounded p-2 me-3">
-                <FileText size={24} className="text-white" />
-              </div>
-              <h5 className="mb-0">KP5 Academy</h5>
-            </div>
-          </div>
-        </div>
-        <div className="flex-grow-1 bg-light">
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="documents" userData={userData} />
+        <div className="flex-grow-1 bg-light d-flex justify-content-center align-items-center" style={{ minWidth: 0, overflow: 'auto', height: '400px' }}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
         </div>
       </div>
@@ -177,25 +173,14 @@ export default function DocumentsPage() {
   }
 
   // Show access denied if no user data
-  if (!userData) {
+  if (!user) {
     return (
-      <div className="d-flex">
-        <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-          <div className="p-3">
-            <div className="d-flex align-items-center mb-4">
-              <div className="bg-primary rounded p-2 me-3">
-                <FileText size={24} className="text-white" />
-              </div>
-              <h5 className="mb-0">KP5 Academy</h5>
-            </div>
-          </div>
-        </div>
-        <div className="flex-grow-1 bg-light">
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-            <div className="text-center">
-              <h5 className="text-muted">Access Denied</h5>
-              <p className="text-muted">Please log in to view documents.</p>
-            </div>
+      <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+        <Sidebar activeTab="documents" />
+        <div className="flex-grow-1 bg-light d-flex justify-content-center align-items-center" style={{ minWidth: 0, overflow: 'auto', height: '400px' }}>
+          <div className="text-center">
+            <h5 className="text-muted">Access Denied</h5>
+            <p className="text-muted">Please log in to view documents.</p>
           </div>
         </div>
       </div>
@@ -203,76 +188,9 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-        <div className="p-3">
-          <div className="d-flex align-items-center mb-4">
-            <div className="bg-primary rounded p-2 me-3">
-              <FileText size={24} className="text-white" />
-            </div>
-            <h5 className="mb-0">KP5 Academy</h5>
-          </div>
-          
-          {/* User Profile */}
-          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
-            <div className="bg-primary rounded-circle p-2 me-3">
-              <User size={20} className="text-white" />
-            </div>
-            <div>
-              <h6 className="mb-0">{userData.displayName || 'User'}</h6>
-              <small className="text-muted">{userData.role}</small>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="nav flex-column">
-            <a className="nav-link" href="/dashboard">
-              <FileText size={20} className="me-2" />
-              Dashboard
-            </a>
-            <a className="nav-link" href="/announcements">
-              <FileText size={20} className="me-2" />
-              Announcements
-            </a>
-            <a className="nav-link" href="/messages">
-              <FileText size={20} className="me-2" />
-              Messages
-            </a>
-            <a className="nav-link" href="/notifications">
-              <FileText size={20} className="me-2" />
-              Notifications
-            </a>
-            <a className="nav-link" href="/teams">
-              <FileText size={20} className="me-2" />
-              Teams
-            </a>
-            <a className="nav-link" href="/tournaments">
-              <FileText size={20} className="me-2" />
-              Tournaments
-            </a>
-            <a className="nav-link" href="/schedule">
-              <FileText size={20} className="me-2" />
-              Schedule
-            </a>
-            <a className="nav-link" href="/media">
-              <FileText size={20} className="me-2" />
-              Media
-            </a>
-            <a className="nav-link active" href="/documents">
-              <FileText size={20} className="me-2" />
-              Documents
-            </a>
-            <a className="nav-link" href="/photos">
-              <FileText size={20} className="me-2" />
-              Photos
-            </a>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      <Sidebar activeTab="documents" userData={userData} />
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Top Header */}
         <div className="bg-white border-bottom p-3">
           <div className="d-flex justify-content-between align-items-center">
@@ -292,7 +210,6 @@ export default function DocumentsPage() {
             </div>
           </div>
         </div>
-
         {/* Main Content */}
         <div className="p-4">
           {/* Stats Cards */}
@@ -366,7 +283,6 @@ export default function DocumentsPage() {
               </div>
             </div>
           </div>
-
           {/* Filters and Controls */}
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body">
@@ -450,7 +366,6 @@ export default function DocumentsPage() {
               </div>
             </div>
           </div>
-
           {/* Documents Grid/List */}
           {viewMode === 'grid' ? (
             <div className="row">

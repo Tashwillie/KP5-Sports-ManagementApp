@@ -9,26 +9,42 @@ import LiveMatchTracker from '@/components/live-match/LiveMatchTracker';
 import RealTimeStatsDashboard from '@/components/statistics/RealTimeStatsDashboard';
 import WebSocketStatus from '@/components/common/WebSocketStatus';
 import { Wifi, Database, Activity, Trophy, Target } from 'lucide-react';
+import type { TournamentMatch } from '@/lib/services/tournamentsApiService';
 
 export default function AdvancedFeaturesDemo() {
   const {
-    realTournaments,
-    realMatches,
-    fallbackTournament,
-    fallbackMatches,
+    tournaments,
+    matches,
     isLoading,
     error,
     hasRealData,
     refetch
   } = useDemoData();
 
+  // Use real data if available, otherwise fallback to demo data
+  const fallbackTournament = tournaments[0] || { id: 'demo-tournament-1', name: 'Demo Tournament' };
+  const fallbackMatches: TournamentMatch[] = matches.length > 0 ? matches as TournamentMatch[] : [{
+    id: 'demo-match-1',
+    tournamentId: 'demo-tournament-1',
+    homeTeamId: 'team-1',
+    awayTeamId: 'team-2',
+    round: 1,
+    matchNumber: 1,
+    homeTeam: { name: 'Home Team', id: 'team-1' },
+    awayTeam: { name: 'Away Team', id: 'team-2' },
+    homeScore: 0,
+    awayScore: 0,
+    status: 'SCHEDULED',
+    venue: 'Main Stadium',
+    scheduledAt: new Date().toISOString(),
+  }];
+
+  const displayTournaments = hasRealData ? tournaments : [fallbackTournament];
+  const displayMatches = hasRealData ? matches : fallbackMatches;
+
   const updateMatchStatus = useUpdateMatchStatus();
   const updateMatchScore = useUpdateMatchScore();
   const addMatchEvent = useAddMatchEvent();
-
-  // Use real data if available, otherwise fallback to demo data
-  const tournaments = hasRealData ? realTournaments : [fallbackTournament];
-  const matches = hasRealData ? realMatches : fallbackMatches;
 
   const handleMatchUpdate = async (matchId: string, updates: any) => {
     if (hasRealData) {
@@ -52,11 +68,13 @@ export default function AdvancedFeaturesDemo() {
     if (hasRealData) {
       await addMatchEvent.mutateAsync({
         matchId,
-        type: eventData.type,
-        minute: eventData.minute,
-        teamId: eventData.teamId,
-        playerId: eventData.playerId,
-        description: eventData.description
+        eventData: {
+          type: eventData.type,
+          minute: eventData.minute,
+          teamId: eventData.teamId,
+          playerId: eventData.playerId,
+          description: eventData.description
+        }
       });
     }
   };
@@ -156,15 +174,15 @@ export default function AdvancedFeaturesDemo() {
               </p>
               <LiveMatchTracker
                 match={{
-                  id: matches[0]?.id || 'demo-match-1',
-                  homeTeam: matches[0]?.homeTeam?.name || 'Home Team',
-                  awayTeam: matches[0]?.awayTeam?.name || 'Away Team',
-                  homeScore: matches[0]?.homeScore || 0,
-                  awayScore: matches[0]?.awayScore || 0,
-                  status: matches[0]?.status || 'scheduled',
-                  currentMinute: matches[0]?.currentMinute || 0,
-                  venue: matches[0]?.venue || 'Main Stadium',
-                  date: matches[0]?.date || 'Today'
+                  id: displayMatches[0]?.id || 'demo-match-1',
+                  homeTeam: displayMatches[0]?.homeTeam?.name || 'Home Team',
+                  awayTeam: displayMatches[0]?.awayTeam?.name || 'Away Team',
+                  homeScore: displayMatches[0]?.homeScore || 0,
+                  awayScore: displayMatches[0]?.awayScore || 0,
+                  status: displayMatches[0]?.status || 'scheduled',
+                  currentMinute: 'currentMinute' in displayMatches[0] ? (displayMatches[0] as any).currentMinute || 0 : 0,
+                  venue: displayMatches[0]?.venue || 'Main Stadium',
+                  date: 'date' in displayMatches[0] ? (displayMatches[0] as any).date || 'Today' : 'Today',
                 }}
                 isReferee={true}
                 onMatchUpdate={handleMatchUpdate}
@@ -190,10 +208,43 @@ export default function AdvancedFeaturesDemo() {
                 Track match progress and see how teams advance through the tournament.
               </p>
               <TournamentBracket
-                tournament={tournaments[0]}
-                matches={matches}
+                tournament={{
+                  id: (displayTournaments[0] as any).id || 'demo-tournament-1',
+                  name: (displayTournaments[0] as any).name || 'Demo Tournament',
+                  maxTeams: (displayTournaments[0] as any).maxTeams || 8,
+                  currentTeams: (displayTournaments[0] as any).currentTeams || 2,
+                  ...Object.fromEntries(Object.entries(displayTournaments[0]).filter(([k]) => !['matches', 'id', 'name', 'maxTeams', 'currentTeams'].includes(k))),
+                  rounds: (displayTournaments[0] as any).rounds || [],
+                  settings: (displayTournaments[0] as any).settings || {},
+                  format: (() => {
+                    const allowed = ['custom', 'round_robin', 'group_stage', 'knockout'] as const;
+                    let fmt = typeof displayTournaments[0].format === 'string'
+                      ? displayTournaments[0].format.toLowerCase().replace('league', 'round_robin')
+                      : 'knockout';
+                    return (allowed as readonly string[]).includes(fmt) ? (fmt as typeof allowed[number]) : 'knockout';
+                  })(),
+                  status: (() => {
+                    const statusMap: Record<string, 'completed' | 'cancelled' | 'active' | 'draft'> = {
+                      'IN_PROGRESS': 'active',
+                      'COMPLETED': 'completed',
+                      'CANCELLED': 'cancelled',
+                      'DRAFT': 'draft',
+                      'REGISTRATION_OPEN': 'active',
+                      'REGISTRATION_CLOSED': 'active',
+                      'active': 'active',
+                      'completed': 'completed',
+                      'cancelled': 'cancelled',
+                      'draft': 'draft',
+                    };
+                    const raw = (displayTournaments[0] as any).status;
+                    return statusMap[raw] || 'active';
+                  })(),
+                  startDate: new Date((displayTournaments[0] as any).startDate),
+                  endDate: new Date((displayTournaments[0] as any).endDate),
+                  teams: (displayTournaments[0] as any).teams || [],
+                  matches: [],
+                }}
                 onMatchUpdate={handleMatchUpdate}
-                isReferee={true}
               />
             </Card.Body>
           </Card>
@@ -216,10 +267,7 @@ export default function AdvancedFeaturesDemo() {
                 player performance, and team statistics.
               </p>
               <RealTimeStatsDashboard
-                matches={matches}
-                onMatchUpdate={handleMatchUpdate}
-                onAddEvent={handleAddMatchEvent}
-                isReferee={true}
+                match={displayMatches[0]}
               />
             </Card.Body>
           </Card>

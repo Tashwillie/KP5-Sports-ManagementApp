@@ -40,7 +40,7 @@ export default function ClubsPage() {
 }
 
 function ClubsContent() {
-  const { clubs, loading: loadingData, error, refetch } = useClubs();
+  const { data: clubs, isLoading: loadingData, error, refetch } = useClubs();
   const [filteredClubs, setFilteredClubs] = useState<ClubWithStats[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -48,25 +48,35 @@ function ClubsContent() {
 
   // Filter clubs based on search and filters
   useEffect(() => {
-    let filtered = clubs;
+    let filtered: any[] = Array.isArray(clubs) ? clubs : []; // Ensure it's always an array
 
-    if (searchTerm) {
-      filtered = filtered.filter(club =>
-        club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        club.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        club.location.toLowerCase().includes(searchTerm.toLowerCase())
+    if (searchTerm && filtered.length > 0) {
+      filtered = filtered.filter((club: any) =>
+        club.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        club.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        club.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(club => club.status === statusFilter);
+    if (statusFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter((club: any) => club.status === statusFilter);
     }
 
-    if (sportFilter !== 'all') {
-      filtered = filtered.filter(club => club.sports.includes(sportFilter));
+    if (sportFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter((club: any) => club.sports?.includes(sportFilter));
     }
 
-    setFilteredClubs(filtered);
+    // Transform the clubs to match the ClubWithStats interface
+    const transformedClubs = filtered.map((club: any) => ({
+      ...club,
+      activeTeams: club.activeTeams || club.totalTeams || 0,
+      totalPlayers: club.totalPlayers || club.totalMembers || 0,
+      upcomingEvents: club.upcomingEvents || 0,
+      sports: club.sports || ['Football'], // Default sport
+      rating: club.rating || 4.5, // Default rating
+    }));
+
+    setFilteredClubs(transformedClubs);
   }, [clubs, searchTerm, statusFilter, sportFilter]);
 
   const getStatusBadgeClass = (status: string) => {
@@ -130,8 +140,8 @@ function ClubsContent() {
         <div className="text-center">
           <div className="alert alert-danger" role="alert">
             <h4 className="alert-heading">Error loading clubs</h4>
-            <p>{error}</p>
-            <button className="btn btn-primary" onClick={refetch}>
+            <p>{error instanceof Error ? error.message : 'An error occurred while loading clubs'}</p>
+            <button className="btn btn-primary" onClick={() => refetch()}>
               Try Again
             </button>
           </div>
@@ -219,7 +229,7 @@ function ClubsContent() {
 
           {/* Clubs Grid */}
           <div className="row g-4">
-            {filteredClubs.map((club) => (
+            {filteredClubs && filteredClubs.length > 0 ? filteredClubs.map((club) => (
               <div key={club.id} className="col-md-6 col-lg-4">
                 <div className="card border-0 shadow-sm h-100">
                   <div className="card-body">
@@ -279,11 +289,15 @@ function ClubsContent() {
                     <div className="mb-3">
                       <small className="text-muted">Sports</small>
                       <div className="d-flex flex-wrap gap-1 mt-1">
-                        {club.sports.map((sport, index) => (
+                        {Array.isArray(club.sports) ? club.sports.map((sport, index) => (
                           <span key={index} className="badge bg-light text-dark border">
                             {sport}
                           </span>
-                        ))}
+                        )) : (
+                          <span className="badge bg-light text-dark border">
+                            Football
+                          </span>
+                        )}
                       </div>
                     </div>
                     
@@ -302,10 +316,10 @@ function ClubsContent() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : null}
           </div>
 
-          {filteredClubs.length === 0 && (
+          {(!filteredClubs || filteredClubs.length === 0) && !loadingData && (
             <div className="text-center py-5">
               <i className="bi bi-building display-1 text-muted"></i>
               <h4 className="mt-3">No clubs found</h4>

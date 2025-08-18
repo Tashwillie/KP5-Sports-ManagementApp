@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const getMediaFiles = async (req: Request, res: Response) => {
+export const getMediaFiles = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // For now, return a combination of club logos, team logos, and user avatars
     // In a real implementation, you'd have a dedicated Media model
@@ -110,10 +110,6 @@ export const getMediaFiles = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching media files:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch media files',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    next(error);
   }
 };

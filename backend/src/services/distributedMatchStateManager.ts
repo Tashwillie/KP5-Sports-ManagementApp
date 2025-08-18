@@ -139,10 +139,12 @@ export class DistributedMatchStateManager {
       const matchKeys = await redisService.smembers('active:matches');
       
       for (const matchId of matchKeys) {
-        const matchState = await redisService.get<DistributedMatchState>(`match:state:${matchId}`);
-        if (matchState) {
-          this.localMatchStates.set(matchId, matchState);
-          logger.info(`Loaded existing match state for: ${matchId}`);
+        if (typeof matchId === 'string') {
+          const matchState = await redisService.get<DistributedMatchState>(`match:state:${matchId}`);
+          if (matchState) {
+            this.localMatchStates.set(matchId, matchState);
+            logger.info(`Loaded existing match state for: ${matchId}`);
+          }
         }
       }
     } catch (error) {

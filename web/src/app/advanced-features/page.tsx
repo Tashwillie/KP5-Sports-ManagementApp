@@ -254,11 +254,10 @@ export default function AdvancedFeaturesPage() {
                   tournament={{
                     id: "demo-tournament",
                     name: "Demo Tournament",
-                    format: "single_elimination",
-                    status: "in_progress",
+                    format: "knockout",
+                    status: "active",
                     startDate: new Date('2024-01-15'),
                     endDate: new Date('2024-01-25'),
-                    location: "Main Stadium",
                     teams: sampleTeams.map(team => ({
                       id: team.id,
                       name: team.name,
@@ -276,10 +275,16 @@ export default function AdvancedFeaturesPage() {
                       location: match.venue,
                       round: match.round,
                       matchNumber: match.matchNumber,
-                      winner: match.winnerId ? { id: match.winnerId, name: sampleTeams.find(t => t.id === match.winnerId)?.name || 'Unknown' } : undefined
-                    }))
+                      winner: match.winnerId ? { id: match.winnerId, name: sampleTeams.find(t => t.id === match.winnerId)?.name || 'Unknown' } : undefined,
+                      homeTeamId: match.team1Id,
+                      awayTeamId: match.team2Id,
+                      matchType: 'knockout',
+                    })),
+                    maxTeams: 8,
+                    currentTeams: 6,
+                    rounds: 1,
+                    settings: { hasThirdPlace: false, hasSeeding: true, groupSize: 2, knockoutRounds: 1 },
                   }}
-                  onMatchClick={(match) => console.log('Match clicked:', match)}
                 />
               </div>
             </div>

@@ -4,13 +4,13 @@
     "strict": true,
     "noEmit": true,
     "jsx": "react-native",
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "paths": {
-      "@kp5-academy/shared": ["../shared/src/index.ts"],
-      "@kp5-academy/shared/*": ["../shared/src/*"]
+      "@mobile/*": ["./*"],
+      "@shared/*": ["../../shared/src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
+import redisService from '../services/redisService';
 
 // Extend Express Request interface to include user
 declare global {
@@ -10,6 +11,7 @@ declare global {
         id: string;
         email: string;
         role: string;
+        permissions?: string[];
       };
     }
   }
@@ -27,6 +29,25 @@ export const authenticate = async (
       res.status(401).json({
         success: false,
         message: 'Access denied. No token provided.',
+      });
+      return;
+    }
+
+    // Optionally: Check if token is a refresh token (e.g., UUID format)
+    if (token.split('.').length !== 3) {
+      res.status(401).json({
+        success: false,
+        message: 'Access denied. Invalid access token format.',
+      });
+      return;
+    }
+
+    // Check if token is blacklisted
+    const isBlacklisted = await redisService.exists(`blacklist:access_token:${token}`);
+    if (isBlacklisted) {
+      res.status(401).json({
+        success: false,
+        message: 'Access denied. Token has been revoked.',
       });
       return;
     }
@@ -69,6 +90,11 @@ export const authenticate = async (
       message: 'Access denied. Invalid token.',
     });
   }
+};
+
+// Helper to blacklist an access token (e.g., on logout/compromise)
+export const blacklistAccessToken = async (token: string, expiresInSeconds: number) => {
+  await redisService.set(`blacklist:access_token:${token}`, true, { ttl: expiresInSeconds });
 };
 
 // Higher-order function to require specific roles

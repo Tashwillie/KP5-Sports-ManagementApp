@@ -709,7 +709,7 @@ export class TeamStatisticsService extends EventEmitter {
     // This would update team match statistics
   }
 
-  private async getHistoricalTeamData(teamId: string, season?: string, period: string) {
+  private async getHistoricalTeamData(teamId: string, period: string, season?: string) {
     // This would get historical team data for trend analysis
     return [];
   }

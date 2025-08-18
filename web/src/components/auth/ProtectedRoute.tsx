@@ -1,116 +1,126 @@
+// Enhanced Protected Route Component
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import React from 'react';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: string;
+  requiredRole?: string | string[];
   requiredPermission?: string;
+  fallback?: React.ReactNode;
+  redirectTo?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
   requiredRole,
-  requiredPermission
+  requiredPermission,
+  fallback,
+  redirectTo = '/auth/signin',
 }) => {
-  const { user, loading, isAuthenticated } = useAuth();
-  const { can, isLoading: permissionsLoading, error: permissionsError } = useEnhancedPermissions();
-  const router = useRouter();
+  const { user, loading, isAuthenticated, isInitialized, hasRole, hasPermission } = useEnhancedAuthContext();
 
-  useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated) {
-        router.push('/auth/signin');
-        return;
-      }
+  // Show loading state while initializing
+  if (!isInitialized || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-      // Check role-based access
-      if (requiredRole && user?.role !== requiredRole) {
-        // Redirect to appropriate page based on user role
-        switch (user?.role) {
-          case 'SUPER_ADMIN':
-            router.push('/admin');
-            break;
-          case 'CLUB_ADMIN':
-            router.push('/dashboard');
-            break;
-          case 'COACH':
-            router.push('/dashboard');
-            break;
-          case 'PLAYER':
-            router.push('/dashboard');
-            break;
-          case 'REFEREE':
-            router.push('/dashboard');
-            break;
-          default:
-            router.push('/dashboard');
-        }
-        return;
-      }
-
-      // Check permission-based access
-      if (requiredPermission && !can(requiredPermission)) {
-        router.push('/dashboard');
-        return;
-      }
+  // Check if user is authenticated
+  if (!isAuthenticated || !user) {
+    if (redirectTo) {
+      // Redirect to login page
+      window.location.href = redirectTo;
+      return null;
     }
-  }, [loading, isAuthenticated, user, requiredRole, requiredPermission, can, router]);
-
-  // Show loading spinner while checking authentication
-  if (loading) {
-    return (
-      <div className="min-vh-100 d-flex align-items-center justify-content-center">
+    
+    return fallback || (
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="text-muted">Checking authentication...</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-4">Please log in to access this page.</p>
+          <a
+            href="/auth/signin"
+            className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Sign In
+          </a>
         </div>
       </div>
     );
   }
 
-  // Show access denied if user doesn't have required role
-  if (requiredRole && user?.role !== requiredRole) {
-    return (
-      <div className="min-vh-100 d-flex align-items-center justify-content-center">
+  // Check role requirements
+  if (requiredRole && !hasRole(requiredRole)) {
+    return fallback || (
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="mb-3">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-danger">
-              <path d="M18.364 18.364A9 9 0 1 1 5.636 5.636a9 9 0 0 1 12.728 12.728zM12 8v4m0 4h.01" />
-            </svg>
-          </div>
-          <h4 className="text-danger mb-3">Access Denied</h4>
-          <p className="text-muted mb-4">
-            You don't have permission to access this page. 
-            Required role: <strong>{requiredRole.replace('_', ' ')}</strong>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You don't have the required role to access this page.
           </p>
-          <button 
-            onClick={() => router.back()} 
-            className="btn btn-outline-primary me-2"
-          >
-            Go Back
-          </button>
-          <button 
-            onClick={() => router.push('/dashboard')} 
-            className="btn btn-primary"
-          >
-            Go to Dashboard
-          </button>
+          <p className="text-sm text-gray-500">
+            Required: {Array.isArray(requiredRole) ? requiredRole.join(' or ') : requiredRole}
+            <br />
+            Your role: {user.role}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Show children if user is authenticated and has required role
-  if (isAuthenticated) {
-    return <>{children}</>;
+  // Check permission requirements
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return fallback || (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You don't have the required permission to access this page.
+          </p>
+          <p className="text-sm text-gray-500">
+            Required permission: {requiredPermission}
+          </p>
+        </div>
+      </div>
+    );
   }
 
-  // This should never be reached, but just in case
-  return null;
+  // User has access, render children
+  return <>{children}</>;
 };
+
+// Convenience components for common use cases
+export const AdminRoute: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
+  children, 
+  fallback 
+}) => (
+  <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLUB_ADMIN']} fallback={fallback}>
+    {children}
+  </ProtectedRoute>
+);
+
+export const CoachRoute: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
+  children, 
+  fallback 
+}) => (
+  <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLUB_ADMIN', 'COACH']} fallback={fallback}>
+    {children}
+  </ProtectedRoute>
+);
+
+export const PlayerRoute: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
+  children, 
+  fallback 
+}) => (
+  <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLUB_ADMIN', 'COACH', 'PLAYER']} fallback={fallback}>
+    {children}
+  </ProtectedRoute>
+);

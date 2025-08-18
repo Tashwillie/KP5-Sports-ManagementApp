@@ -4,7 +4,7 @@ import {
   LeagueStanding, 
   LeagueTeamStats,
   ApiResponse 
-} from '../../../../shared/src/types';
+} from '@shared/types';
 import apiClient from '../apiClient';
 
 export class LeagueService {

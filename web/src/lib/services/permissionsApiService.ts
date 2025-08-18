@@ -1,4 +1,4 @@
-import apiClient from '../apiClient';
+import apiClient from '@web/lib/apiClient';
 import { Permission, UserPermissions, PermissionCheck } from '@/types/permissions';
 
 export interface BackendPermissionCheck {
@@ -106,7 +106,7 @@ export class PermissionsApiService {
     differences: Permission[];
   }> {
     try {
-      const backendPermissions = await this.getCurrentUserPermissions();
+      const backendPermissions = await PermissionsApiService.getCurrentUserPermissions();
       
       // Get frontend permissions from the current user's role
       // This would need to be passed in or retrieved from context
@@ -146,7 +146,7 @@ export class PermissionsApiService {
     message: string;
   }> {
     try {
-      const backendCheck = await this.checkPermission(permission);
+      const backendCheck = await PermissionsApiService.checkPermission(permission);
       
       const isValid = backendCheck.hasPermission === expectedResult;
       
@@ -175,10 +175,10 @@ export class PermissionsApiService {
   }> {
     try {
       const [userInfo, summary, hierarchy, availableRolesData] = await Promise.all([
-        this.getCurrentUserPermissions(),
-        this.getPermissionSummary(),
-        this.getRoleHierarchy(),
-        this.getAvailableRoles(),
+        PermissionsApiService.getCurrentUserPermissions(),
+        PermissionsApiService.getPermissionSummary(),
+        PermissionsApiService.getRoleHierarchy(),
+        PermissionsApiService.getAvailableRoles(),
       ]);
 
       return {

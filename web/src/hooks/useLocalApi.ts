@@ -2,7 +2,7 @@
 // This hook provides API access without Firebase dependencies
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import AuthService from '@/lib/services/authService';
 
 interface ApiState {
@@ -12,7 +12,7 @@ interface ApiState {
 }
 
 export const useLocalApi = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useEnhancedAuthContext();
   const [state, setState] = useState<ApiState>({
     loading: false,
     error: null,

@@ -1,5 +1,5 @@
 // Firebase imports removed - will be replaced with API calls
-import { Club, Team, ClubMember, ClubInvitation, ClubRole, ClubPermission } from '../../../../shared/src/types';
+import { Club, Team, ClubMember, ClubInvitation, ClubRole, ClubPermission } from '@shared/types';
 import { apiClient } from '../apiClient';
 
 export class ClubService {

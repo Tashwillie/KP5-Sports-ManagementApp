@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import MatchHistoryController from '../controllers/matchHistory';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
 
 const router = Router();
 const matchHistoryController = new MatchHistoryController();
 
 // Apply authentication middleware to all routes
-router.use(authenticateToken);
+router.use(authenticate);
 
 // General match history routes
 router.get('/', requirePermission('matches.view'), matchHistoryController.getMatchHistory);

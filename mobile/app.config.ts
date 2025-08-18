@@ -49,16 +49,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     // App configuration
     eas: {
-      projectId: "your-eas-project-id"
+      projectId: process.env.EAS_PROJECT_ID || "your-eas-project-id"
     },
     
-    // API Configuration
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://your-api-url.com",
-    websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL || "wss://your-api-url.com",
+    // PostgreSQL Backend Configuration
+    apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3001",
+    websocketUrl: process.env.EXPO_PUBLIC_WEBSOCKET_URL || "ws://localhost:3001/ws",
     
     // File Upload Configuration
-    fileUploadUrl: process.env.EXPO_PUBLIC_FILE_UPLOAD_URL || "https://your-api-url.com/api/upload",
-    cloudStorageUrl: process.env.EXPO_PUBLIC_CLOUD_STORAGE_URL || "https://your-storage-bucket.s3.amazonaws.com",
+    fileUploadUrl: process.env.EXPO_PUBLIC_FILE_UPLOAD_URL || "http://localhost:3001/api/upload",
     
     // Feature Flags
     enablePushNotifications: process.env.EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS === 'true',
@@ -70,13 +69,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // App Settings
     appName: process.env.EXPO_PUBLIC_APP_NAME || "KP5 Academy",
     appVersion: "1.0.0",
-    debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true'
+    debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
+    
+    // Database Configuration
+    databaseType: "PostgreSQL",
+    backendType: "Node.js + Express",
+    realtimeType: "WebSocket (Socket.IO)"
   },
-  owner: 'your-expo-username',
+  owner: process.env.EXPO_USERNAME || 'your-expo-username',
   runtimeVersion: {
     policy: 'appVersion'
   },
   updates: {
-    url: 'https://u.expo.dev/your-project-id'
+    url: process.env.EXPO_UPDATES_URL || 'https://u.expo.dev/your-project-id'
   }
 }); 

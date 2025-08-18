@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import notificationsService, { UiNotification } from '@/lib/services/notificationsService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface UseNotificationsReturn {
   notifications: UiNotification[];
@@ -10,7 +10,7 @@ export interface UseNotificationsReturn {
 }
 
 export const useNotifications = (): UseNotificationsReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [notifications, setNotifications] = useState<UiNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

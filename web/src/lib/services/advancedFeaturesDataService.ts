@@ -1,5 +1,5 @@
-import { apiService, ApiResponse } from './apiService';
-import { Tournament, TournamentMatch } from './tournamentsApiService';
+import { apiService, ApiResponse } from '@web/lib/services/apiService';
+import { Tournament, TournamentMatch } from '@web/lib/services/tournamentsApiService';
 
 // Extended interfaces to match backend data structure
 export interface BackendTournament {

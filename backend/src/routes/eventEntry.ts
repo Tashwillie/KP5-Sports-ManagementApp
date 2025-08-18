@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import eventEntryController from '../controllers/eventEntry';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
 
 const router = Router();
 
 // Apply authentication middleware to all routes
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Event entry session management
 router.post('/sessions/start', requirePermission('matches.live_tracking'), eventEntryController.startEventEntrySession);

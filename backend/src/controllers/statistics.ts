@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import statisticsService from '../services/statisticsService';
 
 export class StatisticsController {
   // Get player match statistics
-  static async getPlayerMatchStats(req: Request, res: Response) {
+  static async getPlayerMatchStats(req: Request, res: Response, next: NextFunction) {
     try {
       const { playerId, matchId } = req.params;
       
@@ -30,15 +30,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting player match stats:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get team match statistics
-  static async getTeamMatchStats(req: Request, res: Response) {
+  static async getTeamMatchStats(req: Request, res: Response, next: NextFunction) {
     try {
       const { teamId, matchId } = req.params;
       
@@ -64,15 +61,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting team match stats:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get match statistics
-  static async getMatchStats(req: Request, res: Response) {
+  static async getMatchStats(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId } = req.params;
       
@@ -98,15 +92,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting match stats:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get player season statistics
-  static async getPlayerSeasonStats(req: Request, res: Response) {
+  static async getPlayerSeasonStats(req: Request, res: Response, next: NextFunction) {
     try {
       const { playerId, season } = req.params;
       
@@ -132,15 +123,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting player season stats:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get team season statistics
-  static async getTeamSeasonStats(req: Request, res: Response) {
+  static async getTeamSeasonStats(req: Request, res: Response, next: NextFunction) {
     try {
       const { teamId, season } = req.params;
       
@@ -166,15 +154,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting team season stats:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get top performers for a season
-  static async getTopPerformers(req: Request, res: Response) {
+  static async getTopPerformers(req: Request, res: Response, next: NextFunction) {
     try {
       const { season } = req.params;
       const limit = parseInt(req.query.limit as string) || 10;
@@ -201,15 +186,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting top performers:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get team standings for a season
-  static async getTeamStandings(req: Request, res: Response) {
+  static async getTeamStandings(req: Request, res: Response, next: NextFunction) {
     try {
       const { season } = req.params;
       
@@ -228,15 +210,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting team standings:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get statistics overview for a match
-  static async getMatchStatisticsOverview(req: Request, res: Response) {
+  static async getMatchStatisticsOverview(req: Request, res: Response, next: NextFunction) {
     try {
       const { matchId } = req.params;
       
@@ -279,15 +258,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting match statistics overview:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get player performance comparison
-  static async getPlayerPerformanceComparison(req: Request, res: Response) {
+  static async getPlayerPerformanceComparison(req: Request, res: Response, next: NextFunction) {
     try {
       const { playerIds } = req.query;
       const { season } = req.params;
@@ -338,15 +314,12 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting player performance comparison:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 
   // Get team performance comparison
-  static async getTeamPerformanceComparison(req: Request, res: Response) {
+  static async getTeamPerformanceComparison(req: Request, res: Response, next: NextFunction) {
     try {
       const { teamIds } = req.query;
       const { season } = req.params;
@@ -397,10 +370,7 @@ export class StatisticsController {
       });
     } catch (error) {
       logger.error('Error getting team performance comparison:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Internal server error' 
-      });
+      next(error);
     }
   }
 }

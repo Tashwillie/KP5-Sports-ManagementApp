@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, Row, Col, Badge, Button, Table, Form } from 'react-bootstrap';
 import { Trophy, TrendingUp, BarChart3, PieChart, Target, Users } from 'lucide-react';
-import RealTimeChart, { ChartConfig } from './RealTimeChart';
+import RealTimeChart, { ChartConfig } from '@web/components/charts/RealTimeChart';
 
 interface TeamStanding {
   teamId: string;

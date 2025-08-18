@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 interface NavigationItem {
   name: string;
@@ -110,7 +110,7 @@ const navigationItems: NavigationItem[] = [
 
 export const Navigation: React.FC = () => {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout } = useEnhancedAuthContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userRole = user?.role || 'player';

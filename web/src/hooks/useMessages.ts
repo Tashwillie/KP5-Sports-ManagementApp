@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import messagesService, { UiMessage } from '@/lib/services/messagesService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface UseMessagesReturn {
   messages: UiMessage[];
@@ -10,7 +10,7 @@ export interface UseMessagesReturn {
 }
 
 export const useMessages = (): UseMessagesReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

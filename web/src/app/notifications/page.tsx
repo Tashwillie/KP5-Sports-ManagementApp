@@ -58,6 +58,7 @@ import {
 } from 'lucide-react';
 
 import { useNotifications } from '@/hooks/useNotifications';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export default function NotificationsPage() {
   return (
@@ -68,7 +69,7 @@ export default function NotificationsPage() {
 }
 
 function NotificationsContent() {
-  const { userData, loading  } = useAuth();
+  const { user, loading  } = useEnhancedAuthContext();
   const { notifications, loading: loadingNotifications, error, refetch } = useNotifications();
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -185,7 +186,7 @@ function NotificationsContent() {
     );
   }
 
-  if (!userData) {
+  if (!user) {
     return (
       <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
         <div className="text-center">
@@ -196,127 +197,18 @@ function NotificationsContent() {
     );
   }
 
+  // Prepare userData for Sidebar
+  const userData = {
+    id: user.id || 'user123',
+    name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin User',
+    email: user.email || 'admin@example.com',
+    role: user.role || 'Super Admin'
+  };
+
   return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div className="bg-white border-end" style={{width: '280px', minHeight: '100vh'}}>
-        <div className="p-3">
-          {/* Logo and Top Icons */}
-          <div className="d-flex align-items-center justify-content-between mb-4">
-            <div className="d-flex align-items-center">
-              <img 
-                src="/images/logo.png" 
-                alt="KP5 Academy" 
-                width={120} 
-                height={45} 
-                className="me-2"
-                style={{maxWidth: '120px'}}
-              />
-            </div>
-            <div className="d-flex gap-2">
-              <Bell className="h-4 w-4 text-muted position-relative">
-                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success" style={{fontSize: '0.6rem'}}>3</span>
-              </Bell>
-              <Search className="h-4 w-4 text-muted" />
-            </div>
-          </div>
-
-          {/* User Profile */}
-          <div className="d-flex align-items-center mb-4 p-3 bg-light rounded">
-            <div className="rounded-circle p-2 me-3" style={{backgroundColor: '#4169E1', opacity: 0.1}}>
-              <User className="h-4 w-4" style={{color: '#4169E1'}} />
-            </div>
-            <div>
-              <div className="fw-medium text-dark">{userData.displayName || 'User'}</div>
-              <small className="text-muted">{userData.email}</small>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="mb-4">
-            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Sports Management</small>
-            <div className="d-flex flex-column gap-1">
-              <a href="/dashboard" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <BarChart3 className="h-4 w-4 me-2" />
-                Dashboard
-              </a>
-              <a href="/teams" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Users className="h-4 w-4 me-2" />
-                Teams
-              </a>
-              <a href="/matches" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Calendar className="h-4 w-4 me-2" />
-                Matches
-              </a>
-              <a href="/tournaments" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Trophy className="h-4 w-4 me-2" />
-                Tournaments
-              </a>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Management</small>
-            <div className="d-flex flex-column gap-1">
-              <a href="/clubs" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <GraduationCap className="h-4 w-4 me-2" />
-                Clubs
-              </a>
-              <a href="/players" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Users className="h-4 w-4 me-2" />
-                Players
-              </a>
-              <a href="/coaches" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Shield className="h-4 w-4 me-2" />
-                Coaches
-              </a>
-              <a href="/referees" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Shield className="h-4 w-4 me-2" />
-                Referees
-              </a>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Communication</small>
-            <div className="d-flex flex-column gap-1">
-              <a href="/messages" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <MessageCircle className="h-4 w-4 me-2" />
-                Messages
-              </a>
-              <a href="/notifications" className={`btn btn-sm text-start ${activeTab === 'notifications' ? 'text-white' : 'text-muted'} border-0 text-decoration-none`} style={{backgroundColor: activeTab === 'notifications' ? '#4169E1' : 'transparent'}}>
-                <Mail className="h-4 w-4 me-2" />
-                Notifications
-              </a>
-              <a href="/announcements" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Bell className="h-4 w-4 me-2" />
-                Announcements
-              </a>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <small className="text-muted text-uppercase fw-bold mb-2 d-block">Content</small>
-            <div className="d-flex flex-column gap-1">
-              <a href="/media" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <Cloud className="h-4 w-4 me-2" />
-                Media Library
-              </a>
-              <a href="/documents" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <FileText className="h-4 w-4 me-2" />
-                Documents
-              </a>
-              <a href="/photos" className="btn btn-sm text-start text-muted border-0 text-decoration-none">
-                <ImageIcon className="h-4 w-4 me-2" />
-                Photos
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      <Sidebar activeTab="notifications" userData={userData} />
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Top Header */}
         <div className="bg-white border-bottom p-3">
           <div className="d-flex align-items-center justify-content-between">
@@ -329,7 +221,6 @@ function NotificationsContent() {
                 </small>
               </div>
             </div>
-            
             <div className="d-flex align-items-center gap-3">
               <div className="input-group" style={{width: '300px'}}>
                 <span className="input-group-text bg-white border-end-0">
@@ -373,7 +264,6 @@ function NotificationsContent() {
             </div>
           </div>
         </div>
-
         {/* Main Notifications Content */}
         <div className="p-4">
           <div className="row">
@@ -434,7 +324,6 @@ function NotificationsContent() {
                 </div>
               </div>
             </div>
-
             {/* Notifications List */}
             <div className="col-12">
               <div className="card border-0 shadow-sm">

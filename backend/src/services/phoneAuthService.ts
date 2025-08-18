@@ -167,6 +167,7 @@ export class PhoneAuthService {
 
         user = await prisma.user.create({
           data: {
+            email: `phone_${phone}@temp.kp5academy.com`, // Temporary email for phone users
             phone,
             password: randomPassword, // Random password for phone users
             displayName: `User_${phone.slice(-4)}`, // Generate display name from phone

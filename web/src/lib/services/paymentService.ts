@@ -4,7 +4,7 @@ import {
   Subscription, 
   Invoice,
   ApiResponse 
-} from '../../../../shared/src/types';
+} from '@shared/types';
 import apiClient from '../apiClient';
 
 interface PaymentStats {

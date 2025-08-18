@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { League, LeagueStanding, LeagueTeamStats } from '../../../../../shared/src/types';
+import { League, LeagueStanding, LeagueTeamStats } from '@shared/types';
 import { leagueService } from '@/lib/services/leagueService';
 
 interface StandingsRow {

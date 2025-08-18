@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, Row, Col, Badge, Button, Form, Dropdown } from 'react-bootstrap';
 import { User, Target, TrendingUp, Award, Activity, Filter } from 'lucide-react';
-import RealTimeChart, { ChartConfig } from './RealTimeChart';
+import RealTimeChart, { ChartConfig } from '@web/components/charts/RealTimeChart';
 
 interface PlayerStats {
   playerId: string;

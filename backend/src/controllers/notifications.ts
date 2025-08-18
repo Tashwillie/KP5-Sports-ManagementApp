@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 import { NotificationType, TeamRole, ClubRole } from '@prisma/client';
 
 // Get all notifications with pagination and filtering
-export const getNotifications = async (req: Request, res: Response): Promise<void> => {
+export const getNotifications = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -92,15 +92,12 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error fetching notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch notifications',
-    });
+    next(error);
   }
 };
 
 // Get single notification by ID
-export const getNotification = async (req: Request, res: Response): Promise<void> => {
+export const getNotification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -173,15 +170,12 @@ export const getNotification = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     logger.error('Error fetching notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch notification',
-    });
+    next(error);
   }
 };
 
 // Create new notification
-export const createNotification = async (req: Request, res: Response): Promise<void> => {
+export const createNotification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       title,
@@ -312,15 +306,12 @@ export const createNotification = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error creating notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create notification',
-    });
+    next(error);
   }
 };
 
 // Update notification
-export const updateNotification = async (req: Request, res: Response): Promise<void> => {
+export const updateNotification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -404,15 +395,12 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error updating notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update notification',
-    });
+    next(error);
   }
 };
 
 // Delete notification
-export const deleteNotification = async (req: Request, res: Response): Promise<void> => {
+export const deleteNotification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -454,15 +442,12 @@ export const deleteNotification = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error deleting notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete notification',
-    });
+    next(error);
   }
 };
 
 // Mark notification as read
-export const markAsRead = async (req: Request, res: Response): Promise<void> => {
+export const markAsRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -490,15 +475,12 @@ export const markAsRead = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Error marking notification as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark notification as read',
-    });
+    next(error);
   }
 };
 
 // Mark all notifications as read
-export const markAllAsRead = async (req: Request, res: Response): Promise<void> => {
+export const markAllAsRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).user.id;
 
@@ -516,15 +498,12 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error marking all notifications as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark notifications as read',
-    });
+    next(error);
   }
 };
 
 // Get notification preferences
-export const getNotificationPreferences = async (req: Request, res: Response): Promise<void> => {
+export const getNotificationPreferences = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).user.id;
 
@@ -557,15 +536,12 @@ export const getNotificationPreferences = async (req: Request, res: Response): P
     });
   } catch (error) {
     logger.error('Error fetching notification preferences:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch notification preferences',
-    });
+    next(error);
   }
 };
 
 // Update notification preferences
-export const updateNotificationPreferences = async (req: Request, res: Response): Promise<void> => {
+export const updateNotificationPreferences = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).user.id;
     const updateData = { ...req.body };
@@ -596,15 +572,12 @@ export const updateNotificationPreferences = async (req: Request, res: Response)
     });
   } catch (error) {
     logger.error('Error updating notification preferences:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update notification preferences',
-    });
+    next(error);
   }
 };
 
 // Send push notification
-export const sendPushNotification = async (req: Request, res: Response): Promise<void> => {
+export const sendPushNotification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       title,
@@ -712,9 +685,6 @@ export const sendPushNotification = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     logger.error('Error sending push notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send push notification',
-    });
+    next(error);
   }
 };

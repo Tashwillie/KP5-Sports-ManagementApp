@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Payment, Subscription, Invoice } from '../../../../shared/src/types';
+import { Payment, Subscription, Invoice } from '@shared/types';
 import { paymentService } from '@/lib/services/paymentService';
 
 interface PaymentStats {

@@ -20,11 +20,11 @@ import {
   MoreHorizontal,
   DragHandle
 } from 'lucide-react';
-import { PerformanceOptimizedTouchDraggableEvent } from './PerformanceOptimizedTouchDraggableEvent';
-import { TouchDropZone } from './TouchDropZone';
-import { DragDropService } from '../../lib/services/dragDropService';
-import { TouchDragService } from '../../lib/services/touchDragService';
-import { PerformanceOptimizedTouchService } from '../../lib/services/performanceOptimizedTouchService';
+import { PerformanceOptimizedTouchDraggableEvent } from '@web/components/calendar/PerformanceOptimizedTouchDraggableEvent';
+import { TouchDropZone } from '@web/components/calendar/TouchDropZone';
+import { DragDropService } from '@web/lib/services/dragDropService';
+import { TouchDragService } from '@web/lib/services/touchDragService';
+import { PerformanceOptimizedTouchService } from '@web/lib/services/performanceOptimizedTouchService';
 
 interface Event {
   id: string;

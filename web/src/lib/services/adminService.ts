@@ -21,7 +21,7 @@ import {
   SystemMetrics,
   EngagementMetrics,
   AnalyticsInsight,
-} from '../../../../shared/src/types/admin';
+} from '@shared/types/admin';
 import apiClient from '../apiClient';
 
 export class AdminService {

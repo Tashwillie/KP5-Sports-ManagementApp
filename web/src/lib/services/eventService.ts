@@ -1,4 +1,4 @@
-import { Event, EventType, EventStatus, EventRecurrence, EventParticipant } from '../../../../shared/src/types';
+import { Event, EventType, EventStatus, EventRecurrence, EventParticipant } from '@shared/types';
 import { apiClient } from '../apiClient';
 
 export class EventService {

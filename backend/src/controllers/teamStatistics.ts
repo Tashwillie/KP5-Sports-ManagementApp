@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import TeamStatisticsService from '../services/teamStatisticsService';
 import TeamAnalyticsService from '../services/teamAnalyticsService';
@@ -11,7 +11,7 @@ export class TeamStatisticsController {
   /**
    * Get team performance metrics
    */
-  async getTeamPerformance(req: Request, res: Response): Promise<void> {
+  async getTeamPerformance(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, startDate, endDate } = req.query;
@@ -36,17 +36,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error getting team performance:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get team performance'
-      });
+      next(error);
     }
   }
 
   /**
    * Compare team performance with other teams
    */
-  async compareTeamPerformance(req: Request, res: Response): Promise<void> {
+  async compareTeamPerformance(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { comparisonType, season } = req.query;
@@ -71,17 +68,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error comparing team performance:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to compare team performance'
-      });
+      next(error);
     }
   }
 
   /**
    * Get team performance insights
    */
-  async getTeamInsights(req: Request, res: Response): Promise<void> {
+  async getTeamInsights(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season } = req.query;
@@ -97,17 +91,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error getting team insights:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get team insights'
-      });
+      next(error);
     }
   }
 
   /**
    * Get team performance trends
    */
-  async getTeamTrends(req: Request, res: Response): Promise<void> {
+  async getTeamTrends(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, period } = req.query;
@@ -132,17 +123,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error getting team trends:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get team trends'
-      });
+      next(error);
     }
   }
 
   /**
    * Generate team performance report
    */
-  async generateTeamReport(req: Request, res: Response): Promise<void> {
+  async generateTeamReport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, includeRecommendations } = req.query;
@@ -159,17 +147,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error generating team report:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to generate team report'
-      });
+      next(error);
     }
   }
 
   /**
    * Get league table
    */
-  async getLeagueTable(req: Request, res: Response): Promise<void> {
+  async getLeagueTable(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { season, tournamentId } = req.query;
 
@@ -184,17 +169,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error getting league table:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get league table'
-      });
+      next(error);
     }
   }
 
   /**
    * Analyze team form
    */
-  async analyzeTeamForm(req: Request, res: Response): Promise<void> {
+  async analyzeTeamForm(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, tournamentId } = req.query;
@@ -211,17 +193,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error analyzing team form:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to analyze team form'
-      });
+      next(error);
     }
   }
 
   /**
    * Calculate team efficiency metrics
    */
-  async calculateTeamEfficiency(req: Request, res: Response): Promise<void> {
+  async calculateTeamEfficiency(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season } = req.query;
@@ -237,17 +216,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error calculating team efficiency:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to calculate team efficiency'
-      });
+      next(error);
     }
   }
 
   /**
    * Compare team with league
    */
-  async compareTeamWithLeague(req: Request, res: Response): Promise<void> {
+  async compareTeamWithLeague(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, tournamentId } = req.query;
@@ -264,17 +240,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error comparing team with league:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to compare team with league'
-      });
+      next(error);
     }
   }
 
   /**
    * Get top teams by metric
    */
-  async getTopTeams(req: Request, res: Response): Promise<void> {
+  async getTopTeams(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { metric, season, limit, tournamentId } = req.query;
 
@@ -299,17 +272,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error getting top teams:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get top teams'
-      });
+      next(error);
     }
   }
 
   /**
    * Update team statistics
    */
-  async updateTeamStatistics(req: Request, res: Response): Promise<void> {
+  async updateTeamStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId, matchId } = req.body;
 
@@ -329,17 +299,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error updating team statistics:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update team statistics'
-      });
+      next(error);
     }
   }
 
   /**
    * Get team statistics summary
    */
-  async getTeamStatisticsSummary(req: Request, res: Response): Promise<void> {
+  async getTeamStatisticsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season } = req.query;
@@ -368,17 +335,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error getting team statistics summary:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get team statistics summary'
-      });
+      next(error);
     }
   }
 
   /**
    * Get multiple teams comparison
    */
-  async compareMultipleTeams(req: Request, res: Response): Promise<void> {
+  async compareMultipleTeams(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamIds, season, tournamentId } = req.body;
 
@@ -414,17 +378,14 @@ export class TeamStatisticsController {
       });
     } catch (error) {
       console.error('Error comparing multiple teams:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to compare multiple teams'
-      });
+      next(error);
     }
   }
 
   /**
    * Export team statistics
    */
-  async exportTeamStatistics(req: Request, res: Response): Promise<void> {
+  async exportTeamStatistics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, format } = req.query;
@@ -478,10 +439,7 @@ export class TeamStatisticsController {
       }
     } catch (error) {
       console.error('Error exporting team statistics:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to export team statistics'
-      });
+      next(error);
     }
   }
 

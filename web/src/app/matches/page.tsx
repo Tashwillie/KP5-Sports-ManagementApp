@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useMatches } from '@/hooks/useMatches';
@@ -44,29 +44,33 @@ function MatchesContent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
-  // Transform API matches to match the interface
-  const matches: MatchWithStats[] = apiMatches.map(match => ({
-    id: match.id,
-    homeTeam: match.homeTeam?.name || 'Unknown Team',
-    awayTeam: match.awayTeam?.name || 'Unknown Team',
-    homeScore: match.homeScore || 0,
-    awayScore: match.awayScore || 0,
-    date: new Date(match.startTime).toISOString().split('T')[0],
-    time: new Date(match.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    venue: match.location || 'Unknown Venue',
-    status: match.status === 'SCHEDULED' ? 'scheduled' : 
-            match.status === 'IN_PROGRESS' ? 'live' : 
-            match.status === 'COMPLETED' ? 'completed' : 'cancelled',
-    tournament: match.tournament?.name,
-    referee: match.referee?.displayName || 'Unassigned',
-    createdAt: match.createdAt,
-    updatedAt: match.updatedAt,
-    homeTeamId: match.homeTeamId,
-    awayTeamId: match.awayTeamId,
-    tournamentId: match.tournamentId,
-    spectators: 0, // Not available in API
-    weather: 'Unknown', // Not available in API
-  }));
+  // Transform API matches to match the interface (memoized to prevent infinite re-renders)
+  const matches: MatchWithStats[] = useMemo(() => {
+    if (!Array.isArray(apiMatches)) return [];
+    
+    return apiMatches.map(match => ({
+      id: match.id,
+      homeTeam: match.homeTeam?.name || 'Unknown Team',
+      awayTeam: match.awayTeam?.name || 'Unknown Team',
+      homeScore: match.homeScore || 0,
+      awayScore: match.awayScore || 0,
+      date: new Date(match.startTime).toISOString().split('T')[0],
+      time: new Date(match.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      venue: match.location || 'Unknown Venue',
+      status: match.status === 'SCHEDULED' ? 'scheduled' : 
+              match.status === 'IN_PROGRESS' ? 'live' : 
+              match.status === 'COMPLETED' ? 'completed' : 'cancelled',
+      tournament: match.tournament?.name,
+      referee: match.referee?.displayName || 'Unassigned',
+      createdAt: match.createdAt,
+      updatedAt: match.updatedAt,
+      homeTeamId: match.homeTeamId,
+      awayTeamId: match.awayTeamId,
+      tournamentId: match.tournamentId,
+      spectators: 0, // Not available in API
+      weather: 'Unknown', // Not available in API
+    }));
+  }, [apiMatches]);
 
   // Filter matches based on search and filters
   useEffect(() => {

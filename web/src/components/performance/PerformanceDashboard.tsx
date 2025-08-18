@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PerformanceTestingPanel } from '../calendar/PerformanceTestingPanel';
-import { AdvancedPerformanceMonitor } from '../calendar/AdvancedPerformanceMonitor';
-import { PerformanceOptimizedTouchService } from '../../lib/services/performanceOptimizedTouchService';
-import { ParameterValidationService, ValidationResult } from '../../lib/services/parameterValidationService';
-import { HapticFeedbackService, HapticConfig } from '../../lib/services/hapticFeedbackService';
-import { CrossDeviceLearningService, DeviceCluster } from '../../lib/services/crossDeviceLearningService';
-import { PerformanceTestingService, DeviceInfo } from '../../lib/services/performanceTestingService';
+import { PerformanceTestingPanel } from '@web/components/calendar/PerformanceTestingPanel';
+import { AdvancedPerformanceMonitor } from '@web/components/calendar/AdvancedPerformanceMonitor';
+import { PerformanceOptimizedTouchService } from '@web/lib/services/performanceOptimizedTouchService';
+import { ParameterValidationService, ValidationResult } from '@web/lib/services/parameterValidationService';
+import { HapticFeedbackService, HapticConfig } from '@web/lib/services/hapticFeedbackService';
+import { CrossDeviceLearningService, DeviceCluster } from '@web/lib/services/crossDeviceLearningService';
+import { PerformanceTestingService, DeviceInfo } from '@web/lib/services/performanceTestingService';
+import { PerformanceSettings } from '@web/components/performance/PerformanceSettings';
+import { PerformanceAnalytics } from '@web/components/performance/PerformanceAnalytics';
 
 interface PerformanceDashboardProps {
   onProfileChange?: (profile: any) => void;

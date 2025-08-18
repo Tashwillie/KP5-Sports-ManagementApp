@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import PlayerPerformanceService from '../services/playerPerformanceService';
 import PerformanceAnalyticsService from '../services/performanceAnalyticsService';
@@ -11,7 +11,7 @@ export class PlayerPerformanceController {
   /**
    * Get player performance metrics
    */
-  async getPlayerPerformance(req: Request, res: Response): Promise<void> {
+  async getPlayerPerformance(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
       const { season, startDate, endDate } = req.query;
@@ -49,18 +49,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting player performance:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get player performance',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get performance comparison for a player
    */
-  async getPlayerComparison(req: Request, res: Response): Promise<void> {
+  async getPlayerComparison(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
       const { comparisonType, season } = req.query;
@@ -98,18 +94,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting player comparison:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get player comparison',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get performance insights for a player
    */
-  async getPlayerInsights(req: Request, res: Response): Promise<void> {
+  async getPlayerInsights(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
       const { season } = req.query;
@@ -137,18 +129,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting player insights:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get player insights',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get team performance analytics
    */
-  async getTeamPerformanceAnalytics(req: Request, res: Response): Promise<void> {
+  async getTeamPerformanceAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const { season, startDate, endDate } = req.query;
@@ -180,18 +168,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting team performance analytics:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get team performance analytics',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get league/tournament performance analytics
    */
-  async getLeaguePerformanceAnalytics(req: Request, res: Response): Promise<void> {
+  async getLeaguePerformanceAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { season, startDate, endDate, minMatches } = req.query;
 
@@ -213,18 +197,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting league performance analytics:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get league performance analytics',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get performance report
    */
-  async getPerformanceReport(req: Request, res: Response): Promise<void> {
+  async getPerformanceReport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { season, startDate, endDate, teamId, minMatches } = req.query;
 
@@ -247,18 +227,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting performance report:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get performance report',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Compare multiple players
    */
-  async comparePlayers(req: Request, res: Response): Promise<void> {
+  async comparePlayers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerIds, metrics, season, startDate, endDate } = req.body;
 
@@ -301,18 +277,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error comparing players:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to compare players',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Export performance analytics
    */
-  async exportAnalytics(req: Request, res: Response): Promise<void> {
+  async exportAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { season, startDate, endDate, teamId, minMatches, format } = req.query;
 
@@ -352,18 +324,14 @@ export class PlayerPerformanceController {
       res.send(exportData);
     } catch (error) {
       console.error('Error exporting analytics:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to export analytics',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get player performance history
    */
-  async getPlayerPerformanceHistory(req: Request, res: Response): Promise<void> {
+  async getPlayerPerformanceHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
       const { limit = 20, offset = 0 } = req.query;
@@ -382,7 +350,7 @@ export class PlayerPerformanceController {
           match: {
             select: {
               id: true,
-              date: true,
+              startTime: true,
               homeTeam: { select: { name: true } },
               awayTeam: { select: { name: true } },
               homeScore: true,
@@ -391,7 +359,7 @@ export class PlayerPerformanceController {
           },
           team: { select: { name: true } }
         },
-        orderBy: { match: { date: 'desc' } },
+        orderBy: { match: { startTime: 'desc' } },
         take: parseInt(limit as string),
         skip: parseInt(offset as string)
       });
@@ -415,18 +383,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting player performance history:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get player performance history',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get player season statistics
    */
-  async getPlayerSeasonStats(req: Request, res: Response): Promise<void> {
+  async getPlayerSeasonStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
       const { season } = req.query;
@@ -461,18 +425,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting player season stats:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get player season stats',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Update player performance (triggered by match events)
    */
-  async updatePlayerPerformance(req: Request, res: Response): Promise<void> {
+  async updatePlayerPerformance(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId, matchId } = req.body;
 
@@ -493,18 +453,14 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error updating player performance:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to update player performance',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 
   /**
    * Get performance leaderboards
    */
-  async getPerformanceLeaderboards(req: Request, res: Response): Promise<void> {
+  async getPerformanceLeaderboards(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { season, teamId, position, minMatches = 3 } = req.query;
 
@@ -531,11 +487,7 @@ export class PlayerPerformanceController {
       });
     } catch (error) {
       console.error('Error getting performance leaderboards:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get performance leaderboards',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      next(error);
     }
   }
 }

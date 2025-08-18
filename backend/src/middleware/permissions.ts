@@ -34,7 +34,7 @@ export const getRolePermissions = (userRole: string) => {
         'analytics.view', 'analytics.export', 'analytics.configure', 'reports.view', 'reports.create', 'reports.export',
         'system.view', 'system.configure', 'system.backup', 'system.restore', 'system.logs', 'system.maintenance',
         'content.view', 'content.create', 'content.edit', 'content.delete', 'content.moderate', 'content.publish',
-        'messages.send', 'messages.view', 'messages.manage', 'notifications.send', 'notifications.manage',
+        'messages.send', 'messages.view', 'messages.manage', 'notifications.view', 'notifications.send', 'notifications.manage',
         'profile.view_own', 'profile.edit_own', 'profile.view_others', 'profile.edit_others'
       ]
     },
@@ -52,7 +52,7 @@ export const getRolePermissions = (userRole: string) => {
         'payments.view', 'payments.process', 'payments.refund', 'payments.manage_subscriptions', 'payments.view_reports',
         'analytics.view', 'analytics.export', 'reports.view', 'reports.create', 'reports.export',
         'content.view', 'content.create', 'content.edit', 'content.delete',
-        'messages.send', 'messages.view', 'messages.manage', 'notifications.send', 'notifications.manage',
+        'messages.send', 'messages.view', 'messages.manage', 'notifications.view', 'notifications.send', 'notifications.manage',
         'profile.view_own', 'profile.edit_own', 'profile.view_others', 'profile.edit_others'
       ]
     },
@@ -67,7 +67,7 @@ export const getRolePermissions = (userRole: string) => {
         'matches.view', 'matches.create', 'matches.edit', 'matches.manage_scores', 'matches.manage_events', 'matches.live_tracking',
         'analytics.view', 'reports.view',
         'content.view', 'content.create', 'content.edit',
-        'messages.send', 'messages.view', 'notifications.send',
+        'messages.send', 'messages.view', 'notifications.view', 'notifications.send',
         'profile.view_own', 'profile.edit_own', 'profile.view_others'
       ]
     },

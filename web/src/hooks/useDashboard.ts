@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import dashboardService, { DashboardData } from '@/lib/services/dashboardService';
 
 export interface UseDashboardReturn {
@@ -10,7 +10,7 @@ export interface UseDashboardReturn {
 }
 
 export const useDashboard = (): UseDashboardReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -399,6 +399,10 @@ class ApiClient {
   getToken(): string | null {
     return this.token;
   }
+
+  public publicRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, options);
+  }
 }
 
 // Create and export a singleton instance

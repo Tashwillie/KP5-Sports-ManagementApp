@@ -1,7 +1,33 @@
 import { logger } from '../utils/logger';
 import prisma from '../config/database';
 
-export interface RoomParticipant {
+interface RoomSettings {
+  allowChat: boolean;
+  allowSpectators: boolean;
+  maxSpectators: number;
+  requireApproval: boolean;
+  autoKickInactive: boolean;
+  inactivityTimeout: number;
+  enableTypingIndicators: boolean;
+  enableReadReceipts: boolean;
+}
+
+interface RoomMetadata {
+  weather?: string;
+  pitchCondition?: string;
+  expectedDuration?: number;
+}
+
+interface RoomAnalytics {
+  totalParticipants: number;
+  activeParticipants: number;
+  messagesSent: number;
+  eventsRecorded: number;
+  uptime: number;
+  lastActivity: Date;
+}
+
+interface RoomParticipant {
   userId: string;
   socketId: string;
   userRole: string;
@@ -13,504 +39,252 @@ export interface RoomParticipant {
   permissions: string[];
   isTyping: boolean;
   isOnline: boolean;
+  category: 'PARTICIPANT' | 'SPECTATOR' | 'REFEREE' | 'COACH' | 'ADMIN';
 }
 
-export interface RoomSettings {
-  allowChat: boolean;
-  allowSpectators: boolean;
-  maxSpectators: number;
-  requireApproval: boolean;
-  autoKickInactive: boolean;
-  inactivityTimeout: number; // minutes
-  enableTypingIndicators: boolean;
-  enableReadReceipts: boolean;
-}
-
-export interface RoomMetadata {
-  matchTitle: string;
-  homeTeamName: string;
-  awayTeamName: string;
-  tournamentName?: string;
-  location?: string;
-  startTime?: Date;
-  expectedDuration: number; // minutes
-  weather?: string;
-  pitchCondition?: string;
-}
-
-export interface RoomAnalytics {
-  totalParticipants: number;
-  activeParticipants: number;
-  messagesSent: number;
-  eventsRecorded: number;
-  averageResponseTime: number;
-  peakConcurrency: number;
-  roomUptime: number; // minutes
-}
-
-export interface MatchRoom {
+interface MatchRoom {
   matchId: string;
   roomName: string;
   participants: Map<string, RoomParticipant>;
-  spectators: Map<string, RoomParticipant>;
-  referees: Map<string, RoomParticipant>;
-  coaches: Map<string, RoomParticipant>;
-  admins: Map<string, RoomParticipant>;
+  settings: RoomSettings;
+  metadata: RoomMetadata;
+  analytics: RoomAnalytics;
   isActive: boolean;
   createdAt: Date;
   lastActivity: Date;
-  settings: RoomSettings;
-  metadata: RoomMetadata;
 }
 
 export class MatchRoomManager {
   private matchRooms: Map<string, MatchRoom> = new Map();
   private roomAnalytics: Map<string, RoomAnalytics> = new Map();
-  private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    this.startCleanupInterval();
     logger.info('MatchRoomManager initialized');
+    this.startCleanupInterval();
   }
 
   // Create a new match room
-  async createMatchRoom(matchId: string): Promise<MatchRoom> {
-    try {
-      // Fetch match information from database
-      const match = await prisma.match.findFirst({
-        where: { id: matchId },
-        include: {
-          homeTeam: { select: { name: true } },
-          awayTeam: { select: { name: true } },
-          tournamentMatches: { include: { tournament: { select: { name: true } } } }
-        }
-      });
-      
-      if (!match) {
-        throw new Error(`Match ${matchId} not found`);
-      }
-      
-      const room: MatchRoom = {
-        matchId,
-        roomName: `match:${matchId}`,
-        participants: new Map(),
-        spectators: new Map(),
-        referees: new Map(),
-        coaches: new Map(),
-        admins: new Map(),
-        isActive: true,
-        createdAt: new Date(),
-        lastActivity: new Date(),
-        settings: this.getDefaultRoomSettings(),
-        metadata: {
-          matchTitle: match.title || 'Match',
-          homeTeamName: match.homeTeam?.name || 'Home Team',
-          awayTeamName: match.awayTeam?.name || 'Away Team',
-          tournamentName: match.tournamentMatches?.[0]?.tournament?.name,
-          location: match.location,
-          startTime: match.startTime,
-          expectedDuration: 90,
-          weather: 'Unknown',
-          pitchCondition: 'Unknown'
-        }
-      };
-      
-      // Initialize room analytics
-      this.roomAnalytics.set(room.roomName, this.getDefaultAnalytics());
-      
-      this.matchRooms.set(matchId, room);
-      logger.info(`Created match room: ${matchId}`);
-      
-      return room;
-      
-    } catch (error) {
-      logger.error('Error creating match room:', error);
-      throw error;
-    }
+  public async createRoom(matchId: string, creatorId: string, options?: { maxParticipants?: number; settings?: Partial<RoomSettings> }): Promise<MatchRoom> {
+    const room: MatchRoom = {
+      matchId,
+      roomName: `match-${matchId}`,
+      participants: new Map(),
+      settings: {
+        ...this.getDefaultRoomSettings(),
+        ...options?.settings,
+      },
+      metadata: this.getDefaultMetadata(),
+      analytics: this.getDefaultAnalytics(),
+      isActive: true,
+      createdAt: new Date(),
+      lastActivity: new Date(),
+    };
+
+    this.matchRooms.set(matchId, room);
+    logger.info(`Created match room for match ${matchId}`);
+    return room;
   }
 
-  // Get or create match room
-  async getOrCreateMatchRoom(matchId: string): Promise<MatchRoom> {
-    let matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) {
-      matchRoom = await this.createMatchRoom(matchId);
-    }
-    return matchRoom;
-  }
-
-  // Add participant to room
-  addParticipant(matchId: string, participant: RoomParticipant, role: string = 'PARTICIPANT'): boolean {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) {
-      return false;
-    }
-
-    // Check spectator limits
-    if (role === 'SPECTATOR' && !this.canAddSpectator(matchRoom)) {
-      return false;
-    }
-
-    // Add to appropriate category
-    switch (role.toUpperCase()) {
-      case 'REFEREE':
-        matchRoom.referees.set(participant.userId, participant);
-        break;
-      case 'COACH':
-        matchRoom.coaches.set(participant.userId, participant);
-        break;
-      case 'ADMIN':
-        matchRoom.admins.set(participant.userId, participant);
-        break;
-      case 'SPECTATOR':
-        matchRoom.spectators.set(participant.userId, participant);
-        break;
-      default:
-        matchRoom.participants.set(participant.userId, participant);
-    }
-
-    // Update analytics
-    this.updateRoomAnalytics(matchId, 'totalParticipants');
-    matchRoom.lastActivity = new Date();
-
-    logger.info(`Added participant ${participant.userId} to room ${matchId} as ${role}`);
-    return true;
-  }
-
-  // Remove participant from room
-  removeParticipant(matchId: string, userId: string): boolean {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) {
-      return false;
-    }
-
-    // Remove from all categories
-    const removed = matchRoom.referees.delete(userId) ||
-                   matchRoom.coaches.delete(userId) ||
-                   matchRoom.admins.delete(userId) ||
-                   matchRoom.spectators.delete(userId) ||
-                   matchRoom.participants.delete(userId);
-
-    if (removed) {
-      // Update analytics
-      this.updateRoomAnalytics(matchId, 'totalParticipants');
-      matchRoom.lastActivity = new Date();
-      
-      // Clean up if room is empty
-      if (this.shouldCleanupRoom(matchRoom)) {
-        this.cleanupMatchRoom(matchId);
-      }
-    }
-
-    return removed;
-  }
-
-  // Find participant in room
-  findParticipant(matchId: string, userId: string): RoomParticipant | null {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return null;
-
-    return matchRoom.referees.get(userId) ||
-           matchRoom.coaches.get(userId) ||
-           matchRoom.admins.get(userId) ||
-           matchRoom.spectators.get(userId) ||
-           matchRoom.participants.get(userId) ||
-           null;
-  }
-
-  // Update participant activity
-  updateParticipantActivity(matchId: string, userId: string): void {
-    const participant = this.findParticipant(matchId, userId);
-    if (participant) {
-      participant.lastActivity = new Date();
-      participant.isOnline = true;
-    }
-  }
-
-  // Update participant typing status
-  updateParticipantTyping(matchId: string, userId: string, isTyping: boolean): void {
-    const participant = this.findParticipant(matchId, userId);
-    if (participant) {
-      participant.isTyping = isTyping;
-      participant.lastActivity = new Date();
-    }
-  }
-
-  // Check if user has admin permissions
-  hasAdminPermissions(userId: string, matchId: string): boolean {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return false;
-
-    return matchRoom.admins.has(userId) || 
-           matchRoom.referees.has(userId);
-  }
-
-  // Check if user can send messages
-  canUserSendMessage(userId: string, matchId: string): boolean {
-    const participant = this.findParticipant(matchId, userId);
-    if (!participant) return false;
-
-    return !participant.permissions.includes('MUTED');
-  }
-
-  // Check if can add spectator
-  private canAddSpectator(matchRoom: MatchRoom): boolean {
-    if (!matchRoom.settings.allowSpectators) return false;
-    
-    const currentSpectators = matchRoom.spectators.size;
-    return currentSpectators < matchRoom.settings.maxSpectators;
+  // Get a specific room
+  public async getRoom(roomId: string): Promise<MatchRoom | null> {
+    return this.matchRooms.get(roomId) || null;
   }
 
   // Update room settings
-  updateRoomSettings(matchId: string, settings: Partial<RoomSettings>): boolean {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return false;
+  public async updateRoom(roomId: string, userId: string, updateData: Partial<RoomSettings>): Promise<MatchRoom | null> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return null;
 
-    Object.assign(matchRoom.settings, settings);
-    matchRoom.lastActivity = new Date();
+    // Check if user has admin permissions
+    const participant = room.participants.get(userId);
+    if (!participant || !participant.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to update room');
+    }
+
+    room.settings = { ...room.settings, ...updateData };
+    room.lastActivity = new Date();
     
-    logger.info(`Updated room settings for match ${matchId}`);
-    return true;
+    logger.info(`Updated room ${roomId} by user ${userId}`);
+    return room;
   }
 
-  // Get room settings
-  getRoomSettings(matchId: string): RoomSettings | null {
-    const matchRoom = this.matchRooms.get(matchId);
-    return matchRoom?.settings || null;
+  // Delete a room
+  public async deleteRoom(roomId: string, userId: string): Promise<void> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return;
+
+    // Check if user has admin permissions
+    const participant = room.participants.get(userId);
+    if (!participant || !participant.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to delete room');
+    }
+
+    this.matchRooms.delete(roomId);
+    logger.info(`Deleted room ${roomId} by user ${userId}`);
   }
 
-  // Get room metadata
-  getRoomMetadata(matchId: string): RoomMetadata | null {
-    const matchRoom = this.matchRooms.get(matchId);
-    return matchRoom?.metadata || null;
+  // Add participant to room
+  public async addParticipant(roomId: string, userId: string, role: string, permissions: string[] = [], adminId: string): Promise<RoomParticipant> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    // Check if admin has permissions
+    const admin = room.participants.get(adminId);
+    if (!admin || !admin.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to add participant');
+    }
+
+    const participant: RoomParticipant = {
+      userId,
+      socketId: '',
+      userRole: role,
+      userEmail: '',
+      displayName: '',
+      joinedAt: new Date(),
+      lastActivity: new Date(),
+      permissions,
+      isTyping: false,
+      isOnline: true,
+      category: 'PARTICIPANT',
+    };
+
+    room.participants.set(userId, participant);
+    room.lastActivity = new Date();
+    this.updateRoomAnalytics(roomId, 'totalParticipants');
+
+    logger.info(`Added participant ${userId} to room ${roomId}`);
+    return participant;
+  }
+
+  // Update participant
+  public async updateParticipant(roomId: string, userId: string, updateData: Partial<RoomParticipant>, adminId: string): Promise<RoomParticipant | null> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return null;
+
+    // Check if admin has permissions
+    const admin = room.participants.get(adminId);
+    if (!admin || !admin.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to update participant');
+    }
+
+    const participant = room.participants.get(userId);
+    if (!participant) return null;
+
+    Object.assign(participant, updateData);
+    participant.lastActivity = new Date();
+    room.lastActivity = new Date();
+
+    logger.info(`Updated participant ${userId} in room ${roomId}`);
+    return participant;
+  }
+
+  // Remove participant from room
+  public async removeParticipant(roomId: string, userId: string, adminId: string): Promise<void> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return;
+
+    // Check if admin has permissions
+    const admin = room.participants.get(adminId);
+    if (!admin || !admin.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to remove participant');
+    }
+
+    room.participants.delete(userId);
+    room.lastActivity = new Date();
+    this.updateRoomAnalytics(roomId, 'totalParticipants');
+
+    logger.info(`Removed participant ${userId} from room ${roomId}`);
+  }
+
+  // Start room
+  public async startRoom(roomId: string, userId: string): Promise<MatchRoom | null> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return null;
+
+    // Check if user has admin permissions
+    const participant = room.participants.get(userId);
+    if (!participant || !participant.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to start room');
+    }
+
+    room.isActive = true;
+    room.lastActivity = new Date();
+    
+    logger.info(`Started room ${roomId} by user ${userId}`);
+    return room;
+  }
+
+  // Pause room
+  public async pauseRoom(roomId: string, userId: string): Promise<MatchRoom | null> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return null;
+
+    // Check if user has admin permissions
+    const participant = room.participants.get(userId);
+    if (!participant || !participant.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to pause room');
+    }
+
+    room.isActive = false;
+    room.lastActivity = new Date();
+    
+    logger.info(`Paused room ${roomId} by user ${userId}`);
+    return room;
+  }
+
+  // End room
+  public async endRoom(roomId: string, userId: string): Promise<MatchRoom | null> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return null;
+
+    // Check if user has admin permissions
+    const participant = room.participants.get(userId);
+    if (!participant || !participant.permissions.includes('ADMIN')) {
+      throw new Error('Insufficient permissions to end room');
+    }
+
+    room.isActive = false;
+    room.lastActivity = new Date();
+    
+    logger.info(`Ended room ${roomId} by user ${userId}`);
+    return room;
   }
 
   // Get room analytics
-  getRoomAnalytics(matchId: string): RoomAnalytics | null {
-    const roomName = `match:${matchId}`;
-    return this.roomAnalytics.get(roomName) || null;
-  }
-
-  // Update room analytics
-  updateRoomAnalytics(matchId: string, metric: keyof RoomAnalytics): void {
-    const roomName = `match:${matchId}`;
-    const analytics = this.roomAnalytics.get(roomName);
-    
-    if (analytics) {
-      switch (metric) {
-        case 'totalParticipants':
-          analytics.totalParticipants = this.getParticipantCount(matchId);
-          break;
-        case 'activeParticipants':
-          analytics.activeParticipants = this.getActiveParticipantCount(matchId);
-          break;
-        case 'messagesSent':
-          analytics.messagesSent++;
-          break;
-        case 'eventsRecorded':
-          analytics.eventsRecorded++;
-          break;
-      }
-      
-      analytics.roomUptime = this.calculateRoomUptime(matchId);
-      this.roomAnalytics.set(roomName, analytics);
-    }
-  }
-
-  // Get participant count
-  getParticipantCount(matchId: string): number {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return 0;
-
-    return matchRoom.participants.size +
-           matchRoom.spectators.size +
-           matchRoom.referees.size +
-           matchRoom.coaches.size +
-           matchRoom.admins.size;
-  }
-
-  // Get active participant count
-  getActiveParticipantCount(matchId: string): number {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return 0;
-
-    let activeCount = 0;
-    const allParticipants = [
-      ...matchRoom.participants.values(),
-      ...matchRoom.spectators.values(),
-      ...matchRoom.referees.values(),
-      ...matchRoom.coaches.values(),
-      ...matchRoom.admins.values()
-    ];
-
-    for (const participant of allParticipants) {
-      if (participant.isOnline && this.isParticipantActive(participant)) {
-        activeCount++;
-      }
-    }
-
-    return activeCount;
-  }
-
-  // Check if participant is active
-  private isParticipantActive(participant: RoomParticipant): boolean {
-    const now = new Date();
-    const lastActivity = new Date(participant.lastActivity);
-    const minutesSinceLastActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
-    
-    return minutesSinceLastActivity < 5; // Consider active if last activity was within 5 minutes
-  }
-
-  // Calculate room uptime
-  private calculateRoomUptime(matchId: string): number {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return 0;
-
-    const now = new Date();
-    const createdAt = new Date(matchRoom.createdAt);
-    const uptimeMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
-    
-    return Math.floor(uptimeMinutes);
-  }
-
-  // Get all participants in a room
-  getAllParticipants(matchId: string): any[] {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return [];
-
-    const allParticipants = [
-      ...Array.from(matchRoom.participants.values()).map(p => ({ ...p, category: 'PARTICIPANT' })),
-      ...Array.from(matchRoom.spectators.values()).map(p => ({ ...p, category: 'SPECTATOR' })),
-      ...Array.from(matchRoom.referees.values()).map(p => ({ ...p, category: 'REFEREE' })),
-      ...Array.from(matchRoom.coaches.values()).map(p => ({ ...p, category: 'COACH' })),
-      ...Array.from(matchRoom.admins.values()).map(p => ({ ...p, category: 'ADMIN' }))
-    ];
-
-    return allParticipants.map(p => ({
-      userId: p.userId,
-      userEmail: p.userEmail,
-      userRole: p.userRole,
-      displayName: p.displayName,
-      category: p.category,
-      teamId: p.teamId,
-      joinedAt: p.joinedAt,
-      lastActivity: p.lastActivity,
-      isTyping: p.isTyping,
-      isOnline: p.isOnline,
-      permissions: p.permissions
-    }));
-  }
-
-  // Get room info
-  getRoomInfo(matchId: string): any {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) {
-      return {
-        matchId,
-        exists: false,
-        userCount: 0,
-        users: []
-      };
-    }
-
-    const allParticipants = this.getAllParticipants(matchId);
+  public async getRoomAnalytics(roomId: string): Promise<RoomAnalytics | null> {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return null;
 
     return {
-      matchId,
-      exists: true,
-      roomName: matchRoom.roomName,
-      userCount: allParticipants.length,
-      users: allParticipants.map(p => ({
-        userId: p.userId,
-        role: p.userRole,
-        email: p.userEmail,
-        category: p.category,
-        teamId: p.teamId,
-        isOnline: p.isOnline,
-        isTyping: p.isTyping
-      })),
-      settings: matchRoom.settings,
-      metadata: matchRoom.metadata,
-      analytics: this.getRoomAnalytics(matchId)
+      ...room.analytics,
+      totalParticipants: room.participants.size,
+      activeParticipants: Array.from(room.participants.values()).filter(p => this.isParticipantActive(p)).length,
+      uptime: this.calculateRoomUptime(roomId),
     };
   }
 
-  // Check if room should be cleaned up
-  private shouldCleanupRoom(matchRoom: MatchRoom): boolean {
+  // Get all rooms
+  public async getAllRooms(): Promise<MatchRoom[]> {
+    return Array.from(this.matchRooms.values());
+  }
+
+  // Private helper methods
+  private isParticipantActive(participant: RoomParticipant): boolean {
     const now = new Date();
-    const lastActivity = new Date(matchRoom.lastActivity);
-    const minutesSinceLastActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
+    const inactiveThreshold = 5 * 60 * 1000; // 5 minutes
+    return (now.getTime() - participant.lastActivity.getTime()) < inactiveThreshold;
+  }
+
+  private calculateRoomUptime(matchId: string): number {
+    const room = this.matchRooms.get(matchId);
+    if (!room) return 0;
     
-    // Clean up if no activity for 1 hour and no participants
-    return minutesSinceLastActivity > 60 && 
-           matchRoom.participants.size === 0 &&
-           matchRoom.spectators.size === 0 &&
-           matchRoom.referees.size === 0 &&
-           matchRoom.coaches.size === 0 &&
-           matchRoom.admins.size === 0;
-  }
-
-  // Cleanup match room
-  private cleanupMatchRoom(matchId: string): void {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return;
-
-    // Remove room analytics
-    this.roomAnalytics.delete(matchRoom.roomName);
-
-    // Remove match room
-    this.matchRooms.delete(matchId);
-
-    logger.info(`Cleaned up match room: ${matchId}`);
-  }
-
-  // Start cleanup interval
-  private startCleanupInterval(): void {
-    this.cleanupInterval = setInterval(() => {
-      this.performCleanup();
-    }, 5 * 60 * 1000); // Every 5 minutes
-  }
-
-  // Perform cleanup
-  private performCleanup(): void {
-    for (const [matchId, matchRoom] of this.matchRooms.entries()) {
-      // Check for inactive participants
-      if (matchRoom.settings.autoKickInactive) {
-        this.cleanupInactiveParticipants(matchRoom);
-      }
-      
-      // Check if room should be cleaned up
-      if (this.shouldCleanupRoom(matchRoom)) {
-        this.cleanupMatchRoom(matchId);
-      }
-    }
-    
-    logger.info('Match room cleanup completed');
-  }
-
-  // Cleanup inactive participants
-  private cleanupInactiveParticipants(matchRoom: MatchRoom): void {
     const now = new Date();
-    const timeoutMinutes = matchRoom.settings.inactivityTimeout;
-    
-    const allParticipants = [
-      ...Array.from(matchRoom.participants.entries()),
-      ...Array.from(matchRoom.spectators.entries()),
-      ...Array.from(matchRoom.coaches.entries())
-    ];
-
-    for (const [userId, participant] of allParticipants) {
-      const lastActivity = new Date(participant.lastActivity);
-      const minutesSinceLastActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
-      
-      if (minutesSinceLastActivity > timeoutMinutes) {
-        // Mark as offline
-        participant.isOnline = false;
-        participant.lastActivity = new Date();
-      }
-    }
+    return Math.floor((now.getTime() - room.createdAt.getTime()) / 1000);
   }
 
-  // Get default room settings
   private getDefaultRoomSettings(): RoomSettings {
     return {
       allowChat: true,
@@ -518,50 +292,80 @@ export class MatchRoomManager {
       maxSpectators: 100,
       requireApproval: false,
       autoKickInactive: true,
-      inactivityTimeout: 30,
+      inactivityTimeout: 10,
       enableTypingIndicators: true,
-      enableReadReceipts: false
+      enableReadReceipts: true,
     };
   }
 
-  // Get default analytics
+  private getDefaultMetadata(): RoomMetadata {
+    return {
+      weather: 'Unknown',
+      pitchCondition: 'Unknown',
+      expectedDuration: 90,
+    };
+  }
+
   private getDefaultAnalytics(): RoomAnalytics {
     return {
       totalParticipants: 0,
       activeParticipants: 0,
       messagesSent: 0,
       eventsRecorded: 0,
-      averageResponseTime: 0,
-      peakConcurrency: 0,
-      roomUptime: 0
+      uptime: 0,
+      lastActivity: new Date(),
     };
   }
 
-  // Get all match rooms
-  getAllMatchRooms(): Map<string, MatchRoom> {
-    return new Map(this.matchRooms);
-  }
+  private updateRoomAnalytics(roomId: string, metric: keyof RoomAnalytics): void {
+    const room = this.matchRooms.get(roomId);
+    if (!room) return;
 
-  // Get match room
-  getMatchRoom(matchId: string): MatchRoom | undefined {
-    return this.matchRooms.get(matchId);
-  }
-
-  // Check if room exists
-  roomExists(matchId: string): boolean {
-    return this.matchRooms.has(matchId);
-  }
-
-  // Get room count
-  getRoomCount(): number {
-    return this.matchRooms.size;
-  }
-
-  // Cleanup on shutdown
-  cleanup(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
+    switch (metric) {
+      case 'totalParticipants':
+        room.analytics.totalParticipants = room.participants.size;
+        break;
+      case 'activeParticipants':
+        room.analytics.activeParticipants = Array.from(room.participants.values()).filter(p => this.isParticipantActive(p)).length;
+        break;
+      case 'messagesSent':
+        room.analytics.messagesSent++;
+        break;
+      case 'eventsRecorded':
+        room.analytics.eventsRecorded++;
+        break;
     }
+    
+    room.analytics.lastActivity = new Date();
+  }
+
+  private startCleanupInterval(): void {
+    setInterval(() => {
+      this.performCleanup();
+    }, 60000); // Clean up every minute
+  }
+
+  private performCleanup(): void {
+    for (const [matchId, room] of this.matchRooms.entries()) {
+      if (this.shouldCleanupRoom(room)) {
+        this.cleanupMatchRoom(matchId);
+      }
+    }
+  }
+
+  private shouldCleanupRoom(room: MatchRoom): boolean {
+    const now = new Date();
+    const cleanupThreshold = 30 * 60 * 1000; // 30 minutes
+    return !room.isActive && (now.getTime() - room.lastActivity.getTime()) > cleanupThreshold;
+  }
+
+  private cleanupMatchRoom(matchId: string): void {
+    this.matchRooms.delete(matchId);
+    logger.info(`Cleaned up inactive match room: ${matchId}`);
+  }
+
+  // Cleanup method for graceful shutdown
+  public cleanup(): void {
     this.matchRooms.clear();
     this.roomAnalytics.clear();
     logger.info('MatchRoomManager cleaned up');

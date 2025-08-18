@@ -1,10 +1,10 @@
 import { useRealTimeContext } from '@kp5-academy/shared';
 import { useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export const useRealTime = () => {
   const realTime = useRealTimeContext();
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
 
   // Auto-connect when user is authenticated
   useEffect(() => {

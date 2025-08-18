@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 
 // Get all messages with pagination and filtering
-export const getMessages = async (req: Request, res: Response): Promise<void> => {
+export const getMessages = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -115,15 +115,12 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     logger.error('Error fetching messages:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch messages',
-    });
+    next(error);
   }
 };
 
 // Get single message by ID
-export const getMessage = async (req: Request, res: Response): Promise<void> => {
+export const getMessage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -211,15 +208,12 @@ export const getMessage = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Error fetching message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch message',
-    });
+    next(error);
   }
 };
 
 // Create new message
-export const createMessage = async (req: Request, res: Response): Promise<void> => {
+export const createMessage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       content,
@@ -389,15 +383,12 @@ export const createMessage = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error creating message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send message',
-    });
+    next(error);
   }
 };
 
 // Update message
-export const updateMessage = async (req: Request, res: Response): Promise<void> => {
+export const updateMessage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -493,15 +484,12 @@ export const updateMessage = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error updating message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update message',
-    });
+    next(error);
   }
 };
 
 // Delete message
-export const deleteMessage = async (req: Request, res: Response): Promise<void> => {
+export const deleteMessage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -546,15 +534,12 @@ export const deleteMessage = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error deleting message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete message',
-    });
+    next(error);
   }
 };
 
 // Get conversations list
-export const getConversations = async (req: Request, res: Response): Promise<void> => {
+export const getConversations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).user.id;
 
@@ -715,15 +700,12 @@ export const getConversations = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error fetching conversations:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch conversations',
-    });
+    next(error);
   }
 };
 
 // Get conversation with specific user
-export const getConversation = async (req: Request, res: Response): Promise<void> => {
+export const getConversation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { recipientId } = req.params;
     if (!recipientId) {
@@ -815,15 +797,12 @@ export const getConversation = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     logger.error('Error fetching conversation:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch conversation',
-    });
+    next(error);
   }
 };
 
 // Mark message as read
-export const markAsRead = async (req: Request, res: Response): Promise<void> => {
+export const markAsRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -851,15 +830,12 @@ export const markAsRead = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Error marking message as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark message as read',
-    });
+    next(error);
   }
 };
 
 // Mark all messages as read
-export const markAllAsRead = async (req: Request, res: Response): Promise<void> => {
+export const markAllAsRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = (req as any).user.id;
     const { recipientId, teamId, clubId } = req.body;
@@ -893,9 +869,6 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error marking all messages as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark messages as read',
-    });
+    next(error);
   }
 };

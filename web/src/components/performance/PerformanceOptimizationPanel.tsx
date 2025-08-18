@@ -21,10 +21,10 @@ import {
   Clock,
   Gauge
 } from 'lucide-react';
-import { PerformanceOptimizedTouchService } from '../../lib/services/performanceOptimizedTouchService';
-import { AdvancedPerformanceTuningService } from '../../lib/services/advancedPerformanceTuningService';
-import { CrossDeviceLearningService } from '../../lib/services/crossDeviceLearningService';
-import { PerformanceTestingService } from '../../lib/services/performanceTestingService';
+import { PerformanceOptimizedTouchService } from '@web/lib/services/performanceOptimizedTouchService';
+import { AdvancedPerformanceTuningService } from '@web/lib/services/advancedPerformanceTuningService';
+import { CrossDeviceLearningService } from '@web/lib/services/crossDeviceLearningService';
+import { PerformanceTestingService } from '@web/lib/services/performanceTestingService';
 
 interface PerformanceOptimizationPanelProps {
   onOptimizationComplete?: (result: any) => void;

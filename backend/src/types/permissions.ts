@@ -55,6 +55,7 @@ export type Permission =
   | 'matches.create'
   | 'matches.edit'
   | 'matches.delete'
+  | 'matches.manage'
   | 'matches.manage_scores'
   | 'matches.manage_events'
   | 'matches.live_tracking'
@@ -94,6 +95,7 @@ export type Permission =
   | 'messages.send'
   | 'messages.view'
   | 'messages.manage'
+  | 'notifications.view'
   | 'notifications.send'
   | 'notifications.manage'
   

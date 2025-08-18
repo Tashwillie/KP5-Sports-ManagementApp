@@ -7,17 +7,17 @@ export default function HomePage() {
       <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
         <div className="container">
           {/* Logo */}
-          <div className="navbar-brand d-flex align-items-center">
-            <h1 className="mb-0">KP5 Academy</h1>
+          <div className="navbar-brand d-flex align-items-center me-4">
+            <img
+              src="/images/logo.png"
+              alt="KP5 Academy Logo"
+              style={{ height: '56px', width: 'auto', maxWidth: '180px', objectFit: 'contain', display: 'block' }}
+            />
           </div>
 
           {/* Navigation */}
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav me-auto">
+          <div className="collapse navbar-collapse justify-content-center" id="navbarNav">
+            <ul className="navbar-nav mx-auto">
               <li className="nav-item">
                 <a className="nav-link" href="/dashboard">Dashboard</a>
               </li>
@@ -31,12 +31,12 @@ export default function HomePage() {
                 <a className="nav-link" href="/events">Calendar</a>
               </li>
             </ul>
+          </div>
 
-            {/* Auth Buttons */}
-            <div className="d-flex gap-2">
-              <a href="/auth/signin" className="btn btn-outline-primary">Sign In</a>
-              <a href="/auth/signup" className="btn btn-primary">Sign Up</a>
-            </div>
+          {/* Auth Buttons */}
+          <div className="d-flex gap-2 ms-auto">
+            <a href="/auth/signin" className="btn btn-outline-primary">Sign In</a>
+            <a href="/auth/signup" className="btn btn-primary">Sign Up</a>
           </div>
         </div>
       </nav>

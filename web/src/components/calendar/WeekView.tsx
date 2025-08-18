@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { DraggableEvent } from './DraggableEvent';
 import { DropZone } from './DropZone';
-import { Event } from '../../../../shared/src/types';
-import { CalendarService } from '../../lib/services/calendarService';
-import { EventService } from '../../lib/services/eventService';
+import { Event } from '@shared/types';
+import { CalendarService } from '@web/lib/services/calendarService';
+import { EventService } from '@web/lib/services/eventService';
 
 interface WeekViewProps {
   events: Event[];

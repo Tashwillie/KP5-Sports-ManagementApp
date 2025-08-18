@@ -1,4 +1,4 @@
-import { apiService, ApiResponse } from './apiService';
+import { apiService, ApiResponse } from '@web/lib/services/apiService';
 
 // Match interfaces
 export interface Match {

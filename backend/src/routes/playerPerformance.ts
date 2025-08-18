@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import PlayerPerformanceController from '../controllers/playerPerformance';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
 
 const router = Router();
 const playerPerformanceController = new PlayerPerformanceController();
 
 // Apply authentication middleware to all routes
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Player Performance Routes
 router.get('/player/:playerId', requirePermission('analytics.view'), playerPerformanceController.getPlayerPerformance);
