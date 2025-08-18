@@ -5,10 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Player, Team, TeamMember, PlayerPosition } from '../../../../shared/src/types';
+import { Player, Team, TeamMember, PlayerPosition } from '@shared/types';
 import { TeamService } from '../../lib/services/teamService';
 import { PlayerService } from '../../lib/services/playerService';
-import { useAuth } from '../providers/AuthProvider';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 interface RosterManagementProps {
   team: Team;
@@ -16,7 +16,7 @@ interface RosterManagementProps {
 }
 
 export function RosterManagement({ team, onUpdate }: RosterManagementProps) {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);

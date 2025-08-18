@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import eventsService, { EventWithRelations } from '@/lib/services/eventsService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface UseEventsReturn {
   events: EventWithRelations[];
@@ -10,7 +10,7 @@ export interface UseEventsReturn {
 }
 
 export const useEvents = (): UseEventsReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [events, setEvents] = useState<EventWithRelations[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

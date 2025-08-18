@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import registrationsService, { RegistrationApplication, RegistrationFormTemplate } from '@/lib/services/registrationsService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export const useRegistrations = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [applications, setApplications] = useState<RegistrationApplication[]>([]);
   const [forms, setForms] = useState<RegistrationFormTemplate[]>([]);
   const [loading, setLoading] = useState(false);

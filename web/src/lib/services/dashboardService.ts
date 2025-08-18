@@ -1,4 +1,4 @@
-import apiClient from '@/lib/apiClient';
+import enhancedApiClient from '@/lib/enhancedApiClient';
 
 export interface DashboardStats {
   totalUsers: number;
@@ -41,129 +41,71 @@ class DashboardService {
   async getDashboardData(): Promise<DashboardData> {
     try {
       console.log('🔍 Fetching dashboard data...');
-      console.log('🔐 Authentication status:', apiClient.isAuthenticated());
-      console.log('🔑 Token:', apiClient.getToken() ? 'Present' : 'Missing');
       
-      // Check if we have a token before making API calls
-      if (!apiClient.isAuthenticated()) {
-        throw new Error('User not authenticated. Please log in again.');
+      // Use the dashboard stats endpoint for aggregated data
+      console.log('📡 Fetching dashboard stats...');
+      const dashboardResponse = await enhancedApiClient.get<{
+        stats: DashboardStats;
+        recentActivities: any[];
+        upcomingMatches: any[];
+      }>('/dashboard/stats');
+
+      console.log('📊 Dashboard Response:', dashboardResponse);
+
+      // Check if response succeeded
+      if (!dashboardResponse.success || !dashboardResponse.data) {
+        throw new Error('Dashboard API failed');
       }
 
-      // Use the correct apiClient methods to fetch data
-      console.log('📡 Making API calls...');
-      const [usersResponse, teamsResponse, matchesResponse, clubsResponse, tournamentsResponse] = await Promise.all([
-        apiClient.getUsers(),
-        apiClient.getTeams(),
-        apiClient.getMatches(),
-        apiClient.getClubs(),
-        apiClient.getTournaments()
-      ]);
+      // Extract data from response
+      const { stats, recentActivities, upcomingMatches } = dashboardResponse.data;
 
-      console.log('📊 API Responses:', {
-        users: usersResponse,
-        teams: teamsResponse,
-        matches: matchesResponse,
-        clubs: clubsResponse,
-        tournaments: tournamentsResponse
-      });
+      console.log('📈 Dashboard stats:', stats);
+      console.log('📊 Recent activities:', recentActivities?.length || 0);
+      console.log('🗓️ Upcoming matches:', upcomingMatches?.length || 0);
 
-      // Check if any response failed
-      if (!usersResponse.success) {
-        throw new Error('Users API failed');
-      }
-      if (!teamsResponse.success) {
-        throw new Error('Teams API failed');
-      }
-      if (!matchesResponse.success) {
-        throw new Error('Matches API failed');
-      }
-      if (!clubsResponse.success) {
-        throw new Error('Clubs API failed');
-      }
-      if (!tournamentsResponse.success) {
-        throw new Error('Tournaments API failed');
-      }
-
-      // Extract data from responses
-      const users = usersResponse.data.users || [];
-      const teams = teamsResponse.data.teams || [];
-      const matches = matchesResponse.data.matches || [];
-      const clubs = clubsResponse.data.clubs || [];
-      const tournaments = tournamentsResponse.data.tournaments || [];
-
-      console.log('📈 Extracted data:', {
-        usersCount: users.length,
-        teamsCount: teams.length,
-        matchesCount: matches.length,
-        clubsCount: clubs.length,
-        tournamentsCount: tournaments.length
-      });
-
-      // Calculate stats
-      const stats: DashboardStats = {
-        totalUsers: users.length,
-        totalTeams: teams.length,
-        totalMatches: matches.length,
-        totalClubs: clubs.length,
-        totalTournaments: tournaments.length,
-        activeMatches: matches.filter(m => m.status === 'IN_PROGRESS').length,
-        upcomingMatches: matches.filter(m => m.status === 'SCHEDULED').length,
-        completedMatches: matches.filter(m => m.status === 'COMPLETED').length
+      // Format the data according to our interface
+      const dashboardStats: DashboardStats = {
+        totalUsers: stats.totalUsers || 0,
+        totalTeams: stats.totalTeams || 0,
+        totalMatches: stats.totalMatches || 0,
+        totalClubs: stats.totalClubs || 0,
+        totalTournaments: stats.totalTournaments || 0,
+        activeMatches: stats.activeMatches || 0,
+        upcomingMatches: stats.upcomingMatches || 0,
+        completedMatches: stats.completedMatches || 0
       };
 
-      console.log('📊 Calculated stats:', stats);
+      // Format recent activities with proper types
+      const formattedActivities: RecentActivity[] = (recentActivities || []).map((activity: any) => ({
+        id: activity.id,
+        type: activity.type,
+        title: activity.title,
+        description: activity.description,
+        timestamp: new Date(activity.timestamp),
+        userName: activity.userName,
+        userId: activity.userId
+      }));
 
-      // Generate recent activities from the data
-      const recentActivities: RecentActivity[] = [
-        ...users.slice(0, 3).map(user => ({
-          id: `user-${user.id}`,
-          type: 'user_registered',
-          title: 'New User Registered',
-          description: `${user.displayName || user.email} joined the platform`,
-          timestamp: new Date(user.createdAt),
-          userName: user.displayName || 'System',
-          userId: user.id
-        })),
-        ...teams.slice(0, 3).map(team => ({
-          id: `team-${team.id}`,
-          type: 'team_created',
-          title: 'New Team Created',
-          description: `${team.name} team has been created`,
-          timestamp: new Date(team.createdAt),
-          userName: 'System',
-          userId: 'system'
-        })),
-        ...matches.slice(0, 3).map(match => ({
-          id: `match-${match.id}`,
-          type: 'match_created',
-          title: 'New Match Scheduled',
-          description: `${match.title} - ${new Date(match.startTime).toLocaleDateString()}`,
-          timestamp: new Date(match.createdAt),
-          userName: 'System',
-          userId: 'system'
-        }))
-      ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 10);
+      // Format upcoming matches
+      const formattedUpcomingMatches: UpcomingMatch[] = (upcomingMatches || []).map((match: any) => ({
+        id: match.id,
+        title: match.title,
+        startTime: match.startTime,
+        location: match.location,
+        homeTeam: match.homeTeam,
+        awayTeam: match.awayTeam
+      }));
 
-      // Get upcoming matches
-      const upcomingMatches: UpcomingMatch[] = matches
-        .filter(match => match.status === 'SCHEDULED')
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-        .slice(0, 5)
-        .map(match => ({
-          id: match.id,
-          title: match.title,
-          startTime: match.startTime,
-          location: match.location,
-          homeTeam: match.homeTeam,
-          awayTeam: match.awayTeam
-        }));
+      // For now, we don't have recent matches from the stats endpoint
+      // In the future, we might want to add another endpoint or include them in the stats
+      const recentMatches: any[] = [];
 
       const result = {
-        stats,
-        recentActivities,
-        upcomingMatches,
-        recentMatches: matches.filter(m => m.status === 'COMPLETED').slice(0, 5)
+        stats: dashboardStats,
+        recentActivities: formattedActivities,
+        upcomingMatches: formattedUpcomingMatches,
+        recentMatches
       };
 
       console.log('✅ Dashboard data prepared:', result);

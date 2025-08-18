@@ -7,63 +7,44 @@ import compression from 'compression';
 import morgan from 'morgan';
 import 'express-async-errors';
 import { createServer } from 'http';
-
-import { errorHandler } from './middleware/errorHandler';
-import { notFoundHandler } from './middleware/notFoundHandler';
-import { logger } from './utils/logger';
-import { WebSocketService } from './services/websocketService';
+import { Server } from 'socket.io';
 
 // Import routes
 import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import clubRoutes from './routes/clubs';
-import teamRoutes from './routes/teams';
-import eventRoutes from './routes/events';
-import matchRoutes from './routes/matches';
-import matchRoomRoutes from './routes/matchRooms';
-import scalingRoutes from './routes/scaling';
-import statisticsRoutes from './routes/statistics';
-import tournamentRoutes from './routes/tournaments';
-import messageRoutes from './routes/messages';
-import notificationRoutes from './routes/notifications';
-import paymentRoutes from './routes/payments';
-import registrationRoutes from './routes/registrations';
+import usersRoutes from './routes/users';
 import dashboardRoutes from './routes/dashboard';
+import clubsRoutes from './routes/clubs';
+import teamsRoutes from './routes/teams';
+import eventsRoutes from './routes/events'; // Re-enabled events routes
+import matchesRoutes from './routes/matches';
+import tournamentsRoutes from './routes/tournaments';
+import paymentsRoutes from './routes/payments';
+import notificationsRoutes from './routes/notifications';
+import messagesRoutes from './routes/messages';
+import registrationsRoutes from './routes/registrations';
 import mediaRoutes from './routes/media';
+import statisticsRoutes from './routes/statistics';
+import permissionsRoutes from './routes/permissions';
 import eventEntryRoutes from './routes/eventEntry';
-import playerPerformanceRoutes from './routes/playerPerformance';
-import teamStatisticsRoutes from './routes/teamStatistics';
-import permissionRoutes from './routes/permissions';
+import matchHistoryRoutes from './routes/matchHistory';
+import matchRoomsRoutes from './routes/matchRooms';
+import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 const server = createServer(app);
 const port = process.env['PORT'] || 3001;
 
-// Initialize WebSocket service
-export const webSocketService = new WebSocketService(server);
+// Initialize Socket.IO for real-time features
+const io = new Server(server, {
+  cors: {
+    origin: process.env['FRONTEND_URL'] || 'http://localhost:3003',
+    credentials: true,
+  },
+  path: '/ws',
+});
 
-// Initialize scaling services
-import distributedMatchStateManager from './services/distributedMatchStateManager';
-import loadBalancerService from './services/loadBalancerService';
-import performanceMonitoringService from './services/performanceMonitoringService';
-import statisticsService from './services/statisticsService';
-// import eventEntryService from './services/eventEntryService';
-
-// Initialize scaling services
-const initializeScalingServices = async () => {
-  try {
-    await distributedMatchStateManager.initialize();
-    await loadBalancerService.initialize();
-    await performanceMonitoringService.initialize();
-    // Note: statisticsService is a singleton, no initialization needed
-    logger.info('All scaling services initialized successfully');
-  } catch (error) {
-    logger.error('Failed to initialize scaling services:', error);
-  }
-};
-
-// Initialize scaling services
-initializeScalingServices();
+// Make io available to routes
+app.set('io', io);
 
 // Security middleware
 app.use(helmet());
@@ -74,13 +55,37 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-});
-app.use(limiter);
+// Rate limiting - disabled in development for easier testing
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per 15min in production
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(limiter);
+} else {
+  console.log('🔓 Rate limiting disabled in development mode');
+}
+
+// Rate limit only for auth endpoints in production
+if (process.env.NODE_ENV === 'production') {
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 auth attempts in 15min in production
+    message: {
+      success: false,
+      message: 'Too many authentication attempts. Please try again later.',
+      error: 'RATE_LIMIT_EXCEEDED'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api/auth', authLimiter);
+} else {
+  console.log('🔓 Auth rate limiting disabled in development mode');
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -90,11 +95,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 
 // Logging middleware
-app.use(morgan('combined', {
-  stream: {
-    write: (message: string) => logger.info(message.trim()),
-  },
-}));
+app.use(morgan('combined'));
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -103,84 +104,121 @@ app.get('/health', (_req, res) => {
     message: 'KP5 Academy Backend is running',
     timestamp: new Date().toISOString(),
     environment: process.env['NODE_ENV'] || 'development',
-    websocketConnections: webSocketService.getUserCount(),
+    database: 'PostgreSQL',
+    realtime: 'WebSocket (Socket.IO)',
   });
 });
 
-// WebSocket status endpoint
-app.get('/websocket/status', (_req, res) => {
-  res.status(200).json({
-    success: true,
-    connectedUsers: webSocketService.getUserCount(),
-    rooms: Array.from(webSocketService.getConnectedUsers().values()).map(user => ({
-      userId: user.userId,
-      role: user.userRole,
-      email: user.userEmail
-    }))
+// Development-only endpoint to reset rate limiting
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/api/dev/reset-rate-limit', (_req, res) => {
+    try {
+      // Clear rate limit store if possible
+      res.status(200).json({
+        success: true,
+        message: 'Rate limit reset (development only)',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error resetting rate limit:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reset rate limit',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
-});
+}
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/clubs', clubRoutes);
-app.use('/api/teams', teamRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/match-rooms', matchRoomRoutes);
-app.use('/api/scaling', scalingRoutes);
-app.use('/api/statistics', statisticsRoutes);
-app.use('/api/tournaments', tournamentRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/registrations', registrationRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/clubs', clubsRoutes);
+app.use('/api/teams', teamsRoutes);
+app.use('/api/events', eventsRoutes); // Re-enabled events routes
+app.use('/api/matches', matchesRoutes);
+app.use('/api/tournaments', tournamentsRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/messages', messagesRoutes);
+app.use('/api/registrations', registrationsRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/statistics', statisticsRoutes);
+app.use('/api/permissions', permissionsRoutes);
 app.use('/api/event-entry', eventEntryRoutes);
-app.use('/api/player-performance', playerPerformanceRoutes);
-app.use('/api/team-statistics', teamStatisticsRoutes);
-app.use('/api/permissions', permissionRoutes);
+app.use('/api/match-history', matchHistoryRoutes);
+app.use('/api/match-rooms', matchRoomsRoutes);
+
+// WebSocket connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 New WebSocket connection:', socket.id);
+
+  // Join match room
+  socket.on('join-match', (matchId: string) => {
+    socket.join(`match-${matchId}`);
+    console.log(`👥 User joined match room: ${matchId}`);
+  });
+
+  // Leave match room
+  socket.on('leave-match', (matchId: string) => {
+    socket.leave(`match-${matchId}`);
+    console.log(`👋 User left match room: ${matchId}`);
+  });
+
+  // Handle match events
+  socket.on('match-event', (data: any) => {
+    const { matchId, event } = data;
+    socket.to(`match-${matchId}`).emit('match-event-update', event);
+    console.log(`⚽ Match event in ${matchId}:`, event.type);
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('🔌 WebSocket disconnected:', socket.id);
+  });
+});
 
 // Error handling middleware
-app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  await Promise.all([
-    webSocketService.cleanup(),
-    distributedMatchStateManager.cleanup(),
-    loadBalancerService.cleanup(),
-    performanceMonitoringService.cleanup(),
-    statisticsService.cleanup()
-  ]);
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  await Promise.all([
-    webSocketService.cleanup(),
-    distributedMatchStateManager.cleanup(),
-    loadBalancerService.cleanup(),
-    performanceMonitoringService.cleanup(),
-    statisticsService.cleanup()
-  ]);
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-});
-
 // Start server
-server.listen(port, () => {
-  logger.info(`🚀 KP5 Academy Backend server running on port ${port}`);
-  logger.info(`Environment: ${process.env['NODE_ENV'] || 'development'}`);
-  logger.info(`Health check: http://localhost:${port}/health`);
-  logger.info(`WebSocket status: http://localhost:${port}/websocket/status`);
+server.listen(Number(port), '0.0.0.0', () => {
+  console.log(`🚀 KP5 Academy Backend server running on port ${port}`);
+  console.log(`Environment: ${process.env['NODE_ENV'] || 'development'}`);
+  console.log(`Database: PostgreSQL`);
+  console.log(`Real-time: WebSocket (Socket.IO)`);
+  console.log(`Health check: http://localhost:${port}/health`);
+  console.log(`API base: http://localhost:${port}/api`);
+  console.log(`WebSocket: ws://localhost:${port}/ws`);
+  console.log(`Listening on all interfaces (0.0.0.0)`);
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error: Error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 }); 

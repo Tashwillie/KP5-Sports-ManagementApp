@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 import { RegistrationStatus } from '@prisma/client';
 
 // Get all registrations with pagination and filtering
-export const getRegistrations = async (req: Request, res: Response): Promise<void> => {
+export const getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -74,15 +74,12 @@ export const getRegistrations = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error fetching registrations:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch registrations',
-    });
+    next(error);
   }
 };
 
 // Get single registration by ID
-export const getRegistration = async (req: Request, res: Response): Promise<void> => {
+export const getRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -137,15 +134,12 @@ export const getRegistration = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     logger.error('Error fetching registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch registration',
-    });
+    next(error);
   }
 };
 
 // Create new registration
-export const createRegistration = async (req: Request, res: Response): Promise<void> => {
+export const createRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       type,
@@ -192,15 +186,12 @@ export const createRegistration = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error creating registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create registration',
-    });
+    next(error);
   }
 };
 
 // Update registration
-export const updateRegistration = async (req: Request, res: Response): Promise<void> => {
+export const updateRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -261,15 +252,12 @@ export const updateRegistration = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error updating registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update registration',
-    });
+    next(error);
   }
 };
 
 // Delete registration (soft delete by setting status to CANCELLED)
-export const deleteRegistration = async (req: Request, res: Response): Promise<void> => {
+export const deleteRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -310,15 +298,12 @@ export const deleteRegistration = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error deleting registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete registration',
-    });
+    next(error);
   }
 };
 
 // Approve registration (admin only)
-export const approveRegistration = async (req: Request, res: Response): Promise<void> => {
+export const approveRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -398,15 +383,12 @@ export const approveRegistration = async (req: Request, res: Response): Promise<
     });
   } catch (error) {
     logger.error('Error approving registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to approve registration',
-    });
+    next(error);
   }
 };
 
 // Reject registration (admin only)
-export const rejectRegistration = async (req: Request, res: Response): Promise<void> => {
+export const rejectRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -486,15 +468,12 @@ export const rejectRegistration = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error rejecting registration:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to reject registration',
-    });
+    next(error);
   }
 };
 
 // Sign waiver
-export const signWaiver = async (req: Request, res: Response): Promise<void> => {
+export const signWaiver = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -566,15 +545,12 @@ export const signWaiver = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Error signing waiver:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to sign waiver',
-    });
+    next(error);
   }
 };
 
 // Get registration form templates
-export const getRegistrationForms = async (_req: Request, res: Response): Promise<void> => {
+export const getRegistrationForms = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Define form templates for different registration types
     const formTemplates = {
@@ -645,15 +621,12 @@ export const getRegistrationForms = async (_req: Request, res: Response): Promis
     });
   } catch (error) {
     logger.error('Error fetching registration forms:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch registration forms',
-    });
+    next(error);
   }
 };
 
 // Submit registration form
-export const submitRegistrationForm = async (req: Request, res: Response): Promise<void> => {
+export const submitRegistrationForm = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       type,
@@ -699,9 +672,6 @@ export const submitRegistrationForm = async (req: Request, res: Response): Promi
     });
   } catch (error) {
     logger.error('Error submitting registration form:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit registration form',
-    });
+    next(error);
   }
 };

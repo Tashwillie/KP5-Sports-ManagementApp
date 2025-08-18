@@ -4,7 +4,7 @@ import {
   Event, 
   Player,
   ApiResponse 
-} from '../../../../shared/src/types';
+} from '@shared/types';
 import apiClient from '../apiClient';
 
 interface ClubStats {

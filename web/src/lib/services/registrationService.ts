@@ -3,7 +3,7 @@ import {
   RegistrationSubmission,
   FormField,
   ApiResponse 
-} from '../../../../shared/src/types';
+} from '@shared/types';
 import apiClient from '../apiClient';
 
 export class RegistrationService {

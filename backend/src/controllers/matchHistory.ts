@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import MatchHistoryService from '../services/matchHistoryService';
 
@@ -9,7 +9,7 @@ export class MatchHistoryController {
   /**
    * Get match history with filters
    */
-  async getMatchHistory(req: Request, res: Response): Promise<void> {
+  async getMatchHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const {
         startDate,
@@ -46,18 +46,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getMatchHistory:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch match history',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Get detailed match information
    */
-  async getMatchDetail(req: Request, res: Response): Promise<void> {
+  async getMatchDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { matchId } = req.params;
 
@@ -86,18 +82,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getMatchDetail:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch match details',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Generate comprehensive match report
    */
-  async generateMatchReport(req: Request, res: Response): Promise<void> {
+  async generateMatchReport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const {
         startDate,
@@ -130,18 +122,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in generateMatchReport:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to generate match report',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Get historical trends
    */
-  async getHistoricalTrends(req: Request, res: Response): Promise<void> {
+  async getHistoricalTrends(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { period } = req.params;
       const {
@@ -186,18 +174,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getHistoricalTrends:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch historical trends',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Compare two matches
    */
-  async compareMatches(req: Request, res: Response): Promise<void> {
+  async compareMatches(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { matchId1, matchId2 } = req.params;
 
@@ -218,18 +202,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in compareMatches:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to compare matches',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Search matches by various criteria
    */
-  async searchMatches(req: Request, res: Response): Promise<void> {
+  async searchMatches(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { query } = req.params;
       const {
@@ -275,18 +255,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in searchMatches:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to search matches',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Export match data
    */
-  async exportMatchData(req: Request, res: Response): Promise<void> {
+  async exportMatchData(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { format } = req.params;
       const {
@@ -342,18 +318,14 @@ export class MatchHistoryController {
       }
     } catch (error) {
       console.error('Error in exportMatchData:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to export match data',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Get match statistics summary
    */
-  async getMatchStatisticsSummary(req: Request, res: Response): Promise<void> {
+  async getMatchStatisticsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const {
         startDate,
@@ -398,18 +370,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getMatchStatisticsSummary:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch match statistics summary',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Get team match history
    */
-  async getTeamMatchHistory(req: Request, res: Response): Promise<void> {
+  async getTeamMatchHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { teamId } = req.params;
       const {
@@ -446,18 +414,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getTeamMatchHistory:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch team match history',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Get player match history
    */
-  async getPlayerMatchHistory(req: Request, res: Response): Promise<void> {
+  async getPlayerMatchHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { playerId } = req.params;
       const {
@@ -494,18 +458,14 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getPlayerMatchHistory:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch player match history',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 
   /**
    * Get tournament match history
    */
-  async getTournamentMatchHistory(req: Request, res: Response): Promise<void> {
+  async getTournamentMatchHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { tournamentId } = req.params;
       const {
@@ -542,11 +502,7 @@ export class MatchHistoryController {
       });
     } catch (error) {
       console.error('Error in getTournamentMatchHistory:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch tournament match history',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      next(error);
     }
   }
 }

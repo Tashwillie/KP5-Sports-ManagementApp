@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import matchesService, { MatchWithStats } from '@/lib/services/matchesService';
 
 export interface UseMatchesReturn {
@@ -10,7 +10,7 @@ export interface UseMatchesReturn {
 }
 
 export const useMatches = (): UseMatchesReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [matches, setMatches] = useState<MatchWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

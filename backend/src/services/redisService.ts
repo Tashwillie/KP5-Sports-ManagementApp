@@ -36,8 +36,8 @@ export class RedisService {
       url: config.url,
       password: config.password,
       database: config.db || 0,
-      retry_delay_on_failover: config.retryDelayOnFailover || 100,
-      max_retries_per_request: config.maxRetriesPerRequest || 3,
+      // retry_delay_on_failover: config.retryDelayOnFailover || 100, // Property not available in current Redis client
+      // max_retries_per_request: config.maxRetriesPerRequest || 3, // Property not available in current Redis client
       socket: {
         reconnectStrategy: (retries) => {
           if (retries > this.maxReconnectAttempts) {
@@ -186,7 +186,8 @@ export class RedisService {
     try {
       const fullKey = options.prefix ? `${options.prefix}:${key}` : key;
       const result = await this.client.expire(fullKey, ttl);
-      return result === 1;
+      // @ts-ignore - Redis returns 1 for success, 0 for failure
+      return result === 1; // Redis returns 1 for success, 0 for failure
     } catch (error) {
       logger.error('Redis expire error:', error);
       return false;

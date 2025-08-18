@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Player, PlayerStats, Team } from '../../../../shared/src/types';
+import { Player, PlayerStats, Team } from '@shared/types';
 import { playerService } from '@/lib/services/playerService';
 
 interface PlayerStatsRow {

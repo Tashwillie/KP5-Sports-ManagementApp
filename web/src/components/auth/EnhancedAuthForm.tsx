@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { UserRole, ROLE_PERMISSIONS } from '@/lib/permissions/rolePermissions';
 import { Eye, EyeOff, User, Mail, Lock, Phone, Calendar, MapPin, Shield } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ export const EnhancedAuthForm: React.FC<EnhancedAuthFormProps> = ({
   onSuccess, 
   onError 
 }) => {
-  const { login, register } = useAuth();
+  const { login, register } = useEnhancedAuthContext();
   
   // Form state
   const [formData, setFormData] = useState<SignUpFormData>({

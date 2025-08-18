@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 
 // Get all users with pagination and filtering
-export const getUsers = async (req: Request, res: Response): Promise<void> => {
+export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -73,15 +73,12 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Get users error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch users.',
-    });
+    next(error);
   }
 };
 
 // Get single user by ID
-export const getUser = async (req: Request, res: Response): Promise<void> => {
+export const getUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -129,15 +126,12 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Get user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user.',
-    });
+    next(error);
   }
 };
 
 // Create new user
-export const createUser = async (req: Request, res: Response): Promise<void> => {
+export const createUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password, displayName, firstName, lastName, phone, role = 'PLAYER' } = req.body;
 
@@ -198,15 +192,12 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Create user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create user.',
-    });
+    next(error);
   }
 };
 
 // Update user
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
+export const updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const { displayName, firstName, lastName, phone, role, isActive } = req.body;
@@ -262,15 +253,12 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Update user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update user.',
-    });
+    next(error);
   }
 };
 
 // Delete user
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -307,15 +295,12 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Delete user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete user.',
-    });
+    next(error);
   }
 };
 
 // Get user profile
-export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+export const getUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -350,15 +335,12 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     logger.error('Get user profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user profile.',
-    });
+    next(error);
   }
 };
 
 // Update user profile
-export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
+export const updateUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const { bio, height, weight, position, jerseyNumber, emergencyContact, medicalInfo, preferences } = req.body;
@@ -417,9 +399,6 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.error('Update user profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update user profile.',
-    });
+    next(error);
   }
 };

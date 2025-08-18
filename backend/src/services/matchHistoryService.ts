@@ -902,7 +902,7 @@ export class MatchHistoryService extends EventEmitter {
       winPercentage: stats.totalMatches > 0 ? Math.round((stats.wins / stats.totalMatches) * 10000) / 100 : 0,
     }));
 
-    return { period, data };
+    return { period: period as 'week' | 'month' | 'quarter' | 'year', data };
   }
 
   private analyzeMatchComparison(match1: MatchDetail, match2: MatchDetail): MatchComparison {

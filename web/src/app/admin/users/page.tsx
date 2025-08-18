@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import Sidebar from '@/components/layout/Sidebar';
 import { 
@@ -60,7 +60,7 @@ import { User as AppUser, UserRole } from '@kp5-academy/shared';
 import { useUsers } from '@/hooks/useUsers';
 
 export default function UserManagementPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useEnhancedAuthContext();
 
   // State
   const [users, setUsers] = useState<AppUser[]>([]);

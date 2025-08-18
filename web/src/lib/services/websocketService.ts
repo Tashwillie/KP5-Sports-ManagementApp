@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface MatchUpdate {
   type: 'MATCH_START' | 'MATCH_PAUSE' | 'MATCH_RESUME' | 'MATCH_END' | 'SCORE_UPDATE' | 'EVENT_ADDED' | 'STATUS_CHANGE';

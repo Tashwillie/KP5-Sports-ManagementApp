@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useTeams } from '@/hooks/useTeams';
+import { useSimpleTeams } from '@/hooks/useSimpleTeams';
 
 interface Team {
   id: string;
@@ -37,7 +38,23 @@ export default function TeamsPage() {
 }
 
 function TeamsContent() {
-  const { teams, loading: loadingData, error, refetch } = useTeams();
+  // Try the complex teams hook first, fallback to simple one
+  const { data: teams, isLoading: loadingData, error, refetch } = useTeams();
+  const { 
+    data: simpleTeams, 
+    isLoading: simpleLoading, 
+    error: simpleError, 
+    refetch: simpleRefetch 
+  } = useSimpleTeams();
+  
+  // Use simple teams if complex teams fail
+  const actualTeams = teams || simpleTeams;
+  const actualLoading = loadingData && simpleLoading;
+  const actualError = error || simpleError;
+  const actualRefetch = () => {
+    refetch();
+    simpleRefetch();
+  };
   const [filteredTeams, setFilteredTeams] = useState<TeamWithStats[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sportFilter, setSportFilter] = useState('all');
@@ -45,26 +62,46 @@ function TeamsContent() {
 
   // Filter teams based on search and filters
   useEffect(() => {
-    let filtered = teams;
+    let filtered = actualTeams || []; // Provide fallback empty array
+
+    // Transform the API data to match the expected format
+    const transformedTeams = filtered.map((team: any) => ({
+      ...team,
+      sport: 'Football', // Default sport since it's not in the API
+      ageGroup: 'Senior', // Default age group
+      level: 'intermediate' as const, // Default level
+      coach: team.coaches?.[0]?.user?.displayName || 'No Coach Assigned',
+      players: team.players?.length || 0,
+      maxPlayers: 25, // Default max players
+      status: 'active' as const,
+      matchesPlayed: team.stats?.matchesPlayed || 0,
+      wins: team.stats?.wins || 0,
+      losses: team.stats?.losses || 0,
+      draws: team.stats?.draws || 0,
+      goalsScored: team.stats?.goalsFor || 0,
+      goalsConceded: team.stats?.goalsAgainst || 0,
+    }));
+
+    let filteredData = transformedTeams;
 
     if (searchTerm) {
-      filtered = filtered.filter(team =>
+      filteredData = filteredData.filter((team: any) =>
         team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         team.coach.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.sport.toLowerCase().includes(searchTerm.toLowerCase())
+        team.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (sportFilter !== 'all') {
-      filtered = filtered.filter(team => team.sport === sportFilter);
+      filteredData = filteredData.filter((team: any) => team.sport === sportFilter);
     }
 
     if (levelFilter !== 'all') {
-      filtered = filtered.filter(team => team.level === levelFilter);
+      filteredData = filteredData.filter((team: any) => team.level === levelFilter);
     }
 
-    setFilteredTeams(filtered);
-  }, [teams, searchTerm, sportFilter, levelFilter]);
+    setFilteredTeams(filteredData);
+  }, [actualTeams, searchTerm, sportFilter, levelFilter]);
 
   const getLevelBadgeClass = (level: string) => {
     switch (level) {
@@ -101,7 +138,7 @@ function TeamsContent() {
     window.location.href = `/teams/${teamId}/manage`;
   };
 
-  if (loadingData) {
+  if (actualLoading) {
     return (
       <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
         <div className="text-center">
@@ -114,14 +151,14 @@ function TeamsContent() {
     );
   }
 
-  if (error) {
+  if (actualError) {
     return (
       <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
         <div className="text-center">
           <div className="alert alert-danger" role="alert">
             <h4 className="alert-heading">Error loading teams</h4>
-            <p>{error}</p>
-            <button className="btn btn-primary" onClick={refetch}>
+            <p>{actualError instanceof Error ? actualError.message : 'An error occurred while loading teams'}</p>
+            <button className="btn btn-primary" onClick={() => actualRefetch()}>
               Try Again
             </button>
           </div>
@@ -208,7 +245,7 @@ function TeamsContent() {
 
           {/* Teams Grid */}
           <div className="row g-4">
-            {filteredTeams.map((team) => (
+            {filteredTeams && filteredTeams.length > 0 ? filteredTeams.map((team) => (
               <div key={team.id} className="col-md-6 col-lg-4">
                 <div className="card border-0 shadow-sm h-100">
                   <div className="card-body">
@@ -288,10 +325,10 @@ function TeamsContent() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : null}
           </div>
 
-          {filteredTeams.length === 0 && (
+          {(!filteredTeams || filteredTeams.length === 0) && !actualLoading && (
             <div className="text-center py-5">
               <i className="bi bi-people display-1 text-muted"></i>
               <h4 className="mt-3">No teams found</h4>

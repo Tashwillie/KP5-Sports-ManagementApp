@@ -97,17 +97,20 @@ class LiveMatchService {
 
   async addMatchEvent(eventData: AddMatchEventData): Promise<{ success: boolean; event?: LiveMatchEvent; error?: string }> {
     try {
-      const response = await apiClient.post(`/matches/${eventData.matchId}/events`, {
-        type: eventData.type,
-        minute: eventData.minute,
-        description: eventData.description,
-        playerId: eventData.playerId,
-        teamId: eventData.teamId,
-        data: eventData.data,
+      const response = await apiClient.publicRequest<LiveMatchEvent>(`/matches/${eventData.matchId}/events`, {
+        method: 'POST',
+        body: JSON.stringify({
+          type: eventData.type,
+          minute: eventData.minute,
+          description: eventData.description,
+          playerId: eventData.playerId,
+          teamId: eventData.teamId,
+          data: eventData.data,
+        }),
       });
 
-      if (response.data.success) {
-        const event = response.data.data;
+      if (response.success) {
+        const event = response.data;
         
         // Emit real-time event if service is available
         if (this.realTimeService) {
@@ -116,7 +119,7 @@ class LiveMatchService {
 
         return { success: true, event };
       } else {
-        return { success: false, error: response.data.message || 'Failed to add event' };
+        return { success: false, error: response.message || 'Failed to add event' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -171,12 +174,12 @@ class LiveMatchService {
       if (filters?.tournamentId) params.append('tournamentId', filters.tournamentId);
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
-      const response = await apiClient.get(`/matches?${params.toString()}`);
+      const response = await apiClient.publicRequest<Match[]>(`/matches?${params.toString()}`);
       
-      if (response.data.success) {
-        return { success: true, matches: response.data.data };
+      if (response.success) {
+        return { success: true, matches: response.data };
       } else {
-        return { success: false, error: response.data.message || 'Failed to fetch matches' };
+        return { success: false, error: response.message || 'Failed to fetch matches' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -186,12 +189,12 @@ class LiveMatchService {
 
   async getMatch(matchId: string): Promise<{ success: boolean; match?: Match; error?: string }> {
     try {
-      const response = await apiClient.get(`/matches/${matchId}`);
+      const response = await apiClient.publicRequest<Match>(`/matches/${matchId}`);
       
-      if (response.data.success) {
-        return { success: true, match: response.data.data };
+      if (response.success) {
+        return { success: true, match: response.data };
       } else {
-        return { success: false, error: response.data.message || 'Failed to fetch match' };
+        return { success: false, error: response.message || 'Failed to fetch match' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -201,16 +204,19 @@ class LiveMatchService {
 
   async startMatch(matchId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await apiClient.post(`/matches/${matchId}/start`);
-      
-      if (response.data.success) {
+      const response = await apiClient.publicRequest<void>(`/matches/${matchId}/start`, {
+        method: 'POST',
+      });
+
+      if (response.success) {
         // Emit real-time event if service is available
         if (this.realTimeService) {
           this.realTimeService.emitMatchStatusChange(matchId, 'in_progress');
         }
+
         return { success: true };
       } else {
-        return { success: false, error: response.data.message || 'Failed to start match' };
+        return { success: false, error: response.message || 'Failed to start match' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -225,22 +231,24 @@ class LiveMatchService {
     }
   }
 
-  async endMatch(matchId: string, homeScore?: number, awayScore?: number): Promise<{ success: boolean; error?: string }> {
+  async endMatch(matchId: string, finalScore?: { home: number; away: number }): Promise<{ success: boolean; error?: string }> {
     try {
-      const payload: any = {};
-      if (homeScore !== undefined) payload.homeScore = homeScore;
-      if (awayScore !== undefined) payload.awayScore = awayScore;
-
-      const response = await apiClient.post(`/matches/${matchId}/end`, payload);
+      const payload = finalScore ? { finalScore } : {};
       
-      if (response.data.success) {
+      const response = await apiClient.publicRequest<void>(`/matches/${matchId}/end`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      if (response.success) {
         // Emit real-time event if service is available
         if (this.realTimeService) {
-          this.realTimeService.emitMatchStatusChange(matchId, 'completed', { homeScore, awayScore });
+          this.realTimeService.emitMatchStatusChange(matchId, 'completed', finalScore);
         }
+
         return { success: true };
       } else {
-        return { success: false, error: response.data.message || 'Failed to end match' };
+        return { success: false, error: response.message || 'Failed to end match' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -257,16 +265,19 @@ class LiveMatchService {
 
   async pauseMatch(matchId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await apiClient.post(`/matches/${matchId}/pause`);
-      
-      if (response.data.success) {
+      const response = await apiClient.publicRequest<void>(`/matches/${matchId}/pause`, {
+        method: 'POST',
+      });
+
+      if (response.success) {
         // Emit real-time event if service is available
         if (this.realTimeService) {
           this.realTimeService.emitMatchStatusChange(matchId, 'paused');
         }
+
         return { success: true };
       } else {
-        return { success: false, error: response.data.message || 'Failed to pause match' };
+        return { success: false, error: response.message || 'Failed to pause match' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -283,16 +294,19 @@ class LiveMatchService {
 
   async resumeMatch(matchId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await apiClient.post(`/matches/${matchId}/resume`);
-      
-      if (response.data.success) {
+      const response = await apiClient.publicRequest<void>(`/matches/${matchId}/resume`, {
+        method: 'POST',
+      });
+
+      if (response.success) {
         // Emit real-time event if service is available
         if (this.realTimeService) {
           this.realTimeService.emitMatchStatusChange(matchId, 'in_progress');
         }
+
         return { success: true };
       } else {
-        return { success: false, error: response.data.message || 'Failed to resume match' };
+        return { success: false, error: response.message || 'Failed to resume match' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -334,12 +348,12 @@ class LiveMatchService {
 
   async getMatchEvents(matchId: string): Promise<{ success: boolean; events?: LiveMatchEvent[]; error?: string }> {
     try {
-      const response = await apiClient.get(`/matches/${matchId}/events`);
+      const response = await apiClient.publicRequest<LiveMatchEvent[]>(`/matches/${matchId}/events`);
       
-      if (response.data.success) {
-        return { success: true, events: response.data.data };
+      if (response.success) {
+        return { success: true, events: response.data };
       } else {
-        return { success: false, error: response.data.message || 'Failed to fetch match events' };
+        return { success: false, error: response.message || 'Failed to fetch match events' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -349,12 +363,12 @@ class LiveMatchService {
 
   async getMatchParticipants(matchId: string): Promise<{ success: boolean; participants?: any[]; error?: string }> {
     try {
-      const response = await apiClient.get(`/matches/${matchId}/participants`);
+      const response = await apiClient.publicRequest<any[]>(`/matches/${matchId}/participants`);
       
-      if (response.data.success) {
-        return { success: true, participants: response.data.data };
+      if (response.success) {
+        return { success: true, participants: response.data };
       } else {
-        return { success: false, error: response.data.message || 'Failed to fetch match participants' };
+        return { success: false, error: response.message || 'Failed to fetch match participants' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -363,14 +377,14 @@ class LiveMatchService {
   }
 
   // Get WebSocket status for a match
-  async getMatchWebSocketStatus(matchId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  async getMatchWebSocketStatus(matchId: string): Promise<{ success: boolean; status?: any; error?: string }> {
     try {
-      const response = await apiClient.get(`/matches/${matchId}/websocket-status`);
+      const response = await apiClient.publicRequest<any>(`/matches/${matchId}/websocket-status`);
       
-      if (response.data.success) {
-        return { success: true, data: response.data.data };
+      if (response.success) {
+        return { success: true, status: response.data };
       } else {
-        return { success: false, error: response.data.message || 'Failed to fetch WebSocket status' };
+        return { success: false, error: response.message || 'Failed to fetch WebSocket status' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
@@ -381,7 +395,7 @@ class LiveMatchService {
   // Get overall WebSocket status
   async getWebSocketStatus(): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const response = await apiClient.get('/matches/websocket/status');
+      const response = await apiClient.publicRequest<any>('/matches/websocket/status');
       
       if (response.data.success) {
         return { success: true, data: response.data.data };
@@ -397,12 +411,14 @@ class LiveMatchService {
   // Refresh match state from server
   async refreshMatchState(matchId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await apiClient.post(`/matches/${matchId}/websocket/refresh-state`);
-      
-      if (response.data.success) {
+      const response = await apiClient.publicRequest<void>(`/matches/${matchId}/websocket/refresh-state`, {
+        method: 'POST',
+      });
+
+      if (response.success) {
         return { success: true };
       } else {
-        return { success: false, error: response.data.message || 'Failed to refresh match state' };
+        return { success: false, error: response.message || 'Failed to refresh match state' };
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';

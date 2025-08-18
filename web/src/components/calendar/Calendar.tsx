@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { MonthView } from './MonthView';
-import { WeekView } from './WeekView';
-import { DayView } from './DayView';
-import { Event } from '../../../../shared/src/types';
-import { Button } from '../ui/button';
-import { PerformanceDashboard } from '../performance/PerformanceDashboard';
-import { PerformanceSettings } from '../performance/PerformanceSettings';
-import { PerformanceAnalytics } from '../performance/PerformanceAnalytics';
-import { CalendarViewType } from '../../../../shared/src/types';
+import { MonthView } from '@web/components/calendar/MonthView';
+import { WeekView } from '@web/components/calendar/WeekView';
+import { DayView } from '@web/components/calendar/DayView';
+import { Event } from '@shared/types';
+import { Button } from '@web/components/ui/button';
+import { PerformanceDashboard } from '@web/components/performance/PerformanceDashboard';
+import { PerformanceSettings } from '@web/components/performance/PerformanceSettings';
+import { PerformanceAnalytics } from '@web/components/performance/PerformanceAnalytics';
+import { CalendarViewType } from '@shared/types';
 
 interface CalendarProps {
   events: Event[];

@@ -36,8 +36,25 @@ class MatchesService {
         throw new Error('Failed to fetch matches');
       }
 
-      console.log('✅ Matches fetched successfully:', response.data.matches);
-      return response.data.matches.map((match: any) => ({
+      console.log('✅ Matches response:', response);
+      
+      // Ensure we get an array of matches
+      let matches: any[] = [];
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          matches = response.data;
+        } else if (response.data.matches && Array.isArray(response.data.matches)) {
+          matches = response.data.matches;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          matches = response.data.data;
+        } else {
+          console.warn('Matches data is not in expected format:', response.data);
+          matches = [];
+        }
+      }
+
+      console.log('✅ Matches extracted:', matches);
+      return Array.isArray(matches) ? matches.map((match: any) => ({
         id: match.id,
         title: match.title,
         homeTeamId: match.homeTeamId,
@@ -57,7 +74,7 @@ class MatchesService {
         notes: match.notes,
         createdAt: match.createdAt,
         updatedAt: match.updatedAt,
-      }));
+      })) : [];
     } catch (error) {
       console.error('❌ Error fetching matches:', error);
       throw error;

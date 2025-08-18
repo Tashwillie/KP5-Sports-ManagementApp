@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import paymentsService, { UiPayment } from '@/lib/services/paymentsService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface UsePaymentsReturn {
   payments: UiPayment[];
@@ -10,7 +10,7 @@ export interface UsePaymentsReturn {
 }
 
 export const usePayments = (): UsePaymentsReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [payments, setPayments] = useState<UiPayment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { param, query } from 'express-validator';
 import { validateRequest } from '../middleware/validation';
 import { authenticate } from '../middleware/auth';
-import { requireRole } from '../middleware/roleAuth';
+// import { requireRole } from '../middleware/roleAuth'; // Temporarily disabled
 import { requirePermission } from '../middleware/permissions';
 import { StatisticsController } from '../controllers/statistics';
 

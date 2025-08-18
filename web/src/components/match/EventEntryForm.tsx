@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRealTimeService } from '../../hooks/useRealTimeService';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Separator } from '../ui/separator';
+import { useRealTimeService } from '@web/hooks/useRealTimeService';
+import { Button } from '@web/components/ui/button';
+import { Input } from '@web/components/ui/input';
+import { Label } from '@web/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@web/components/ui/select';
+import { Textarea } from '@web/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@web/components/ui/card';
+import { Badge } from '@web/components/ui/badge';
+import { Alert, AlertDescription } from '@web/components/ui/alert';
+import { Separator } from '@web/components/ui/separator';
 import { Clock, User, Users, Target, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 
 interface EventEntryFormData {

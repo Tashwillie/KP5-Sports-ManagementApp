@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/apiClient';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface SupportTeam { id: string; name: string; clubName?: string }
 export interface SupportTournament { id: string; name: string }
 export interface SupportReferee { id: string; displayName: string }
 
 export const useMatchSupportData = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [teams, setTeams] = useState<SupportTeam[]>([]);
   const [tournaments, setTournaments] = useState<SupportTournament[]>([]);
   const [referees, setReferees] = useState<SupportReferee[]>([]);

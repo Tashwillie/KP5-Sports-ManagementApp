@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PerformanceTestingService, PerformanceTestResult } from '../../lib/services/performanceTestingService';
-import { ParameterValidationService, ValidationResult } from '../../lib/services/parameterValidationService';
-import { CrossDeviceLearningService, DeviceCluster } from '../../lib/services/crossDeviceLearningService';
-import { AdvancedPerformanceTuningService } from '../../lib/services/advancedPerformanceTuningService';
+import { PerformanceTestingService, PerformanceTestResult } from '@web/lib/services/performanceTestingService';
+import { ParameterValidationService, ValidationResult } from '@web/lib/services/parameterValidationService';
+import { CrossDeviceLearningService, DeviceCluster } from '@web/lib/services/crossDeviceLearningService';
+import { AdvancedPerformanceTuningService } from '@web/lib/services/advancedPerformanceTuningService';
 
 interface PerformanceAnalyticsProps {
   onExportData?: (data: any) => void;

@@ -104,23 +104,23 @@ export class RealTimeStatisticsService {
 
   private setupEventListeners(): void {
     // Listen for statistics updates from the server
-    this.realTimeService.on('statistics-update', (update: StatisticsUpdate) => {
-      this.handleStatisticsUpdate(update);
+    this.realTimeService.on('statistics-update', (event) => {
+      this.handleStatisticsUpdate(event.data as StatisticsUpdate);
     });
 
     // Listen for match statistics updates
-    this.realTimeService.on('match-statistics-update', (update: StatisticsUpdate) => {
-      this.handleStatisticsUpdate(update);
+    this.realTimeService.on('match-statistics-update', (event) => {
+      this.handleStatisticsUpdate(event.data as StatisticsUpdate);
     });
 
     // Listen for player statistics updates
-    this.realTimeService.on('player-statistics-update', (update: StatisticsUpdate) => {
-      this.handleStatisticsUpdate(update);
+    this.realTimeService.on('player-statistics-update', (event) => {
+      this.handleStatisticsUpdate(event.data as StatisticsUpdate);
     });
 
     // Listen for team statistics updates
-    this.realTimeService.on('team-statistics-update', (update: StatisticsUpdate) => {
-      this.handleStatisticsUpdate(update);
+    this.realTimeService.on('team-statistics-update', (event) => {
+      this.handleStatisticsUpdate(event.data as StatisticsUpdate);
     });
   }
 

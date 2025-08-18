@@ -1,346 +1,416 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Badge, Alert } from 'react-bootstrap';
-import EnhancedLiveMatchControl from '@/components/live-match/EnhancedLiveMatchControl';
-import LiveStatisticsDisplay from '@/components/live-match/LiveStatisticsDisplay';
-import TournamentBracket from '@/components/tournament/TournamentBracket';
-import { Play, BarChart3, Trophy, Settings, Users, Target } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Play, 
+  Pause, 
+  Square, 
+  Plus, 
+  Minus, 
+  Clock, 
+  Users, 
+  Target,
+  ArrowLeft,
+  Whistle
+} from 'lucide-react';
+import Link from 'next/link';
 
-export default function LiveMatchDemoPage() {
-  const [activeTab, setActiveTab] = useState<'control' | 'statistics' | 'tournament'>('control');
-  const [isReferee, setIsReferee] = useState(true);
+interface MatchEvent {
+  id: string;
+  type: 'goal' | 'yellow_card' | 'red_card' | 'substitution';
+  minute: number;
+  player: string;
+  team: 'home' | 'away';
+  description: string;
+}
 
-  // Mock match data for demonstration
-  const mockMatch = {
-    id: 'match-001',
-    homeTeam: 'Manchester United',
-    awayTeam: 'Liverpool',
-    homeScore: 2,
-    awayScore: 1,
-    status: 'live',
-    currentMinute: 67,
-    venue: 'Old Trafford',
-    date: '2024-01-15',
-    homeTeamId: 'team-home',
-    awayTeamId: 'team-away'
-  };
+export default function LiveMatchDemo() {
+  const [homeScore, setHomeScore] = useState(0);
+  const [awayScore, setAwayScore] = useState(0);
+  const [minute, setMinute] = useState(0);
+  const [isLive, setIsLive] = useState(false);
+  const [period, setPeriod] = useState<'first_half' | 'second_half' | 'halftime'>('first_half');
+  const [events, setEvents] = useState<MatchEvent[]>([]);
 
-  // Mock tournament data for demonstration
-  const mockTournament = {
-    id: 'tournament-001',
-    name: 'Premier League Cup 2024',
-    description: 'Annual knockout tournament featuring top Premier League teams',
-    format: 'knockout' as const,
-    status: 'active' as const,
-    startDate: new Date('2024-01-01'),
-    endDate: new Date('2024-02-01'),
-    maxTeams: 16,
-    currentTeams: 16,
-    rounds: 4,
-    teams: [
-      { id: 'team-1', name: 'Manchester United', seed: 1 },
-      { id: 'team-2', name: 'Liverpool', seed: 2 },
-      { id: 'team-3', name: 'Arsenal', seed: 3 },
-      { id: 'team-4', name: 'Chelsea', seed: 4 },
-      { id: 'team-5', name: 'Manchester City', seed: 5 },
-      { id: 'team-6', name: 'Tottenham', seed: 6 },
-      { id: 'team-7', name: 'Newcastle', seed: 7 },
-      { id: 'team-8', name: 'Aston Villa', seed: 8 }
-    ],
-    matches: [
-      {
-        id: 'match-1',
-        homeTeamId: 'team-1',
-        awayTeamId: 'team-8',
-        homeScore: 2,
-        awayScore: 0,
-        status: 'completed' as const,
-        round: 1,
-        matchNumber: 1,
-        scheduledTime: new Date('2024-01-10T15:00:00'),
-        venue: 'Old Trafford',
-        winnerId: 'team-1',
-        matchType: 'knockout' as const
-      },
-      {
-        id: 'match-2',
-        homeTeamId: 'team-2',
-        awayTeamId: 'team-7',
-        homeScore: 1,
-        awayScore: 1,
-        status: 'live' as const,
-        round: 1,
-        matchNumber: 2,
-        scheduledTime: new Date('2024-01-10T17:30:00'),
-        venue: 'Anfield',
-        matchType: 'knockout' as const
-      },
-      {
-        id: 'match-3',
-        homeTeamId: 'team-3',
-        awayTeamId: 'team-6',
-        homeScore: 0,
-        awayScore: 0,
-        status: 'scheduled' as const,
-        round: 1,
-        matchNumber: 3,
-        scheduledTime: new Date('2024-01-11T15:00:00'),
-        venue: 'Emirates Stadium',
-        matchType: 'knockout' as const
-      },
-      {
-        id: 'match-4',
-        homeTeamId: 'team-4',
-        awayTeamId: 'team-5',
-        homeScore: 0,
-        awayScore: 0,
-        status: 'scheduled' as const,
-        round: 1,
-        matchNumber: 4,
-        scheduledTime: new Date('2024-01-11T17:30:00'),
-        venue: 'Stamford Bridge',
-        matchType: 'knockout' as const
-      }
-    ],
-    settings: {
-      hasThirdPlace: true,
-      hasSeeding: true,
-      groupSize: 4,
-      knockoutRounds: 4
+  // Demo teams
+  const homeTeam = { name: 'Arsenal FC', color: '#DC2626' };
+  const awayTeam = { name: 'Chelsea FC', color: '#2563EB' };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isLive) {
+      interval = setInterval(() => {
+        setMinute(prev => {
+          const newMinute = prev + 1;
+          
+          // Auto-pause at halftime
+          if (newMinute === 45 && period === 'first_half') {
+            setIsLive(false);
+            setPeriod('halftime');
+          }
+          
+          // Auto-pause at full time
+          if (newMinute === 90 && period === 'second_half') {
+            setIsLive(false);
+          }
+          
+          return newMinute;
+        });
+      }, 1000); // 1 second = 1 minute for demo
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLive, period]);
+
+  const handleStart = () => {
+    setIsLive(true);
+    if (period === 'halftime') {
+      setPeriod('second_half');
+      setMinute(45);
     }
   };
 
-  const handleMatchUpdate = (matchId: string, updates: any) => {
-    console.log('Match updated:', matchId, updates);
-    // In a real application, this would update the match in the database
+  const handlePause = () => {
+    setIsLive(false);
   };
 
-  const handleTournamentUpdate = (tournamentId: string, updates: any) => {
-    console.log('Tournament updated:', tournamentId, updates);
-    // In a real application, this would update the tournament in the database
+  const handleStop = () => {
+    setIsLive(false);
+    setMinute(0);
+    setPeriod('first_half');
+  };
+
+  const addGoal = (team: 'home' | 'away') => {
+    if (team === 'home') {
+      setHomeScore(prev => prev + 1);
+    } else {
+      setAwayScore(prev => prev + 1);
+    }
+
+    const event: MatchEvent = {
+      id: Date.now().toString(),
+      type: 'goal',
+      minute,
+      player: team === 'home' ? 'Home Player' : 'Away Player',
+      team,
+      description: `Goal scored by ${team === 'home' ? homeTeam.name : awayTeam.name}`
+    };
+
+    setEvents(prev => [...prev, event]);
+  };
+
+  const addCard = (team: 'home' | 'away', type: 'yellow_card' | 'red_card') => {
+    const event: MatchEvent = {
+      id: Date.now().toString(),
+      type,
+      minute,
+      player: team === 'home' ? 'Home Player' : 'Away Player',
+      team,
+      description: `${type === 'yellow_card' ? 'Yellow' : 'Red'} card for ${team === 'home' ? homeTeam.name : awayTeam.name}`
+    };
+
+    setEvents(prev => [...prev, event]);
+  };
+
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case 'goal': return '⚽';
+      case 'yellow_card': return '🟨';
+      case 'red_card': return '🟥';
+      case 'substitution': return '🔄';
+      default: return '📝';
+    }
+  };
+
+  const getPeriodText = () => {
+    switch (period) {
+      case 'first_half': return '1st Half';
+      case 'second_half': return '2nd Half';
+      case 'halftime': return 'Half Time';
+      default: return 'Match';
+    }
   };
 
   return (
-    <Container fluid className="py-4">
-      {/* Page Header */}
-      <div className="text-center mb-4">
-        <h1 className="display-4 mb-3">
-          <Play className="me-3 text-primary" />
-          Live Match Control System Demo
-        </h1>
-        <p className="lead text-muted">
-          Experience the complete live match management system with real-time controls, 
-          statistics, and tournament management
-        </p>
+    <div className="min-vh-100 bg-light">
+      {/* Header */}
+      <div className="bg-white border-bottom shadow-sm">
+        <div className="container py-3">
+          <div className="d-flex align-items-center">
+            <Link href="/dashboard" className="btn btn-outline-secondary me-3">
+              <ArrowLeft size={16} className="me-1" />
+              Back to Dashboard
+            </Link>
+            <div>
+              <h1 className="h4 mb-0">Live Match Control</h1>
+              <small className="text-muted">Real-time match management demo</small>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Demo Controls */}
-      <Card className="mb-4">
-        <Card.Body>
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex gap-3">
-              <Button
-                variant={activeTab === 'control' ? 'primary' : 'outline-primary'}
-                onClick={() => setActiveTab('control')}
-              >
-                <Play size={16} className="me-2" />
-                Live Match Control
-              </Button>
-              <Button
-                variant={activeTab === 'statistics' ? 'primary' : 'outline-primary'}
-                onClick={() => setActiveTab('statistics')}
-              >
-                <BarChart3 size={16} className="me-2" />
-                Real-Time Statistics
-              </Button>
-              <Button
-                variant={activeTab === 'tournament' ? 'primary' : 'outline-primary'}
-                onClick={() => setActiveTab('tournament')}
-              >
-                <Trophy size={16} className="me-2" />
-                Tournament Bracket
-              </Button>
-            </div>
-            
-            <div className="d-flex gap-2 align-items-center">
-              <span className="text-muted me-2">Role:</span>
-              <Button
-                variant={isReferee ? 'success' : 'outline-success'}
-                size="sm"
-                onClick={() => setIsReferee(!isReferee)}
-              >
-                <Users size={16} className="me-1" />
-                {isReferee ? 'Referee' : 'Spectator'}
-              </Button>
+      <div className="container py-4">
+        {/* Match Header */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm">
+              <div className="card-body text-center">
+                <div className="row align-items-center">
+                  <div className="col-4">
+                    <div className="d-flex flex-column align-items-center">
+                      <div 
+                        className="rounded-circle mb-2" 
+                        style={{
+                          width: '60px', 
+                          height: '60px', 
+                          backgroundColor: homeTeam.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        AFC
+                      </div>
+                      <h5 className="mb-0">{homeTeam.name}</h5>
+                    </div>
+                  </div>
+                  
+                  <div className="col-4">
+                    <div className="d-flex align-items-center justify-content-center mb-3">
+                      <div className="text-center mx-3">
+                        <div className="h1 mb-0">{homeScore}</div>
+                      </div>
+                      <div className="text-center mx-3">
+                        <div className="text-muted">VS</div>
+                      </div>
+                      <div className="text-center mx-3">
+                        <div className="h1 mb-0">{awayScore}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex align-items-center justify-content-center">
+                      <Clock size={16} className="me-2" />
+                      <span className="h5 mb-0">{minute}'</span>
+                      <span className="badge bg-primary ms-2">{getPeriodText()}</span>
+                      {isLive && (
+                        <span className="badge bg-danger ms-2">
+                          <div className="d-flex align-items-center">
+                            <div className="bg-white rounded-circle me-1" style={{width: '6px', height: '6px'}}></div>
+                            LIVE
+                          </div>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="col-4">
+                    <div className="d-flex flex-column align-items-center">
+                      <div 
+                        className="rounded-circle mb-2" 
+                        style={{
+                          width: '60px', 
+                          height: '60px', 
+                          backgroundColor: awayTeam.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        CFC
+                      </div>
+                      <h5 className="mb-0">{awayTeam.name}</h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
 
-      {/* Connection Status Warning */}
-      <Alert variant="warning" className="mb-4">
-        <div className="d-flex align-items-center">
-          <Target size={20} className="me-2" />
-          <div>
-            <strong>Demo Mode:</strong> This is a demonstration of the live match control system. 
-            The WebSocket connection is simulated, but all UI interactions are fully functional.
+        <div className="row">
+          {/* Controls */}
+          <div className="col-lg-8 mb-4">
+            <div className="card border-0 shadow-sm">
+              <div className="card-header bg-transparent">
+                <h5 className="mb-0">Match Controls</h5>
+              </div>
+              <div className="card-body">
+                {/* Timer Controls */}
+                <div className="row mb-4">
+                  <div className="col-12">
+                    <div className="d-flex justify-content-center gap-3">
+                      <button 
+                        className="btn btn-success"
+                        onClick={handleStart}
+                        disabled={isLive}
+                      >
+                        <Play size={16} className="me-1" />
+                        Start
+                      </button>
+                      <button 
+                        className="btn btn-warning"
+                        onClick={handlePause}
+                        disabled={!isLive}
+                      >
+                        <Pause size={16} className="me-1" />
+                        Pause
+                      </button>
+                      <button 
+                        className="btn btn-danger"
+                        onClick={handleStop}
+                      >
+                        <Square size={16} className="me-1" />
+                        Stop
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Score Controls */}
+                <div className="row mb-4">
+                  <div className="col-6">
+                    <div className="text-center">
+                      <h6 className="text-muted">{homeTeam.name} Goals</h6>
+                      <div className="d-flex justify-content-center align-items-center gap-3">
+                        <button 
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => setHomeScore(prev => Math.max(0, prev - 1))}
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="h4 mb-0">{homeScore}</span>
+                        <button 
+                          className="btn btn-outline-success btn-sm"
+                          onClick={() => addGoal('home')}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="text-center">
+                      <h6 className="text-muted">{awayTeam.name} Goals</h6>
+                      <div className="d-flex justify-content-center align-items-center gap-3">
+                        <button 
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => setAwayScore(prev => Math.max(0, prev - 1))}
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="h4 mb-0">{awayScore}</span>
+                        <button 
+                          className="btn btn-outline-success btn-sm"
+                          onClick={() => addGoal('away')}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Controls */}
+                <div className="row">
+                  <div className="col-6">
+                    <h6 className="text-muted">{homeTeam.name} Events</h6>
+                    <div className="d-grid gap-2">
+                      <button 
+                        className="btn btn-warning btn-sm"
+                        onClick={() => addCard('home', 'yellow_card')}
+                      >
+                        🟨 Yellow Card
+                      </button>
+                      <button 
+                        className="btn btn-danger btn-sm"
+                        onClick={() => addCard('home', 'red_card')}
+                      >
+                        🟥 Red Card
+                      </button>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <h6 className="text-muted">{awayTeam.name} Events</h6>
+                    <div className="d-grid gap-2">
+                      <button 
+                        className="btn btn-warning btn-sm"
+                        onClick={() => addCard('away', 'yellow_card')}
+                      >
+                        🟨 Yellow Card
+                      </button>
+                      <button 
+                        className="btn btn-danger btn-sm"
+                        onClick={() => addCard('away', 'red_card')}
+                      >
+                        🟥 Red Card
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Match Events */}
+          <div className="col-lg-4">
+            <div className="card border-0 shadow-sm">
+              <div className="card-header bg-transparent">
+                <h5 className="mb-0">Match Events</h5>
+              </div>
+              <div className="card-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                {events.length === 0 ? (
+                  <div className="text-center text-muted py-4">
+                    <Whistle size={48} className="mb-2" />
+                    <p>No events yet</p>
+                  </div>
+                ) : (
+                  <div className="timeline">
+                    {events.reverse().map((event) => (
+                      <div key={event.id} className="d-flex align-items-start mb-3">
+                        <div className="flex-shrink-0 me-3">
+                          <span className="badge bg-primary">{event.minute}'</span>
+                        </div>
+                        <div className="flex-grow-1">
+                          <div className="d-flex align-items-center">
+                            <span className="me-2 h5 mb-0">{getEventIcon(event.type)}</span>
+                            <div>
+                              <div className="fw-medium">{event.description}</div>
+                              <small className="text-muted">{event.player}</small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </Alert>
 
-      {/* Demo Content */}
-      {activeTab === 'control' && (
-        <div>
-          <h3 className="mb-3">
-            <Play className="me-2 text-primary" />
-            Enhanced Live Match Control
-          </h3>
-          <p className="text-muted mb-4">
-            This component provides referees with comprehensive match control capabilities including 
-            timer management, event entry, and real-time match status updates.
-          </p>
-          
-          <EnhancedLiveMatchControl
-            match={mockMatch}
-            isReferee={isReferee}
-            onMatchUpdate={handleMatchUpdate}
-          />
-        </div>
-      )}
-
-      {activeTab === 'statistics' && (
-        <div>
-          <h3 className="mb-3">
-            <BarChart3 className="me-2 text-info" />
-            Real-Time Statistics Display
-          </h3>
-          <p className="text-muted mb-4">
-            View live match statistics, team performance metrics, and player analytics 
-            in real-time with interactive charts and detailed breakdowns.
-          </p>
-          
-          <LiveStatisticsDisplay
-            matchId={mockMatch.id}
-            homeTeam={mockMatch.homeTeam}
-            awayTeam={mockMatch.awayTeam}
-            homeTeamId={mockMatch.homeTeamId}
-            awayTeamId={mockMatch.awayTeamId}
-            isReferee={isReferee}
-          />
-        </div>
-      )}
-
-      {activeTab === 'tournament' && (
-        <div>
-          <h3 className="mb-3">
-            <Trophy className="me-2 text-warning" />
-            Tournament Bracket System
-          </h3>
-          <p className="text-muted mb-4">
-            Manage tournament brackets with multiple formats, real-time match updates, 
-            and comprehensive tournament administration tools.
-          </p>
-          
-          <TournamentBracket
-            tournament={mockTournament}
-            isAdmin={isReferee}
-            onMatchUpdate={handleMatchUpdate}
-            onTournamentUpdate={handleTournamentUpdate}
-          />
-        </div>
-      )}
-
-      {/* Feature Overview */}
-      <Card className="mt-5">
-        <Card.Body>
-          <h4 className="mb-4">System Features Overview</h4>
-          <Row>
-            <Col md={4}>
-              <div className="text-center mb-3">
-                <Play size={48} className="text-primary mb-3" />
-                <h5>Live Match Control</h5>
-                <ul className="text-start text-muted">
-                  <li>Real-time timer control</li>
-                  <li>Quick event entry</li>
-                  <li>Match status management</li>
-                  <li>Referee permissions</li>
-                </ul>
+        {/* Instructions */}
+        <div className="row mt-4">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm bg-info bg-opacity-10">
+              <div className="card-body">
+                <h6 className="text-info">Demo Instructions</h6>
+                <p className="mb-0 small">
+                  This is a live match control demo. Use the controls to simulate a real match:
+                  Start the timer, add goals and cards, and watch events populate in real-time. 
+                  The timer runs at 1 second = 1 minute for demonstration purposes.
+                </p>
               </div>
-            </Col>
-            
-            <Col md={4}>
-              <div className="text-center mb-3">
-                <BarChart3 size={48} className="text-info mb-3" />
-                <h5>Real-Time Statistics</h5>
-                <ul className="text-start text-muted">
-                  <li>Live match statistics</li>
-                  <li>Player performance tracking</li>
-                  <li>Team analytics</li>
-                  <li>Match momentum analysis</li>
-                </ul>
-              </div>
-            </Col>
-            
-            <Col md={4}>
-              <div className="text-center mb-3">
-                <Trophy size={48} className="text-warning mb-3" />
-                <h5>Tournament Management</h5>
-                <ul className="text-start text-muted">
-                  <li>Multiple bracket formats</li>
-                  <li>Real-time updates</li>
-                  <li>Standings calculation</li>
-                  <li>Admin controls</li>
-                </ul>
-              </div>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {/* Technical Details */}
-      <Card className="mt-4">
-        <Card.Body>
-          <h5 className="mb-3">
-            <Settings className="me-2" />
-            Technical Implementation
-          </h5>
-          <Row>
-            <Col md={6}>
-              <h6>Frontend Components</h6>
-              <ul className="text-muted">
-                <li>React TypeScript components</li>
-                <li>Bootstrap UI framework</li>
-                <li>Real-time WebSocket integration</li>
-                <li>Responsive design</li>
-              </ul>
-            </Col>
-            <Col md={6}>
-              <h6>Backend Integration</h6>
-              <ul className="text-muted">
-                <li>PostgreSQL database</li>
-                <li>Express.js API</li>
-                <li>WebSocket server</li>
-                <li>Real-time event handling</li>
-              </ul>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {/* Usage Instructions */}
-      <Card className="mt-4">
-        <Card.Body>
-          <h5 className="mb-3">How to Use</h5>
-          <ol className="text-muted">
-            <li><strong>Switch between tabs</strong> to explore different system components</li>
-            <li><strong>Toggle referee role</strong> to see different permission levels</li>
-            <li><strong>Interact with controls</strong> to experience the full functionality</li>
-            <li><strong>View real-time updates</strong> as you make changes</li>
-            <li><strong>Explore tournament brackets</strong> and match management</li>
-          </ol>
-        </Card.Body>
-      </Card>
-    </Container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

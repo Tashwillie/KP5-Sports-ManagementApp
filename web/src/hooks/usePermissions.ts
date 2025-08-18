@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { 
   Permission, 
   UserRole, 
@@ -45,7 +45,7 @@ export interface UsePermissionsReturn {
 }
 
 export const usePermissions = (): UsePermissionsReturn => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   
   const userRole = useMemo(() => {
     if (!user?.role) return null;

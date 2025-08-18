@@ -280,17 +280,7 @@ export default function RefereesPage() {
   };
 
   // Filter referees based on search and filters
-  const filteredReferees = (apiRefs || []).map((u: any) => ({
-    id: u.id,
-    firstName: u.firstName || '',
-    lastName: u.lastName || '',
-    email: u.email || '',
-    phone: u.phone || '',
-    specialization: u.profile?.specialization || 'Football',
-    licenseNumber: u.profile?.licenseNumber || '',
-    status: u.isActive ? 'active' : 'inactive',
-    level: 'senior',
-  } as any)).filter(referee => {
+  const filteredReferees = mockReferees.filter(referee => {
     const fullName = `${referee.firstName} ${referee.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
                          referee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -305,31 +295,33 @@ export default function RefereesPage() {
   });
 
   // Calculate stats
-  const totalReferees = apiRefs?.length || 0;
-  const activeReferees = (apiRefs || []).filter((u: any) => u.isActive).length;
-  const totalMatches = 0;
-  const avgAccuracy = 0;
+  const totalReferees = mockReferees.length;
+  const activeReferees = mockReferees.filter(referee => referee.status === 'active').length;
+  const totalMatches = mockReferees.reduce((total, referee) => total + referee.matchesOfficiated, 0);
+  const avgAccuracy = mockReferees.length > 0 
+    ? mockReferees.reduce((total, referee) => total + referee.accuracyRate, 0) / mockReferees.length
+    : 0;
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
       <Sidebar activeTab="referees" userData={userData} />
 
       {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
         {/* Header */}
         <div className="bg-white border-bottom p-3">
-          <div className="d-flex justify-content-between align-items-center">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div className="d-flex align-items-center">
               <h4 className="mb-0 me-3">Referees Management</h4>
             </div>
-            <div className="d-flex gap-2">
+            <div className="d-flex flex-wrap gap-2">
               <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
                 <Search size={16} className="me-1" />
-                Search
+                <span className="d-none d-sm-inline">Search</span>
               </button>
               <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
                 <Bell size={16} className="me-1" />
-                Notifications
+                <span className="d-none d-sm-inline">Notifications</span>
               </button>
               <button 
                 className="btn text-white btn-sm d-flex align-items-center"
@@ -337,81 +329,81 @@ export default function RefereesPage() {
                 onClick={handleCreateReferee}
               >
                 <Plus size={16} className="me-1" />
-                Add Referee
+                <span className="d-none d-sm-inline">Add Referee</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="p-4">
-          <div className="row g-4 mb-4">
-            <div className="col-xl-3 col-md-6">
+        <div className="p-3 p-md-4">
+          <div className="row g-3 g-md-4 mb-4">
+            <div className="col-lg-3 col-md-6 col-12">
               <div className="card border-0 shadow-sm">
-                <div className="card-body">
+                <div className="card-body p-3">
                   <div className="d-flex align-items-center">
                     <div className="flex-shrink-0">
-                      <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Award size={24} style={{color: '#4169E1'}} />
+                      <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+                        <Award size={20} style={{color: '#4169E1'}} />
                       </div>
                     </div>
                     <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Total Referees</h6>
-                      <h4 className="mb-0 fw-bold">{totalReferees}</h4>
+                      <h6 className="text-muted mb-1 small">Total Referees</h6>
+                      <h5 className="mb-0 fw-bold">{totalReferees}</h5>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="col-xl-3 col-md-6">
+            <div className="col-lg-3 col-md-6 col-12">
               <div className="card border-0 shadow-sm">
-                <div className="card-body">
+                <div className="card-body p-3">
                   <div className="d-flex align-items-center">
                     <div className="flex-shrink-0">
-                      <div className="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Activity size={24} className="text-success" />
+                      <div className="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+                        <Activity size={20} className="text-success" />
                       </div>
                     </div>
                     <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Active Referees</h6>
-                      <h4 className="mb-0 fw-bold">{activeReferees}</h4>
+                      <h6 className="text-muted mb-1 small">Active Referees</h6>
+                      <h5 className="mb-0 fw-bold">{activeReferees}</h5>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="col-xl-3 col-md-6">
+            <div className="col-lg-3 col-md-6 col-12">
               <div className="card border-0 shadow-sm">
-                <div className="card-body">
+                <div className="card-body p-3">
                   <div className="d-flex align-items-center">
                     <div className="flex-shrink-0">
-                      <div className="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <Target size={24} className="text-warning" />
+                      <div className="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+                        <Target size={20} className="text-warning" />
                       </div>
                     </div>
                     <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Matches Officiated</h6>
-                      <h4 className="mb-0 fw-bold">{totalMatches}</h4>
+                      <h6 className="text-muted mb-1 small">Matches Officiated</h6>
+                      <h5 className="mb-0 fw-bold">{totalMatches}</h5>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="col-xl-3 col-md-6">
+            <div className="col-lg-3 col-md-6 col-12">
               <div className="card border-0 shadow-sm">
-                <div className="card-body">
+                <div className="card-body p-3">
                   <div className="d-flex align-items-center">
                     <div className="flex-shrink-0">
-                      <div className="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '48px', height: '48px' }}>
-                        <CheckCircle size={24} className="text-info" />
+                      <div className="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+                        <CheckCircle size={20} className="text-info" />
                       </div>
                     </div>
                     <div className="flex-grow-1 ms-3">
-                      <h6 className="text-muted mb-1">Avg Accuracy</h6>
-                      <h4 className="mb-0 fw-bold">{avgAccuracy.toFixed(1)}%</h4>
+                      <h6 className="text-muted mb-1 small">Avg Accuracy</h6>
+                      <h5 className="mb-0 fw-bold">{avgAccuracy.toFixed(1)}%</h5>
                     </div>
                   </div>
                 </div>
@@ -421,13 +413,13 @@ export default function RefereesPage() {
 
           {/* Filters */}
           <div className="card border-0 shadow-sm mb-4">
-            <div className="card-body">
+            <div className="card-body p-3">
               <div className="row g-3">
-                <div className="col-md-3">
-                  <label htmlFor="search" className="form-label fw-medium">Search</label>
-                  <div className="input-group">
+                <div className="col-lg-3 col-md-6 col-12">
+                  <label htmlFor="search" className="form-label fw-medium small">Search</label>
+                  <div className="input-group input-group-sm">
                     <span className="input-group-text bg-white border-end-0">
-                      <Search size={16} className="text-muted" />
+                      <Search size={14} className="text-muted" />
                     </span>
                     <input
                       type="text"
@@ -440,11 +432,11 @@ export default function RefereesPage() {
                   </div>
                 </div>
 
-                <div className="col-md-3">
-                  <label htmlFor="statusFilter" className="form-label fw-medium">Status</label>
+                <div className="col-lg-3 col-md-6 col-12">
+                  <label htmlFor="statusFilter" className="form-label fw-medium small">Status</label>
                   <select
                     id="statusFilter"
-                    className="form-select"
+                    className="form-select form-select-sm"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
@@ -456,11 +448,11 @@ export default function RefereesPage() {
                   </select>
                 </div>
 
-                <div className="col-md-3">
-                  <label htmlFor="levelFilter" className="form-label fw-medium">Level</label>
+                <div className="col-lg-3 col-md-6 col-12">
+                  <label htmlFor="levelFilter" className="form-label fw-medium small">Level</label>
                   <select
                     id="levelFilter"
-                    className="form-select"
+                    className="form-select form-select-sm"
                     value={levelFilter}
                     onChange={(e) => setLevelFilter(e.target.value)}
                   >
@@ -472,11 +464,11 @@ export default function RefereesPage() {
                   </select>
                 </div>
 
-                <div className="col-md-3">
-                  <label htmlFor="specializationFilter" className="form-label fw-medium">Specialization</label>
+                <div className="col-lg-3 col-md-6 col-12">
+                  <label htmlFor="specializationFilter" className="form-label fw-medium small">Specialization</label>
                   <select
                     id="specializationFilter"
-                    className="form-select"
+                    className="form-select form-select-sm"
                     value={specializationFilter}
                     onChange={(e) => setSpecializationFilter(e.target.value)}
                   >
@@ -499,80 +491,80 @@ export default function RefereesPage() {
                 <table className="table table-hover mb-0">
                   <thead className="bg-light">
                     <tr>
-                      <th className="border-0 px-4 py-3 fw-medium">Referee</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Specialization</th>
-                      <th className="border-0 px-4 py-3 fw-medium">License</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Experience</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Stats</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Rating</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Status</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Level</th>
-                      <th className="border-0 px-4 py-3 fw-medium text-end">Actions</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium">Referee</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium d-none d-md-table-cell">Specialization</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium d-none d-lg-table-cell">License</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium d-none d-xl-table-cell">Experience</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium d-none d-lg-table-cell">Stats</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium d-none d-md-table-cell">Rating</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium">Status</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium d-none d-md-table-cell">Level</th>
+                      <th className="border-0 px-2 px-md-3 py-2 py-md-3 fw-medium text-end">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredReferees.map((referee) => (
                       <tr key={referee.id}>
-                        <td className="px-4 py-3">
+                        <td className="px-2 px-md-3 py-2 py-md-3">
                           <div className="d-flex align-items-center">
-                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
-                              <Award size={20} className="text-muted" />
+                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-2 me-md-3" style={{ width: '32px', height: '32px' }}>
+                              <Award size={16} className="text-muted" />
                             </div>
                             <div>
-                              <div className="fw-medium">{referee.firstName} {referee.lastName}</div>
-                              <small className="text-muted">{referee.email}</small>
+                              <div className="fw-medium small">{referee.firstName} {referee.lastName}</div>
+                              <small className="text-muted d-none d-sm-block">{referee.email}</small>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className="badge bg-light text-dark border">
+                        <td className="px-2 px-md-3 py-2 py-md-3 d-none d-md-table-cell">
+                          <span className="badge bg-light text-dark border small">
                             {referee.specialization}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 px-md-3 py-2 py-md-3 d-none d-lg-table-cell">
                           <div className="d-flex align-items-center">
-                            <Shield size={16} className="text-muted me-2" />
+                            <Shield size={14} className="text-muted me-2" />
                             <span className="small">{referee.licenseNumber}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 px-md-3 py-2 py-md-3 d-none d-xl-table-cell">
                           <div className="d-flex align-items-center">
-                            <Clock size={16} className="text-muted me-2" />
-                            <span>{referee.experience} years</span>
+                            <Clock size={14} className="text-muted me-2" />
+                            <span className="small">{referee.experience} years</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 px-md-3 py-2 py-md-3 d-none d-lg-table-cell">
                           <div className="small">
                             <div>Matches: {referee.matchesOfficiated}</div>
                             <div>Cards: {referee.totalCards}</div>
                             <div>Accuracy: {referee.accuracyRate}%</div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 px-md-3 py-2 py-md-3 d-none d-md-table-cell">
                           <div className="d-flex align-items-center">
-                            <Star size={16} className="text-warning me-1" />
-                            <span>{referee.rating}</span>
+                            <Star size={14} className="text-warning me-1" />
+                            <span className="small">{referee.rating}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={getStatusBadgeClass(referee.status)}>
+                        <td className="px-2 px-md-3 py-2 py-md-3">
+                          <span className={`${getStatusBadgeClass(referee.status)} small`}>
                             {getStatusLabel(referee.status)}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={getLevelBadgeClass(referee.level)}>
+                        <td className="px-2 px-md-3 py-2 py-md-3 d-none d-md-table-cell">
+                          <span className={`${getLevelBadgeClass(referee.level)} small`}>
                             {referee.level.charAt(0).toUpperCase() + referee.level.slice(1)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-end">
+                        <td className="px-2 px-md-3 py-2 py-md-3 text-end">
                           <div className="btn-group" role="group">
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-secondary"
+                              className="btn btn-sm btn-outline-secondary d-none d-md-inline-block"
                               onClick={() => handleViewReferee(referee.id)}
                               title="View Referee"
                             >
-                              <Eye size={14} />
+                              <Eye size={12} />
                             </button>
                             <button
                               type="button"
@@ -580,15 +572,15 @@ export default function RefereesPage() {
                               onClick={() => handleEditReferee(referee.id)}
                               title="Edit Referee"
                             >
-                              <Edit size={14} />
+                              <Edit size={12} />
                             </button>
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-secondary"
+                              className="btn btn-sm btn-outline-secondary d-none d-sm-inline-block"
                               onClick={() => handleManageReferee(referee.id)}
                               title="Manage Referee"
                             >
-                              <SettingsIcon size={14} />
+                              <SettingsIcon size={12} />
                             </button>
                           </div>
                         </td>

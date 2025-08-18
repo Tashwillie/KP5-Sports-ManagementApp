@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LiveMatchTracker } from '@/components/match/LiveMatchTracker';
-import { WebSocketStatus } from '@/components/common/WebSocketStatus';
+import WebSocketStatus from '@/components/common/WebSocketStatus';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { MatchUpdate } from '@/lib/services/websocketService';
 import { toast } from 'sonner';

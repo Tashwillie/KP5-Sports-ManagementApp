@@ -2,8 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { useUsers } from '@/hooks/useUsers';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { useRouter } from 'next/navigation';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   Plus,
   Eye,
@@ -76,17 +77,28 @@ interface CoachWithStats extends Coach {
 }
 
 export default function CoachesPage() {
+  return (
+    <ProtectedRoute>
+      <CoachesContent />
+    </ProtectedRoute>
+  );
+}
+
+function CoachesContent() {
   const router = useRouter();
-  const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('coaches');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
   const [specializationFilter, setSpecializationFilter] = useState('all');
   const { users: apiCoaches, loading: loadingCoaches, error } = useUsers({ role: 'COACH' });
-
-  // Auth user replaces mock user data
-  const userData = user ? { id: user.id, name: user.displayName || '', email: user.email, role: user.role } : null;
+  
+  // Mock user data for sidebar
+  const userData = {
+    id: 'user123',
+    name: 'John Doe',
+    email: 'john@example.com',
+    role: 'admin'
+  };
 
   const coaches: CoachWithStats[] = useMemo(() => {
     return (apiCoaches || []).map((u: any) => ({
@@ -202,30 +214,53 @@ export default function CoachesPage() {
   const totalTeams = coaches.reduce((sum, coach) => sum + coach.teamsCoached, 0);
   const avgWinRate = coaches.length ? coaches.reduce((sum, coach) => sum + coach.winRate, 0) / coaches.length : 0;
 
-  return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      <Sidebar activeTab="coaches" userData={userData} />
+  if (loadingCoaches) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading coaches...</p>
+        </div>
+      </div>
+    );
+  }
 
+  if (error) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="alert alert-danger" role="alert">
+            <h4 className="alert-heading">Error loading coaches</h4>
+            <p className="mb-3">{error instanceof Error ? error.message : 'An error occurred while loading coaches'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="d-flex" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+      <Sidebar activeTab="coaches" userData={userData} />
+      
       {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
-        {/* Header */}
-        <div className="bg-white border-bottom p-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <h4 className="mb-0 me-3">Coaches Management</h4>
+      <div className="flex-grow-1 bg-light" style={{ minWidth: 0, overflow: 'auto' }}>
+        <div className="p-3 p-md-4">
+          {/* Header */}
+          <div className="d-flex align-items-center justify-content-between mb-4">
+            <div>
+              <h1 className="h3 mb-0 d-flex align-items-center">
+                <GraduationCap className="me-2 text-primary" size={24} />
+                Coaches Management
+              </h1>
+              <p className="text-muted mb-0" style={{ fontSize: '14px' }}>
+                Manage coaching staff and their assignments
+              </p>
             </div>
-            <div className="d-flex gap-2">
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Search size={16} className="me-1" />
-                Search
-              </button>
-              <button className="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                <Bell size={16} className="me-1" />
-                Notifications
-              </button>
+            <div className="d-flex align-items-center gap-2">
               <button 
-                className="btn text-white btn-sm d-flex align-items-center"
-                style={{backgroundColor: '#4169E1'}}
+                className="btn btn-primary btn-sm d-flex align-items-center"
                 onClick={handleCreateCoach}
               >
                 <Plus size={16} className="me-1" />
@@ -233,10 +268,8 @@ export default function CoachesPage() {
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="p-4">
+          {/* Stats Cards */}
           <div className="row g-4 mb-4">
             <div className="col-xl-3 col-md-6">
               <div className="card border-0 shadow-sm">
@@ -384,121 +417,109 @@ export default function CoachesPage() {
             </div>
           </div>
 
-          {/* Coaches Table */}
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-0">
-              <div className="table-responsive">
-                <table className="table table-hover mb-0">
-                  <thead className="bg-light">
-                    <tr>
-                      <th className="border-0 px-4 py-3 fw-medium">Coach</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Specialization</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Team</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Experience</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Stats</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Rating</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Status</th>
-                      <th className="border-0 px-4 py-3 fw-medium">Level</th>
-                      <th className="border-0 px-4 py-3 fw-medium text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCoaches.map((coach) => (
-                      <tr key={coach.id}>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
-                              <GraduationCap size={20} className="text-muted" />
-                            </div>
-                            <div>
-                              <div className="fw-medium">{coach.firstName} {coach.lastName}</div>
-                              <small className="text-muted">{coach.email}</small>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="badge bg-light text-dark border">
-                            {coach.specialization}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Users size={16} className="text-muted me-2" />
-                            <span>{coach.teamName || 'No Team'}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Clock size={16} className="text-muted me-2" />
-                            <span>{coach.experience} years</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="small">
-                            <div>Teams: {coach.teamsCoached}</div>
-                            <div>Matches: {coach.totalMatches}</div>
-                            <div>Win Rate: {coach.winRate}%</div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="d-flex align-items-center">
-                            <Star size={16} className="text-warning me-1" />
-                            <span>{coach.rating}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={getStatusBadgeClass(coach.status)}>
-                            {getStatusLabel(coach.status)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={getLevelBadgeClass(coach.level)}>
-                            {coach.level.charAt(0).toUpperCase() + coach.level.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          <div className="btn-group" role="group">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleViewCoach(coach.id)}
-                              title="View Coach"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleEditCoach(coach.id)}
-                              title="Edit Coach"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleManageCoach(coach.id)}
-                              title="Manage Coach"
-                            >
-                              <SettingsIcon size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {filteredCoaches.length === 0 && (
-                <div className="text-center py-5">
-                  <GraduationCap size={48} className="text-muted mb-3" />
-                  <h5 className="text-muted">No coaches found</h5>
-                  <p className="text-muted">Try adjusting your search or filters</p>
+          {/* Coaches Grid */}
+          <div className="row g-4">
+            {filteredCoaches && filteredCoaches.length > 0 ? filteredCoaches.map((coach) => (
+              <div key={coach.id} className="col-md-6 col-xl-4">
+                <div className="card border-0 shadow-sm h-100">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <span className={getStatusBadgeClass(coach.status)}>
+                          {getStatusLabel(coach.status)}
+                        </span>
+                        <span className={`${getLevelBadgeClass(coach.level)} ms-2`}>
+                          {coach.level.charAt(0).toUpperCase() + coach.level.slice(1)}
+                        </span>
+                      </div>
+                      <div className="dropdown">
+                        <button className="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                          <i className="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul className="dropdown-menu">
+                          <li><a className="dropdown-item" href="#" onClick={() => handleViewCoach(coach.id)}>
+                            <Eye size={16} className="me-2" />View
+                          </a></li>
+                          <li><a className="dropdown-item" href="#" onClick={() => handleEditCoach(coach.id)}>
+                            <Edit size={16} className="me-2" />Edit
+                          </a></li>
+                          <li><a className="dropdown-item" href="#" onClick={() => handleManageCoach(coach.id)}>
+                            <SettingsIcon size={16} className="me-2" />Manage
+                          </a></li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center mb-3">
+                      <div className="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style={{width: '60px', height: '60px'}}>
+                        <GraduationCap size={24} className="text-primary" />
+                      </div>
+                      <h5 className="card-title mb-1">{coach.firstName} {coach.lastName}</h5>
+                      <p className="text-muted small mb-0">{coach.email}</p>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <small className="text-muted">Specialization</small>
+                      <div className="fw-bold">{coach.specialization}</div>
+                    </div>
+                    
+                    <div className="row text-center mb-3">
+                      <div className="col-4">
+                        <div className="text-primary fw-bold">{coach.teamsCoached}</div>
+                        <small className="text-muted">Teams</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-success fw-bold">{coach.totalMatches}</div>
+                        <small className="text-muted">Matches</small>
+                      </div>
+                      <div className="col-4">
+                        <div className="text-warning fw-bold">{coach.winRate}%</div>
+                        <small className="text-muted">Win Rate</small>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <small className="text-muted">Team</small>
+                        <div className="fw-bold">{coach.teamName || 'No Team'}</div>
+                      </div>
+                      <div className="text-end">
+                        <small className="text-muted">Experience</small>
+                        <div className="fw-bold">{coach.experience} years</div>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div className="d-flex align-items-center">
+                        <Star size={16} className="text-warning me-1" />
+                        <span className="fw-bold">{coach.rating}</span>
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleViewCoach(coach.id)}
+                      >
+                        View Profile
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )) : null}
           </div>
+
+          {(!filteredCoaches || filteredCoaches.length === 0) && !loadingCoaches && (
+            <div className="text-center py-5">
+              <GraduationCap size={48} className="text-muted mb-3" />
+              <h4 className="mt-3">No coaches found</h4>
+              <p className="text-muted">Try adjusting your search or filters</p>
+              <button 
+                className="btn btn-primary"
+                onClick={handleCreateCoach}
+              >
+                Add Your First Coach
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -545,3 +545,5 @@ export const RealTimeStatsDashboard: React.FC<RealTimeStatsDashboardProps> = ({
     </div>
   );
 };
+
+export default RealTimeStatsDashboard;

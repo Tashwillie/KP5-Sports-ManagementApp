@@ -308,7 +308,14 @@ export class PerformanceAnalyticsService {
         id: { in: teamStats.map(stat => stat.teamId) }
       },
       include: {
-        matches: {
+        homeMatches: {
+          where: whereClause.match,
+          include: {
+            homeTeam: true,
+            awayTeam: true
+          }
+        },
+        awayMatches: {
           where: whereClause.match,
           include: {
             homeTeam: true,
@@ -320,12 +327,12 @@ export class PerformanceAnalyticsService {
 
     const rankings = teamDetails.map(team => {
       const stats = teamStats.find(s => s.teamId === team.id);
-      const matches = team.matches;
+      const allMatches = [...team.homeMatches, ...team.awayMatches];
       
       let wins = 0, draws = 0, losses = 0;
       let goalsFor = 0, goalsAgainst = 0;
       
-      matches.forEach(match => {
+      allMatches.forEach(match => {
         if (match.homeTeamId === team.id) {
           goalsFor += match.homeScore || 0;
           goalsAgainst += match.awayScore || 0;
@@ -345,12 +352,12 @@ export class PerformanceAnalyticsService {
 
       const points = wins * 3 + draws;
       const goalDifference = goalsFor - goalsAgainst;
-      const winPercentage = matches.length > 0 ? (wins / matches.length) * 100 : 0;
+      const winPercentage = allMatches.length > 0 ? (wins / allMatches.length) * 100 : 0;
 
       return {
         teamId: team.id,
         teamName: team.name,
-        matchesPlayed: matches.length,
+        matchesPlayed: allMatches.length,
         wins,
         draws,
         losses,

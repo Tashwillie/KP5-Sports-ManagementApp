@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,7 +17,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { register } = useAuth();
+  const { register } = useEnhancedAuthContext();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {

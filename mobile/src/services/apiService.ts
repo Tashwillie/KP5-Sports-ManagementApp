@@ -103,104 +103,190 @@ export interface MatchStatistics {
 }
 
 export interface TeamStats {
-  teamId: string;
-  teamName: string;
-  score: number;
-  possession: number;
+  goals: number;
+  assists: number;
   shots: number;
+  shotsOnTarget: number;
   corners: number;
   fouls: number;
   yellowCards: number;
   redCards: number;
-}
-
-export interface PlayerMatchStats {
-  playerId: string;
-  playerName: string;
-  teamId: string;
-  matchId: string;
-  goals: number;
-  assists: number;
-  yellowCards: number;
-  redCards: number;
-  minutesPlayed: number;
-  shots: number;
+  possession: number;
   passes: number;
+  passesCompleted: number;
   tackles: number;
+  interceptions: number;
+  offsides: number;
+  saves: number;
+  clearances: number;
+  blocks: number;
+  distance: number;
+  sprints: number;
 }
 
-// Match State Types
-export interface MatchState {
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'POSTPONED';
-  currentPeriod: 'FIRST_HALF' | 'HALFTIME' | 'SECOND_HALF' | 'EXTRA_TIME' | 'PENALTIES';
-  timeElapsed: number;
-  injuryTime: number;
-  homeScore: number;
-  awayScore: number;
-  isTimerRunning: boolean;
-  lastEventTime?: string;
+// User Types
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  avatar?: string;
+  role: string;
+  isActive: boolean;
 }
 
-// Base API Class
-class BaseAPI {
-  protected baseURL: string;
-  protected websocketURL: string;
-  protected timeout: number;
-  protected token: string | null = null;
+// Authentication Types
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  role?: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+  refreshToken?: string;
+}
+
+// Token Management
+class TokenManager {
+  private static readonly TOKEN_KEY = 'auth_token';
+  private static readonly REFRESH_TOKEN_KEY = 'refresh_token';
+  private static readonly TOKEN_EXPIRY_KEY = 'token_expiry';
+
+  static async storeTokens(accessToken: string, refreshToken?: string): Promise<void> {
+    try {
+      // Decode JWT to get expiration
+      const decoded = this.decodeJWT(accessToken);
+      const expiryTime = decoded?.exp ? decoded.exp * 1000 : Date.now() + (24 * 60 * 60 * 1000);
+
+      await AsyncStorage.setItem(this.TOKEN_KEY, accessToken);
+      await AsyncStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+      
+      if (refreshToken) {
+        await AsyncStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
+      }
+    } catch (error) {
+      console.error('Failed to store tokens:', error);
+    }
+  }
+
+  static async getAccessToken(): Promise<string | null> {
+    try {
+      const token = await AsyncStorage.getItem(this.TOKEN_KEY);
+      if (!token) return null;
+
+      // Check if token is expired
+      if (this.isTokenExpired(token)) {
+        await this.clearTokens();
+        return null;
+      }
+
+      return token;
+    } catch (error) {
+      console.error('Failed to load token:', error);
+      return null;
+    }
+  }
+
+  static async getRefreshToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(this.REFRESH_TOKEN_KEY);
+    } catch (error) {
+      console.error('Failed to load refresh token:', error);
+      return null;
+    }
+  }
+
+  static async clearTokens(): Promise<void> {
+    try {
+      await AsyncStorage.multiRemove([
+        this.TOKEN_KEY,
+        this.REFRESH_TOKEN_KEY,
+        this.TOKEN_EXPIRY_KEY,
+      ]);
+    } catch (error) {
+      console.error('Failed to clear tokens:', error);
+    }
+  }
+
+  static isTokenExpired(token: string): boolean {
+    try {
+      const decoded = this.decodeJWT(token);
+      if (!decoded?.exp) return true;
+
+      const currentTime = Date.now() / 1000;
+      const bufferTime = 60; // 1 minute buffer
+
+      return decoded.exp < (currentTime + bufferTime);
+    } catch (error) {
+      return true;
+    }
+  }
+
+  private static decodeJWT(token: string): any {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = atob(payload);
+      return JSON.parse(decoded);
+    } catch (error) {
+      return null;
+    }
+  }
+}
+
+// Mobile API Service
+class MobileApiService {
+  private baseURL: string;
+  private websocketURL: string;
+  private timeout: number;
+  private isRefreshing = false;
+  private refreshSubscribers: Array<(token: string) => void> = [];
 
   constructor(config: ApiConfig) {
     this.baseURL = config.baseUrl;
     this.websocketURL = config.websocketUrl;
     this.timeout = config.timeout || 10000;
-    this.loadToken();
   }
 
-  private async loadToken(): Promise<void> {
-    try {
-      this.token = await AsyncStorage.getItem('auth_token');
-    } catch (error) {
-      console.error('Failed to load token:', error);
-    }
-  }
-
-  public async setToken(token: string): Promise<void> {
-    this.token = token;
-    try {
-      await AsyncStorage.setItem('auth_token', token);
-    } catch (error) {
-      console.error('Failed to save token:', error);
-    }
-  }
-
-  public async clearToken(): Promise<void> {
-    this.token = null;
-    try {
-      await AsyncStorage.removeItem('auth_token');
-    } catch (error) {
-      console.error('Failed to clear token:', error);
-    }
-  }
-
-  protected async makeRequest<T>(
+  /**
+   * Generic request method with automatic token handling
+   */
+  private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': `KP5-Academy-Mobile/${Platform.OS}`,
-      ...options.headers as Record<string, string>,
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
     try {
+      // Check if token needs refresh before making request
+      if (await this.needsTokenRefresh() && !endpoint.includes('/auth/refresh')) {
+        await this.refreshToken();
+      }
+
+      const token = await TokenManager.getAccessToken();
+      const url = `${this.baseURL}${endpoint}`;
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+      };
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
       const response = await fetch(url, {
         ...options,
         headers,
@@ -209,224 +295,306 @@ class BaseAPI {
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}`);
+      // Handle token refresh if we get 401
+      if (response.status === 401 && !endpoint.includes('/auth/refresh')) {
+        const refreshed = await this.refreshToken();
+        if (refreshed) {
+          // Retry the request with new token
+          return this.request<T>(endpoint, options);
+        }
       }
 
-      const data = await response.json() as ApiResponse<T>;
-      return data;
+      return this.handleResponse<T>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          message: 'Request timeout',
+          error: 'TIMEOUT',
+        };
+      }
+
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: 'NETWORK_ERROR',
+      };
+    }
+  }
+
+  /**
+   * Handle API response and extract data
+   */
+  private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    try {
+      const responseText = await response.text();
+      let data: any;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        data = { rawResponse: responseText };
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || `HTTP ${response.status}: ${response.statusText}`,
+          error: data.error || 'HTTP_ERROR',
+        };
+      }
+
+      return {
+        success: data.success !== false,
+        message: data.message || 'Request successful',
+        data: data.data || data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: 'Failed to process response',
+        error: 'RESPONSE_ERROR',
+      };
+    }
+  }
+
+  /**
+   * Check if token needs refresh
+   */
+  private async needsTokenRefresh(): Promise<boolean> {
+    const token = await TokenManager.getAccessToken();
+    if (!token) return false;
+
+    try {
+      const decoded = this.decodeJWT(token);
+      if (!decoded?.exp) return true;
+
+      const currentTime = Date.now() / 1000;
+      const fiveMinutes = 5 * 60; // 5 minutes in seconds
+
+      return decoded.exp < (currentTime + fiveMinutes);
     } catch (error) {
-      clearTimeout(timeoutId);
-      console.error(`API request failed for ${endpoint}:`, error);
-      throw error;
+      return true;
     }
   }
 
-  protected async get<T>(endpoint: string): Promise<T> {
-    const response = await this.makeRequest<T>(endpoint, { method: 'GET' });
-    if (!response.success || !response.data) {
-      throw new Error(response.message || 'Request failed');
+  /**
+   * Refresh authentication token
+   */
+  private async refreshToken(): Promise<boolean> {
+    if (this.isRefreshing) {
+      return new Promise((resolve) => {
+        this.refreshSubscribers.push((token: string) => {
+          resolve(token !== '');
+        });
+      });
     }
-    return response.data;
+
+    this.isRefreshing = true;
+
+    try {
+      const refreshToken = await TokenManager.getRefreshToken();
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.token) {
+          await TokenManager.storeTokens(data.data.token, data.data.refreshToken);
+          
+          // Notify subscribers
+          this.refreshSubscribers.forEach(callback => callback(data.data.token));
+          this.refreshSubscribers = [];
+          
+          this.isRefreshing = false;
+          return true;
+        }
+      }
+
+      throw new Error('Token refresh failed');
+    } catch (error: any) {
+      await TokenManager.clearTokens();
+      
+      // Notify subscribers of failure
+      this.refreshSubscribers.forEach(callback => callback(''));
+      this.refreshSubscribers = [];
+      
+      this.isRefreshing = false;
+      return false;
+    }
   }
 
-  protected async post<T>(endpoint: string, data?: any): Promise<T> {
-    const response = await this.makeRequest<T>(endpoint, {
+  /**
+   * Decode JWT payload (without verification)
+   */
+  private decodeJWT(token: string): any {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = atob(payload);
+      return JSON.parse(decoded);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Generic HTTP methods
+  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    const body = data ? JSON.stringify(data) : undefined;
+    return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: body,
     });
-    if (!response.success || !response.data) {
-      throw new Error(response.message || 'Request failed');
-    }
-    return response.data;
   }
 
-  protected async put<T>(endpoint: string, data?: any): Promise<T> {
-    const response = await this.makeRequest<T>(endpoint, {
+  async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     });
-    if (!response.success || !response.data) {
-      throw new Error(response.message || 'Request failed');
-    }
-    return response.data;
   }
 
-  protected async delete<T>(endpoint: string): Promise<T> {
-    const response = await this.makeRequest<T>(endpoint, { method: 'DELETE' });
-    if (!response.success || !response.data) {
-      throw new Error(response.message || 'Request failed');
-    }
-    return response.data;
+  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
   }
-}
 
-// Match API
-export class MatchAPI extends BaseAPI {
-  async getMatch(matchId: string): Promise<Match> {
+  // Authentication methods
+  async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
+    const response = await this.post<AuthResponse>('/auth/signin', credentials);
+    
+    if (response.success && response.data?.token) {
+      await TokenManager.storeTokens(response.data.token, response.data.refreshToken);
+    }
+    
+    return response;
+  }
+
+  async register(userData: RegisterData): Promise<ApiResponse<AuthResponse>> {
+    const response = await this.post<AuthResponse>('/auth/register', userData);
+    
+    if (response.success && response.data?.token) {
+      await TokenManager.storeTokens(response.data.token, response.data.refreshToken);
+    }
+    
+    return response;
+  }
+
+  async logout(): Promise<ApiResponse<void>> {
+    try {
+      const refreshToken = await TokenManager.getRefreshToken();
+      if (refreshToken) {
+        await this.post<void>('/auth/logout', { refreshToken });
+      }
+      await TokenManager.clearTokens();
+      return { success: true, message: 'Logged out successfully' };
+    } catch (error) {
+      await TokenManager.clearTokens();
+      return { success: true, message: 'Logged out (local only)' };
+    }
+  }
+
+  async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
+    return this.get<{ user: User }>('/auth/me');
+  }
+
+  // Match management methods
+  async getMatches(params?: { page?: number; limit?: number; status?: string; homeTeamId?: string; awayTeamId?: string; startDate?: string; endDate?: string }): Promise<ApiResponse<Match[]>> {
+    const queryParams = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return this.get<Match[]>(`/matches${queryParams}`);
+  }
+
+  async getMatch(matchId: string): Promise<ApiResponse<Match>> {
     return this.get<Match>(`/matches/${matchId}`);
   }
 
-  async getMatches(params?: {
-    status?: string;
-    homeTeamId?: string;
-    awayTeamId?: string;
-    startDate?: string;
-    endDate?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ data: Match[]; pagination: any }> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const endpoint = `/matches${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.get<{ data: Match[]; pagination: any }>(endpoint);
+  async createMatch(matchData: any): Promise<ApiResponse<Match>> {
+    return this.post<Match>('/matches', matchData);
   }
 
-  async getMatchEvents(matchId: string): Promise<MatchEvent[]> {
-    return this.get<MatchEvent[]>(`/matches/${matchId}/events`);
+  async updateMatch(matchId: string, matchData: any): Promise<ApiResponse<Match>> {
+    return this.put<Match>(`/matches/${matchId}`, matchData);
   }
 
-  async addMatchEvent(matchId: string, eventData: Partial<MatchEvent>): Promise<void> {
-    return this.post<void>(`/matches/${matchId}/events`, eventData);
+  async deleteMatch(matchId: string): Promise<ApiResponse<void>> {
+    return this.delete<void>(`/matches/${matchId}`);
   }
 
-  async startMatch(matchId: string): Promise<void> {
-    return this.post<void>(`/matches/${matchId}/start`);
+  // Match control methods
+  async startMatch(matchId: string): Promise<ApiResponse<Match>> {
+    return this.post<Match>(`/matches/${matchId}/start`);
   }
 
-  async pauseMatch(matchId: string): Promise<void> {
-    return this.post<void>(`/matches/${matchId}/pause`);
+  async pauseMatch(matchId: string): Promise<ApiResponse<Match>> {
+    return this.post<Match>(`/matches/${matchId}/pause`);
   }
 
-  async resumeMatch(matchId: string): Promise<void> {
-    return this.post<void>(`/matches/${matchId}/resume`);
+  async resumeMatch(matchId: string): Promise<ApiResponse<Match>> {
+    return this.post<Match>(`/matches/${matchId}/resume`);
   }
 
-  async endMatch(matchId: string, scores?: { homeScore: number; awayScore: number }): Promise<void> {
-    return this.post<void>(`/matches/${matchId}/end`, scores);
+  async endMatch(matchId: string, scores?: { homeScore?: number; awayScore?: number }): Promise<ApiResponse<Match>> {
+    return this.post<Match>(`/matches/${matchId}/end`, scores);
   }
 
-  async getMatchWebSocketStatus(matchId: string): Promise<{
-    roomInfo: any;
-    matchState: MatchState;
-    connectedUsers: number;
-    isActive: boolean;
-  }> {
-    return this.get(`/matches/${matchId}/websocket-status`);
+  async updateMatchScore(matchId: string, scores: { homeScore?: number; awayScore?: number }): Promise<ApiResponse<Match>> {
+    return this.put<Match>(`/matches/${matchId}/score`, scores);
   }
 
-  async refreshMatchState(matchId: string): Promise<void> {
-    return this.post<void>(`/matches/${matchId}/websocket/refresh-state`);
-  }
-}
-
-// Statistics API
-export class StatisticsAPI extends BaseAPI {
-  async getMatchStats(matchId: string): Promise<MatchStatistics> {
-    return this.get<MatchStatistics>(`/statistics/matches/${matchId}`);
+  // Match participants methods
+  async addMatchParticipant(matchId: string, participantData: any): Promise<ApiResponse<any>> {
+    return this.post<any>(`/matches/${matchId}/participants`, participantData);
   }
 
-  async getMatchStatisticsOverview(matchId: string, params?: {
-    homeTeamId?: string;
-    awayTeamId?: string;
-  }): Promise<MatchStatistics> {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const endpoint = `/statistics/matches/${matchId}/overview${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.get<MatchStatistics>(endpoint);
+  async updateMatchParticipant(matchId: string, userId: string, participantData: any): Promise<ApiResponse<any>> {
+    return this.put<any>(`/matches/${matchId}/participants/${userId}`, participantData);
   }
 
-  async getPlayerMatchStats(playerId: string, matchId: string): Promise<PlayerMatchStats> {
-    return this.get<PlayerMatchStats>(`/statistics/players/${playerId}/matches/${matchId}`);
+  async removeMatchParticipant(matchId: string, userId: string): Promise<ApiResponse<void>> {
+    return this.delete<void>(`/matches/${matchId}/participants/${userId}`);
   }
 
-  async getTeamMatchStats(teamId: string, matchId: string): Promise<TeamStats> {
-    return this.get<TeamStats>(`/statistics/teams/${teamId}/matches/${matchId}`);
+  // Match statistics methods
+  async getMatchStatistics(matchId: string): Promise<ApiResponse<MatchStatistics>> {
+    return this.get<MatchStatistics>(`/matches/${matchId}/statistics`);
+  }
+
+  // Team management methods
+  async getTeams(params?: { page?: number; limit?: number; clubId?: string; search?: string }): Promise<ApiResponse<Team[]>> {
+    const queryParams = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return this.get<Team[]>(`/teams${queryParams}`);
+  }
+
+  async getTeam(teamId: string): Promise<ApiResponse<Team>> {
+    return this.get<Team>(`/teams/${teamId}`);
+  }
+
+  // Health check method
+  async healthCheck(): Promise<ApiResponse<any>> {
+    return this.get<any>('/health');
+  }
+
+  // Token management methods
+  async isAuthenticated(): Promise<boolean> {
+    const token = await TokenManager.getAccessToken();
+    return token !== null && !TokenManager.isTokenExpired(token);
+  }
+
+  async getToken(): Promise<string | null> {
+    return TokenManager.getAccessToken();
   }
 }
 
-// Event Entry API
-export class EventEntryAPI extends BaseAPI {
-  async startEventEntrySession(matchId: string, userId: string): Promise<{
-    sessionId: string;
-    status: string;
-    matchId: string;
-    userId: string;
-  }> {
-    return this.post(`/event-entry/sessions/start`, { matchId, userId });
-  }
-
-  async endEventEntrySession(sessionId: string): Promise<void> {
-    return this.post(`/event-entry/sessions/${sessionId}/end`);
-  }
-
-  async submitEventEntry(sessionId: string, eventData: any): Promise<{
-    success: boolean;
-    eventId?: string;
-    validation?: any;
-  }> {
-    return this.post(`/event-entry/sessions/${sessionId}/submit`, eventData);
-  }
-
-  async validateEventEntry(eventData: any): Promise<{
-    isValid: boolean;
-    errors: string[];
-    warnings: string[];
-    suggestions: string[];
-  }> {
-    return this.post(`/event-entry/validate`, eventData);
-  }
-
-  async getEventEntrySuggestions(matchId: string, eventType: string): Promise<{
-    suggestions: string[];
-    commonEvents: any[];
-  }> {
-    return this.get(`/event-entry/suggestions?matchId=${matchId}&eventType=${eventType}`);
-  }
-}
-
-// Main API Class
-export class API {
-  public matches: MatchAPI;
-  public statistics: StatisticsAPI;
-  public eventEntry: EventEntryAPI;
-
-  constructor(config: ApiConfig) {
-    this.matches = new MatchAPI(config);
-    this.statistics = new StatisticsAPI(config);
-    this.eventEntry = new EventEntryAPI(config);
-  }
-
-  public async setToken(token: string): Promise<void> {
-    await Promise.all([
-      this.matches.setToken(token),
-      this.statistics.setToken(token),
-      this.eventEntry.setToken(token),
-    ]);
-  }
-
-  public async clearToken(): Promise<void> {
-    await Promise.all([
-      this.matches.clearToken(token),
-      this.statistics.clearToken(token),
-      this.eventEntry.clearToken(token),
-    ]);
-  }
-}
-
-export default API;
+// Export the service
+export default MobileApiService;

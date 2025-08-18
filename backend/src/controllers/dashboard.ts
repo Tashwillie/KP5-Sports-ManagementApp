@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 
 // Get dashboard statistics (public endpoint for testing)
-export const getDashboardStats = async (req: Request, res: Response): Promise<void> => {
+export const getDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Get counts from database
     const [
@@ -13,7 +13,7 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
       clubCount,
       tournamentCount,
       activeMatches,
-      upcomingMatches,
+      upcomingMatchesCount,
       completedMatches
     ] = await Promise.all([
       prisma.user.count(),
@@ -60,7 +60,7 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    const upcomingMatches = await prisma.match.findMany({
+    const upcomingMatchesList = await prisma.match.findMany({
       where: { status: 'SCHEDULED' },
       take: 5,
       orderBy: { startTime: 'asc' },
@@ -111,7 +111,7 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
       totalClubs: clubCount,
       totalTournaments: tournamentCount,
       activeMatches,
-      upcomingMatches,
+      upcomingMatches: upcomingMatchesList.length,
       completedMatches
     };
 
@@ -120,14 +120,11 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
       data: {
         stats,
         recentActivities,
-        upcomingMatches
+        upcomingMatches: upcomingMatchesList
       }
     });
   } catch (error) {
     logger.error('Dashboard stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch dashboard statistics.',
-    });
+    next(error);
   }
 };

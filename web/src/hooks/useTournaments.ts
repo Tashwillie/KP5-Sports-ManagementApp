@@ -7,14 +7,14 @@ import { Tournament, CreateTournamentRequest, UpdateTournamentRequest } from '@/
 // Query hooks
 export const useTournaments = (filters?: any) => {
   return useQuery({
-    queryKey: queryKeys.tournaments.all(filters),
+    queryKey: queryKeys.tournaments.list(filters),
     queryFn: () => tournamentsApiService.getTournaments(filters),
   });
 };
 
 export const useTournamentsInfinite = (filters?: any) => {
   return useQuery({
-    queryKey: queryKeys.tournaments.infinite(filters),
+    queryKey: [...queryKeys.tournaments.list(filters), 'infinite'],
     queryFn: ({ pageParam = 1 }) => tournamentsApiService.getTournaments({ ...filters, page: pageParam }),
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,
@@ -63,7 +63,7 @@ export const useTournamentBracket = (tournamentId: string) => {
 
 export const useTournamentsBySport = (sport: string) => {
   return useQuery({
-    queryKey: queryKeys.tournaments.bySport(sport),
+    queryKey: [...queryKeys.tournaments.all, 'bySport', sport],
     queryFn: () => tournamentsApiService.getTournamentsBySport(sport),
     enabled: !!sport,
   });
@@ -71,7 +71,7 @@ export const useTournamentsBySport = (sport: string) => {
 
 export const useTournamentsByLocation = (location: string) => {
   return useQuery({
-    queryKey: queryKeys.tournaments.byLocation(location),
+    queryKey: [...queryKeys.tournaments.all, 'byLocation', location],
     queryFn: () => tournamentsApiService.getTournamentsByLocation(location),
     enabled: !!location,
   });
@@ -79,7 +79,7 @@ export const useTournamentsByLocation = (location: string) => {
 
 export const useSearchTournaments = (searchTerm: string) => {
   return useQuery({
-    queryKey: queryKeys.tournaments.search(searchTerm),
+    queryKey: queryKeys.search.tournaments(searchTerm),
     queryFn: () => tournamentsApiService.searchTournaments(searchTerm),
     enabled: !!searchTerm && searchTerm.length >= 2,
   });
@@ -87,14 +87,14 @@ export const useSearchTournaments = (searchTerm: string) => {
 
 export const useUpcomingTournaments = () => {
   return useQuery({
-    queryKey: queryKeys.tournaments.upcoming(),
+    queryKey: [...queryKeys.tournaments.all, 'upcoming'],
     queryFn: () => tournamentsApiService.getUpcomingTournaments(),
   });
 };
 
 export const useActiveTournaments = () => {
   return useQuery({
-    queryKey: queryKeys.tournaments.active(),
+    queryKey: [...queryKeys.tournaments.all, 'active'],
     queryFn: () => tournamentsApiService.getActiveTournaments(),
   });
 };
@@ -104,12 +104,12 @@ export const useCreateTournament = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.create(),
+    mutationKey: mutationKeys.tournaments.create,
     mutationFn: (data: CreateTournamentRequest) => tournamentsApiService.createTournament(data),
     onSuccess: (response) => {
       if (response.success) {
         toast.success('Tournament created successfully!');
-        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
         queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.lists() });
       } else {
         toast.error(response.message || 'Failed to create tournament');
@@ -125,14 +125,14 @@ export const useUpdateTournament = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.update(),
+    mutationKey: mutationKeys.tournaments.update,
     mutationFn: ({ id, data }: { id: string; data: UpdateTournamentRequest }) =>
       tournamentsApiService.updateTournament(id, data),
     onSuccess: (response, variables) => {
       if (response.success) {
         toast.success('Tournament updated successfully!');
         queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(variables.id) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
         queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.lists() });
       } else {
         toast.error(response.message || 'Failed to update tournament');
@@ -148,12 +148,12 @@ export const useDeleteTournament = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.delete(),
+    mutationKey: mutationKeys.tournaments.delete,
     mutationFn: (id: string) => tournamentsApiService.deleteTournament(id),
     onSuccess: (response, id) => {
       if (response.success) {
         toast.success('Tournament deleted successfully!');
-        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
         queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.lists() });
         queryClient.removeQueries({ queryKey: queryKeys.tournaments.detail(id) });
       } else {
@@ -170,7 +170,7 @@ export const useRegisterTeamForTournament = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.registerTeam(),
+    mutationKey: mutationKeys.tournaments.registerTeam,
     mutationFn: ({ tournamentId, teamId, registrationData }: { tournamentId: string; teamId: string; registrationData?: any }) =>
       tournamentsApiService.registerTeamForTournament(tournamentId, teamId, registrationData),
     onSuccess: (response, variables) => {
@@ -192,7 +192,7 @@ export const useUnregisterTeamFromTournament = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.unregisterTeam(),
+    mutationKey: [...mutationKeys.tournaments.delete, 'unregisterTeam'],
     mutationFn: ({ tournamentId, teamId }: { tournamentId: string; teamId: string }) =>
       tournamentsApiService.unregisterTeamFromTournament(tournamentId, teamId),
     onSuccess: (response, variables) => {
@@ -214,7 +214,7 @@ export const useGenerateTournamentBracket = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.generateBracket(),
+    mutationKey: [...mutationKeys.tournaments.update, 'generateBracket'],
     mutationFn: (tournamentId: string) => tournamentsApiService.generateTournamentBracket(tournamentId),
     onSuccess: (response, tournamentId) => {
       if (response.success) {
@@ -235,7 +235,7 @@ export const useUpdateTournamentStandings = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.updateStandings(),
+    mutationKey: [...mutationKeys.tournaments.update, 'updateStandings'],
     mutationFn: (tournamentId: string) => tournamentsApiService.updateTournamentStandings(tournamentId),
     onSuccess: (response, tournamentId) => {
       if (response.success) {
@@ -256,14 +256,14 @@ export const useUploadTournamentLogo = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.uploadLogo(),
+    mutationKey: [...mutationKeys.tournaments.update, 'uploadLogo'],
     mutationFn: ({ tournamentId, logo }: { tournamentId: string; logo: File }) =>
       tournamentsApiService.uploadLogo(tournamentId, logo),
     onSuccess: (response, variables) => {
       if (response.success) {
         toast.success('Tournament logo uploaded successfully!');
         queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.detail(variables.tournamentId) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tournaments.all });
       } else {
         toast.error(response.message || 'Failed to upload tournament logo');
       }
@@ -278,7 +278,7 @@ export const useBulkRegisterTeams = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.bulkRegisterTeams(),
+    mutationKey: [...mutationKeys.tournaments.create, 'bulkRegisterTeams'],
     mutationFn: ({ tournamentId, teamIds, registrationData }: { tournamentId: string; teamIds: string[]; registrationData?: any }) =>
       tournamentsApiService.bulkRegisterTeams(tournamentId, teamIds, registrationData),
     onSuccess: (response, variables) => {
@@ -300,7 +300,7 @@ export const useBulkUnregisterTeams = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: mutationKeys.tournaments.bulkUnregisterTeams(),
+    mutationKey: [...mutationKeys.tournaments.delete, 'bulkUnregisterTeams'],
     mutationFn: ({ tournamentId, teamIds }: { tournamentId: string; teamIds: string[] }) =>
       tournamentsApiService.bulkUnregisterTeams(tournamentId, teamIds),
     onSuccess: (response, variables) => {

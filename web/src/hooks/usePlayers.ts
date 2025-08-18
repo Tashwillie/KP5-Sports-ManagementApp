@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import usersService, { UiUser } from '@/lib/services/usersService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export interface UiPlayer extends UiUser {
   teamName?: string;
+  status?: 'active' | 'inactive' | 'injured' | 'suspended';
+  position?: string;
+  level?: 'beginner' | 'intermediate' | 'advanced' | 'elite';
 }
 
 export const usePlayers = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [players, setPlayers] = useState<UiPlayer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

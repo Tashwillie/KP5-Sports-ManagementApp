@@ -1,7 +1,7 @@
 // Authentication service using API calls instead of Firebase
 // This service handles user authentication through the backend API
 
-import { User, LoginCredentials, RegisterCredentials, AuthError } from '../../../../shared/src/types/auth';
+import { User, LoginCredentials, RegisterCredentials, AuthError } from '@shared/types/auth';
 
 export class AuthService {
   private static baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';

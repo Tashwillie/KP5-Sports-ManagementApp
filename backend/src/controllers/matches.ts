@@ -1,10 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
-import { webSocketService } from '../index';
 
 // Get all matches with pagination and filtering
-export const getMatches = async (req: Request, res: Response): Promise<void> => {
+export const getMatches = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -87,37 +86,23 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Error fetching matches:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch matches',
-    });
+    next(error);
   }
 };
 
 // Get single match by ID
-export const getMatch = async (req: Request, res: Response): Promise<void> => {
+export const getMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    if (!id) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
 
-    const match = await prisma.match.findFirst({
-      where: {
-        id,
-        isActive: true,
-      },
+    const match = await prisma.match.findUnique({
+      where: { id },
       include: {
         homeTeam: {
           select: {
             id: true,
             name: true,
             logo: true,
-            description: true,
           },
         },
         awayTeam: {
@@ -125,7 +110,6 @@ export const getMatch = async (req: Request, res: Response): Promise<void> => {
             id: true,
             name: true,
             logo: true,
-            description: true,
           },
         },
         participants: {
@@ -137,14 +121,38 @@ export const getMatch = async (req: Request, res: Response): Promise<void> => {
                 firstName: true,
                 lastName: true,
                 avatar: true,
-                phone: true,
+              },
+            },
+            team: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
               },
             },
           },
         },
-                 events: {
-           orderBy: { createdAt: 'asc' },
-         },
+        events: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            player: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
+            team: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+          },
+        },
+        matchStatistics: true,
       },
     });
 
@@ -162,15 +170,12 @@ export const getMatch = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Error fetching match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch match',
-    });
+    next(error);
   }
 };
 
 // Create new match
-export const createMatch = async (req: Request, res: Response): Promise<void> => {
+export const createMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       title,
@@ -181,10 +186,33 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
       address,
       homeTeamId,
       awayTeamId,
+      participants,
     } = req.body;
 
-    const userId = (req as any).user.id;
+    // Validate required fields
+    if (!title || !startTime || !homeTeamId || !awayTeamId) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, startTime, homeTeamId, awayTeamId',
+      });
+      return;
+    }
 
+    // Check if teams exist
+    const [homeTeam, awayTeam] = await Promise.all([
+      prisma.team.findUnique({ where: { id: homeTeamId } }),
+      prisma.team.findUnique({ where: { id: awayTeamId } }),
+    ]);
+
+    if (!homeTeam || !awayTeam) {
+      res.status(400).json({
+        success: false,
+        message: 'One or both teams not found',
+      });
+      return;
+    }
+
+    // Create match with participants
     const match = await prisma.match.create({
       data: {
         title,
@@ -195,35 +223,33 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         address,
         homeTeamId,
         awayTeamId,
-        creatorId: userId,
+        creatorId: (req as any).user.id,
+        participants: participants ? {
+          create: participants.map((participant: any) => ({
+            userId: participant.userId,
+            teamId: participant.teamId,
+            role: participant.role || 'PLAYER',
+            status: participant.status || 'PENDING',
+          })),
+        } : undefined,
       },
       include: {
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
           },
         },
       },
     });
 
-    // Add creator as referee
-    await prisma.matchParticipant.create({
-      data: {
-        matchId: match.id,
-        userId,
-        role: 'REFEREE',
-        status: 'CONFIRMED',
-      },
-    });
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.emit('match-created', match);
+    }
 
     res.status(201).json({
       success: true,
@@ -232,49 +258,49 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     logger.error('Error creating match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create match',
-    });
+    next(error);
   }
 };
 
 // Update match
-export const updateMatch = async (req: Request, res: Response): Promise<void> => {
+export const updateMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    if (!id) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
+    const updateData = req.body;
 
-    const updateData = { ...req.body };
-    if (updateData.startTime) updateData.startTime = new Date(updateData.startTime);
-    if (updateData.endTime) updateData.endTime = new Date(updateData.endTime);
+    // Remove fields that shouldn't be updated directly
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.creatorId;
+
+    // Handle date fields
+    if (updateData.startTime) {
+      updateData.startTime = new Date(updateData.startTime);
+    }
+    if (updateData.endTime) {
+      updateData.endTime = new Date(updateData.endTime);
+    }
 
     const match = await prisma.match.update({
       where: { id },
       data: updateData,
       include: {
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
           },
         },
       },
     });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('match-updated', match);
+    }
 
     res.json({
       success: true,
@@ -283,29 +309,25 @@ export const updateMatch = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     logger.error('Error updating match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update match',
-    });
+    next(error);
   }
 };
 
-// Delete match (soft delete)
-export const deleteMatch = async (req: Request, res: Response): Promise<void> => {
+// Delete match
+export const deleteMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    if (!id) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
 
     await prisma.match.update({
       where: { id },
       data: { isActive: false },
     });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('match-deleted', { id });
+    }
 
     res.json({
       success: true,
@@ -313,86 +335,187 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     logger.error('Error deleting match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete match',
-    });
+    next(error);
   }
 };
 
-// Get match participants
-export const getMatchParticipants = async (req: Request, res: Response): Promise<void> => {
+// Start match
+export const startMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
+    const { id } = req.params;
 
-    const participants = await prisma.matchParticipant.findMany({
-      where: {
-        matchId,
+    const match = await prisma.match.update({
+      where: { id },
+      data: {
+        status: 'IN_PROGRESS',
+        startTime: new Date(),
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-            phone: true,
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
           },
         },
       },
-      orderBy: [
-        { role: 'asc' },
-        { user: { firstName: 'asc' } },
-      ],
     });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('match-started', match);
+    }
 
     res.json({
       success: true,
-      data: participants,
+      data: match,
+      message: 'Match started successfully',
     });
   } catch (error) {
-    logger.error('Error fetching match participants:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch match participants',
+    logger.error('Error starting match:', error);
+    next(error);
+  }
+};
+
+// Pause match
+export const pauseMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const match = await prisma.match.update({
+      where: { id },
+      data: { status: 'PAUSED' },
+      include: {
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
+          },
+        },
+      },
     });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('match-paused', match);
+    }
+
+    res.json({
+      success: true,
+      data: match,
+      message: 'Match paused successfully',
+    });
+  } catch (error) {
+    logger.error('Error pausing match:', error);
+    next(error);
+  }
+};
+
+// Resume match
+export const resumeMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const match = await prisma.match.update({
+      where: { id },
+      data: { status: 'IN_PROGRESS' },
+      include: {
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
+          },
+        },
+      },
+    });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('match-resumed', match);
+    }
+
+    res.json({
+      success: true,
+      data: match,
+      message: 'Match resumed successfully',
+    });
+  } catch (error) {
+    logger.error('Error resuming match:', error);
+    next(error);
+  }
+};
+
+// End match
+export const endMatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { homeScore, awayScore } = req.body;
+
+    const match = await prisma.match.update({
+      where: { id },
+      data: {
+        status: 'COMPLETED',
+        endTime: new Date(),
+        homeScore: homeScore ? parseInt(homeScore) : null,
+        awayScore: awayScore ? parseInt(awayScore) : null,
+      },
+      include: {
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
+          },
+        },
+      },
+    });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('match-ended', match);
+    }
+
+    res.json({
+      success: true,
+      data: match,
+      message: 'Match ended successfully',
+    });
+  } catch (error) {
+    logger.error('Error ending match:', error);
+    next(error);
   }
 };
 
 // Add match participant
-export const addMatchParticipant = async (req: Request, res: Response): Promise<void> => {
+export const addMatchParticipant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
-
+    const { matchId } = req.params;
     const { userId, teamId, role, status } = req.body;
 
     // Check if participant already exists
-    const existingParticipant = await prisma.matchParticipant.findFirst({
+    const existingParticipant = await prisma.matchParticipant.findUnique({
       where: {
-        matchId,
-        userId,
+        matchId_userId: {
+          matchId,
+          userId,
+        },
       },
     });
 
     if (existingParticipant) {
       res.status(400).json({
         success: false,
-        message: 'User is already a participant in this match',
+        message: 'Participant already exists in this match',
       });
       return;
     }
@@ -402,21 +525,20 @@ export const addMatchParticipant = async (req: Request, res: Response): Promise<
         matchId,
         userId,
         teamId,
-        role,
-        status,
+        role: role || 'PLAYER',
+        status: status || 'PENDING',
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-          },
-        },
+        user: true,
+        team: true,
       },
     });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${matchId}`).emit('participant-added', participant);
+    }
 
     res.status(201).json({
       success: true,
@@ -425,26 +547,15 @@ export const addMatchParticipant = async (req: Request, res: Response): Promise<
     });
   } catch (error) {
     logger.error('Error adding match participant:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add participant',
-    });
+    next(error);
   }
 };
 
 // Update match participant
-export const updateMatchParticipant = async (req: Request, res: Response): Promise<void> => {
+export const updateMatchParticipant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { matchId, userId } = req.params;
-    if (!matchId || !userId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID and User ID are required',
-      });
-      return;
-    }
-
-    const updateData = { ...req.body };
+    const updateData = req.body;
 
     const participant = await prisma.matchParticipant.update({
       where: {
@@ -455,17 +566,16 @@ export const updateMatchParticipant = async (req: Request, res: Response): Promi
       },
       data: updateData,
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-          },
-        },
+        user: true,
+        team: true,
       },
     });
+
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${matchId}`).emit('participant-updated', participant);
+    }
 
     res.json({
       success: true,
@@ -474,24 +584,14 @@ export const updateMatchParticipant = async (req: Request, res: Response): Promi
     });
   } catch (error) {
     logger.error('Error updating match participant:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update participant',
-    });
+    next(error);
   }
 };
 
 // Remove match participant
-export const removeMatchParticipant = async (req: Request, res: Response): Promise<void> => {
+export const removeMatchParticipant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { matchId, userId } = req.params;
-    if (!matchId || !userId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID and User ID are required',
-      });
-      return;
-    }
 
     await prisma.matchParticipant.delete({
       where: {
@@ -502,679 +602,98 @@ export const removeMatchParticipant = async (req: Request, res: Response): Promi
       },
     });
 
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${matchId}`).emit('participant-removed', { matchId, userId });
+    }
+
     res.json({
       success: true,
       message: 'Participant removed successfully',
     });
   } catch (error) {
     logger.error('Error removing match participant:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove participant',
-    });
+    next(error);
   }
 };
 
-// Get match events
-export const getMatchEvents = async (req: Request, res: Response): Promise<void> => {
+// Get match statistics
+export const getMatchStatistics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
+    const { matchId } = req.params;
 
-         const events = await prisma.matchEvent.findMany({
-       where: {
-         matchId,
-       },
-       orderBy: { createdAt: 'asc' },
-     });
-
-    res.json({
-      success: true,
-      data: events,
-    });
-  } catch (error) {
-    logger.error('Error fetching match events:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch match events',
-    });
-  }
-};
-
-// Add match event
-export const addMatchEvent = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
-
-    const {
-      type,
-      minute,
-      description,
-      playerId,
-      teamId,
-      data,
-    } = req.body;
-
-    // Validate match exists and is in progress
-    const match = await prisma.match.findFirst({
-      where: { id: matchId, isActive: true }
-    });
-
-    if (!match) {
-      res.status(404).json({
-        success: false,
-        message: 'Match not found',
-      });
-      return;
-    }
-
-    if (match.status !== 'IN_PROGRESS') {
-      res.status(400).json({
-        success: false,
-        message: 'Match must be in progress to add events',
-      });
-      return;
-    }
-
-    const event = await prisma.matchEvent.create({
-      data: {
-        matchId,
-        type,
-        minute,
-        description,
-        playerId,
-        teamId,
-        data,
-      },
-    });
-
-    // Update player stats if applicable
-    if (playerId && (type === 'GOAL' || type === 'YELLOW_CARD' || type === 'RED_CARD')) {
-      await updatePlayerStats(playerId, type);
-    }
-
-    // Update team stats if applicable
-    if (teamId && type === 'GOAL') {
-      await updateTeamStats(teamId, matchId);
-    }
-
-    // Broadcast event via WebSocket
-    try {
-      const room = `match:${matchId}`;
-      const broadcastData = {
-        ...event,
-        timestamp: new Date(),
-        userId: (req as any).user.id,
-        userRole: (req as any).user.role,
-        userEmail: (req as any).user.email
-      };
-      
-      webSocketService.broadcastToRoom(room, 'match-event', broadcastData);
-      
-      // Update match state in WebSocket service
-      await webSocketService.refreshMatchState(matchId);
-      
-      logger.info(`Match event broadcasted via WebSocket: ${event.type} for match ${matchId}`);
-    } catch (wsError) {
-      logger.error('WebSocket broadcast error:', wsError);
-      // Don't fail the request if WebSocket fails
-    }
-
-    res.status(201).json({
-      success: true,
-      data: event,
-      message: 'Match event added successfully',
-    });
-  } catch (error) {
-    logger.error('Error adding match event:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add match event',
-    });
-  }
-};
-
-// Start match
-export const startMatch = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
-
-    const match = await prisma.match.findFirst({
-      where: { id: matchId, isActive: true }
-    });
-
-    if (!match) {
-      res.status(404).json({
-        success: false,
-        message: 'Match not found',
-      });
-      return;
-    }
-
-    if (match.status !== 'SCHEDULED') {
-      res.status(400).json({
-        success: false,
-        message: 'Match can only be started when scheduled',
-      });
-      return;
-    }
-
-    const updatedMatch = await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        status: 'IN_PROGRESS',
-        startTime: new Date(),
-      },
+    const statistics = await prisma.matchStatistics.findUnique({
+      where: { matchId },
       include: {
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
+        match: {
+          include: {
+            homeTeam: true,
+            awayTeam: true,
           },
         },
       },
     });
 
-    // Broadcast match status change via WebSocket
-    try {
-      const room = `match:${matchId}`;
-      const broadcastData = {
-        matchId,
-        status: 'in_progress',
-        timestamp: new Date(),
-        userId: (req as any).user.id,
-        userRole: (req as any).user.role,
-        userEmail: (req as any).user.email,
-        match: updatedMatch
-      };
-      
-      webSocketService.broadcastToRoom(room, 'match-status-change', broadcastData);
-      
-      // Update match state in WebSocket service
-      await webSocketService.refreshMatchState(matchId);
-      
-      logger.info(`Match started and broadcasted via WebSocket: ${matchId}`);
-    } catch (wsError) {
-      logger.error('WebSocket broadcast error:', wsError);
-    }
-
-    res.json({
-      success: true,
-      data: updatedMatch,
-      message: 'Match started successfully',
-    });
-  } catch (error) {
-    logger.error('Error starting match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start match',
-    });
-  }
-};
-
-// Pause match
-export const pauseMatch = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
-
-    const match = await prisma.match.findFirst({
-      where: { id: matchId, isActive: true }
-    });
-
-    if (!match) {
+    if (!statistics) {
       res.status(404).json({
         success: false,
-        message: 'Match not found',
+        message: 'Match statistics not found',
       });
       return;
-    }
-
-    if (match.status !== 'IN_PROGRESS') {
-      res.status(400).json({
-        success: false,
-        message: 'Match can only be paused when in progress',
-      });
-      return;
-    }
-
-    const updatedMatch = await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        status: 'PAUSED',
-      },
-      include: {
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-      },
-    });
-
-    // Broadcast match status change via WebSocket
-    try {
-      const room = `match:${matchId}`;
-      const broadcastData = {
-        matchId,
-        status: 'paused',
-        timestamp: new Date(),
-        userId: (req as any).user.id,
-        userRole: (req as any).user.role,
-        userEmail: (req as any).user.email,
-        match: updatedMatch
-      };
-      
-      webSocketService.broadcastToRoom(room, 'match-status-change', broadcastData);
-      
-      // Update match state in WebSocket service
-      await webSocketService.refreshMatchState(matchId);
-      
-      logger.info(`Match paused and broadcasted via WebSocket: ${matchId}`);
-    } catch (wsError) {
-      logger.error('WebSocket broadcast error:', wsError);
     }
 
     res.json({
       success: true,
-      data: updatedMatch,
-      message: 'Match paused successfully',
+      data: statistics,
     });
   } catch (error) {
-    logger.error('Error pausing match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to pause match',
-    });
+    logger.error('Error fetching match statistics:', error);
+    next(error);
   }
 };
 
-// Resume match
-export const resumeMatch = async (req: Request, res: Response): Promise<void> => {
+// Update match score
+export const updateMatchScore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id: matchId } = req.params;
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
-
-    const match = await prisma.match.findFirst({
-      where: { id: matchId, isActive: true }
-    });
-
-    if (!match) {
-      res.status(404).json({
-        success: false,
-        message: 'Match not found',
-      });
-      return;
-    }
-
-    if (match.status !== 'PAUSED') {
-      res.status(400).json({
-        success: false,
-        message: 'Match can only be resumed when paused',
-      });
-      return;
-    }
-
-    const updatedMatch = await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        status: 'IN_PROGRESS',
-      },
-      include: {
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-      },
-    });
-
-    // Broadcast match status change via WebSocket
-    try {
-      const room = `match:${matchId}`;
-      const broadcastData = {
-        matchId,
-        status: 'in_progress',
-        timestamp: new Date(),
-        userId: (req as any).user.id,
-        userRole: (req as any).user.role,
-        userEmail: (req as any).user.email,
-        match: updatedMatch
-      };
-      
-      webSocketService.broadcastToRoom(room, 'match-status-change', broadcastData);
-      
-      // Update match state in WebSocket service
-      await webSocketService.refreshMatchState(matchId);
-      
-      logger.info(`Match resumed and broadcasted via WebSocket: ${matchId}`);
-    } catch (wsError) {
-      logger.error('WebSocket broadcast error:', wsError);
-    }
-
-    res.json({
-      success: true,
-      data: updatedMatch,
-      message: 'Match resumed successfully',
-    });
-  } catch (error) {
-    logger.error('Error resuming match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to resume match',
-    });
-  }
-};
-
-// End match
-export const endMatch = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id: matchId } = req.params;
+    const { id } = req.params;
     const { homeScore, awayScore } = req.body;
-    
-    if (!matchId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID is required',
-      });
-      return;
-    }
 
-    const match = await prisma.match.findFirst({
-      where: { id: matchId, isActive: true }
-    });
-
-    if (!match) {
-      res.status(404).json({
-        success: false,
-        message: 'Match not found',
-      });
-      return;
-    }
-
-    if (match.status === 'COMPLETED') {
-      res.status(400).json({
-        success: false,
-        message: 'Match is already completed',
-      });
-      return;
-    }
-
-    const updateData: any = {
-      status: 'COMPLETED',
-      endTime: new Date(),
-    };
-
-    if (homeScore !== undefined && awayScore !== undefined) {
-      updateData.homeScore = homeScore;
-      updateData.awayScore = awayScore;
-    }
-
-    const updatedMatch = await prisma.match.update({
-      where: { id: matchId },
-      data: updateData,
+    const match = await prisma.match.update({
+      where: { id },
+      data: {
+        homeScore: homeScore ? parseInt(homeScore) : null,
+        awayScore: awayScore ? parseInt(awayScore) : null,
+      },
       include: {
-        homeTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        awayTeam: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
+        homeTeam: true,
+        awayTeam: true,
+        participants: {
+          include: {
+            user: true,
+            team: true,
           },
         },
       },
     });
 
-    // Update team standings if this is a tournament match
-    if (match.tournamentId) {
-      await updateTournamentStandings(match.tournamentId, matchId);
-    }
-
-    // Broadcast match completion via WebSocket
-    try {
-      const room = `match:${matchId}`;
-      const broadcastData = {
-        matchId,
-        status: 'completed',
-        timestamp: new Date(),
-        userId: (req as any).user.id,
-        userRole: (req as any).user.role,
-        userEmail: (req as any).user.email,
-        match: updatedMatch,
-        homeScore,
-        awayScore
-      };
-      
-      webSocketService.broadcastToRoom(room, 'match-status-change', broadcastData);
-      
-      // Update match state in WebSocket service
-      await webSocketService.refreshMatchState(matchId);
-      
-      logger.info(`Match completed and broadcasted via WebSocket: ${matchId}`);
-    } catch (wsError) {
-      logger.error('WebSocket broadcast error:', wsError);
+    // Emit real-time update via WebSocket
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`match-${id}`).emit('score-updated', {
+        matchId: id,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+      });
     }
 
     res.json({
       success: true,
-      data: updatedMatch,
-      message: 'Match ended successfully',
+      data: match,
+      message: 'Match score updated successfully',
     });
   } catch (error) {
-    logger.error('Error ending match:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to end match',
-    });
+    logger.error('Error updating match score:', error);
+    next(error);
   }
 };
-
-// Update match event
-export const updateMatchEvent = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { matchId, eventId } = req.params;
-    if (!matchId || !eventId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID and Event ID are required',
-      });
-      return;
-    }
-
-    const updateData = { ...req.body };
-
-         const event = await prisma.matchEvent.update({
-       where: { id: eventId },
-       data: updateData,
-     });
-
-    res.json({
-      success: true,
-      data: event,
-      message: 'Match event updated successfully',
-    });
-  } catch (error) {
-    logger.error('Error updating match event:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update match event',
-    });
-  }
-};
-
-// Delete match event
-export const deleteMatchEvent = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { matchId, eventId } = req.params;
-    if (!matchId || !eventId) {
-      res.status(400).json({
-        success: false,
-        message: 'Match ID and Event ID are required',
-      });
-      return;
-    }
-
-    await prisma.matchEvent.delete({
-      where: { id: eventId },
-    });
-
-    res.json({
-      success: true,
-      message: 'Match event deleted successfully',
-    });
-  } catch (error) {
-    logger.error('Error deleting match event:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete match event',
-    });
-  }
-};
-
-// Helper function to update player stats
-async function updatePlayerStats(playerId: string, eventType: string): Promise<void> {
-  try {
-    const player = await prisma.userProfile.findFirst({
-      where: { userId: playerId }
-    });
-
-    if (!player) return;
-
-    const updateData: any = {};
-    
-    switch (eventType) {
-      case 'GOAL':
-        updateData.goals = { increment: 1 };
-        break;
-      case 'YELLOW_CARD':
-        updateData.yellowCards = { increment: 1 };
-        break;
-      case 'RED_CARD':
-        updateData.redCards = { increment: 1 };
-        break;
-    }
-
-    if (Object.keys(updateData).length > 0) {
-      await prisma.userProfile.update({
-        where: { userId: playerId },
-        data: updateData
-      });
-    }
-  } catch (error) {
-    logger.error('Error updating player stats:', error);
-  }
-}
-
-// Helper function to update team stats
-async function updateTeamStats(teamId: string, matchId: string): Promise<void> {
-  try {
-    const match = await prisma.match.findFirst({
-      where: { id: matchId },
-      include: { events: true }
-    });
-
-    if (!match) return;
-
-    const homeTeamGoals = match.events.filter(e => e.teamId === match.homeTeamId && e.type === 'GOAL').length;
-    const awayTeamGoals = match.events.filter(e => e.teamId === match.awayTeamId && e.type === 'GOAL').length;
-
-    // Update home team stats
-    if (match.homeTeamId) {
-      await prisma.team.update({
-        where: { id: match.homeTeamId },
-        data: {
-          goalsFor: { increment: homeTeamGoals },
-          goalsAgainst: { increment: awayTeamGoals }
-        }
-      });
-    }
-
-    // Update away team stats
-    if (match.awayTeamId) {
-      await prisma.team.update({
-        where: { id: match.awayTeamId },
-        data: {
-          goalsFor: { increment: awayTeamGoals },
-          goalsAgainst: { increment: homeTeamGoals }
-        }
-      });
-    }
-  } catch (error) {
-    logger.error('Error updating team stats:', error);
-  }
-}
-
-// Helper function to update tournament standings
-async function updateTournamentStandings(tournamentId: string, matchId: string): Promise<void> {
-  try {
-    // This would implement tournament standings logic
-    // For now, just log that it's needed
-    logger.info(`Tournament standings update needed for tournament ${tournamentId} after match ${matchId}`);
-  } catch (error) {
-    logger.error('Error updating tournament standings:', error);
-  }
-}

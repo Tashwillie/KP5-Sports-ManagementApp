@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import TeamStatisticsController from '../controllers/teamStatistics';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
 
 const router = Router();
 const teamStatisticsController = new TeamStatisticsController();
 
 // Apply authentication middleware to all routes
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Team Performance Routes
 router.get('/team/:teamId/performance', requirePermission('teams.view_stats'), teamStatisticsController.getTeamPerformance);

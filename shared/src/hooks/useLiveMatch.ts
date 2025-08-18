@@ -170,7 +170,11 @@ export const useLiveMatch = (options: UseLiveMatchOptions = {}): UseLiveMatchRet
     if (!matchId) return;
     
     try {
-      const response = await LiveMatchService.endMatch(matchId, homeScore, awayScore);
+      const finalScore = homeScore !== undefined && awayScore !== undefined 
+        ? { home: homeScore, away: awayScore } 
+        : undefined;
+      
+      const response = await LiveMatchService.endMatch(matchId, finalScore);
       if (response.success) {
         await loadMatch(); // Refresh match data
       } else {

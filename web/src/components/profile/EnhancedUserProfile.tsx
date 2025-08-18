@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
 import { UserRole, ROLE_PERMISSIONS } from '@/lib/permissions/rolePermissions';
 import { 
@@ -63,7 +63,7 @@ interface UserProfile {
 }
 
 export const EnhancedUserProfile: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile } = useEnhancedAuthContext();
   const { 
     userRole, 
     roleDescription, 
@@ -340,15 +340,17 @@ export const EnhancedUserProfile: React.FC = () => {
                   </button>
                 </>
               ) : (
-                              {can('profile.edit_own') && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </button>
-              )}
+                <>
+                  {can('profile.edit_own') && (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Profile
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

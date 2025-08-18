@@ -70,8 +70,18 @@ export const useAuth = () => {
           return;
         }
 
-        // For now, set loading to false without authentication
-        // TODO: Implement proper authentication when backend is ready
+        // Check authentication status with backend
+        if (api.auth) {
+          try {
+            const result = await api.auth.getCurrentUser();
+            if (result.success && result.user) {
+              setUser(result.user);
+              setAuthenticated(true);
+            }
+          } catch (error) {
+            console.error('Auth check failed:', error);
+          }
+        }
         setLoading(false);
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -109,13 +119,31 @@ export const useAuth = () => {
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     try {
-      const api = useApi();
-      // TODO: Implement proper signup when backend is ready
-      console.log('Signup not implemented yet');
-    } catch (error) {
-      throw error;
+      setLoading(true);
+      setError(null);
+      
+      const result = await api.auth.register({
+        email,
+        password,
+        displayName
+      });
+      
+      if (result.success && result.user) {
+        setUser(result.user);
+        setAuthenticated(true);
+        return { success: true, user: result.user };
+      } else {
+        setError(result.error || 'Sign up failed');
+        return { success: false, error: result.error };
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Sign up failed';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [api.auth]);
 
   const signOut = useCallback(async () => {
     try {

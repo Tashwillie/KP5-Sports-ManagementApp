@@ -59,25 +59,33 @@ function PlayersContent() {
   const [positionFilter, setPositionFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
 
-  // Load players (replace mock with API data)
-  useEffect(() => {
-    // When API players change, just mirror to filtered
-    setFilteredPlayers(players as any[]);
-  }, [players]);
-
-
   // Filter players based on search and filters
   useEffect(() => {
-    let filtered = players;
+    let filtered = Array.isArray(players) ? players : [];
 
-    if (searchTerm) {
+    if (searchTerm && filtered.length > 0) {
       filtered = filtered.filter(player =>
-        (player as any).firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (player as any).lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (player as any).teamName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+        player.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.teamName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter(player => player.status === statusFilter);
+    }
+
+    // Apply position filter
+    if (positionFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter(player => player.position === positionFilter);
+    }
+
+    // Apply level filter  
+    if (levelFilter !== 'all' && filtered.length > 0) {
+      filtered = filtered.filter(player => player.level === levelFilter);
     }
 
     setFilteredPlayers(filtered);
@@ -161,8 +169,13 @@ function PlayersContent() {
     return (
       <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
         <div className="text-center">
-          <p className="text-danger mb-3">{error}</p>
-          <button className="btn btn-primary" onClick={refetch}>Try Again</button>
+          <div className="alert alert-danger" role="alert">
+            <h4 className="alert-heading">Error loading players</h4>
+            <p className="mb-3">{error}</p>
+            <button className="btn btn-primary" onClick={() => refetch()}>
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -259,17 +272,17 @@ function PlayersContent() {
 
           {/* Players Grid */}
           <div className="row g-4">
-            {filteredPlayers.map((player) => (
+            {filteredPlayers && filteredPlayers.length > 0 ? filteredPlayers.map((player) => (
               <div key={player.id} className="col-md-6 col-lg-4">
                 <div className="card border-0 shadow-sm h-100">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-start mb-3">
                       <div>
-                        <span className={`badge ${getStatusBadgeClass('active')} me-2`}>
-                          {getStatusLabel('active')}
+                        <span className={`badge ${getStatusBadgeClass(player.status || 'active')} me-2`}>
+                          {getStatusLabel(player.status || 'active')}
                         </span>
-                        <span className={`badge ${getLevelBadgeClass('beginner')}`}>
-                          Beginner
+                        <span className={`badge ${getLevelBadgeClass(player.level || 'beginner')}`}>
+                          {player.level || 'Beginner'}
                         </span>
                       </div>
                       <div className="dropdown">
@@ -300,15 +313,15 @@ function PlayersContent() {
                     
                     <div className="row text-center mb-3">
                       <div className="col-4">
-                        <div className="text-primary fw-bold">{player.matchesPlayed}</div>
+                        <div className="text-primary fw-bold">{player.matchesPlayed || 0}</div>
                         <small className="text-muted">Matches</small>
                       </div>
                       <div className="col-4">
-                        <div className="text-success fw-bold">{player.goalsScored}</div>
+                        <div className="text-success fw-bold">{player.goalsScored || 0}</div>
                         <small className="text-muted">Goals</small>
                       </div>
                       <div className="col-4">
-                        <div className="text-warning fw-bold">{player.rating}</div>
+                        <div className="text-warning fw-bold">{player.rating || 0}</div>
                         <small className="text-muted">Rating</small>
                       </div>
                     </div>
@@ -320,14 +333,14 @@ function PlayersContent() {
                       </div>
                       <div className="text-end">
                         <small className="text-muted">Age</small>
-                        <div className="fw-bold">{player.age}</div>
+                        <div className="fw-bold">{player.age || 'N/A'}</div>
                       </div>
                     </div>
                     
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
                         <small className="text-muted">Contact</small>
-                        <div className="fw-bold">{player.email}</div>
+                        <div className="fw-bold" style={{ fontSize: '12px' }}>{player.email}</div>
                       </div>
                       <button 
                         className="btn btn-sm btn-outline-primary"
@@ -339,10 +352,10 @@ function PlayersContent() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : null}
           </div>
 
-          {filteredPlayers.length === 0 && (
+          {(!filteredPlayers || filteredPlayers.length === 0) && !loadingData && (
             <div className="text-center py-5">
               <i className="bi bi-people display-1 text-muted"></i>
               <h4 className="mt-3">No players found</h4>

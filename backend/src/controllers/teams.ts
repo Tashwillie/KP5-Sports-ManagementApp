@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 
 // Get all teams with pagination and filtering
-export const getTeams = async (req: Request, res: Response): Promise<void> => {
+export const getTeams = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -92,15 +92,12 @@ export const getTeams = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Get teams error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch teams.',
-    });
+    next(error);
   }
 };
 
 // Get single team by ID
-export const getTeam = async (req: Request, res: Response): Promise<void> => {
+export const getTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -145,7 +142,7 @@ export const getTeam = async (req: Request, res: Response): Promise<void> => {
           select: {
             members: true,
             events: true,
-            matches: true,
+            // matches: true, // Property not available in current schema
           },
         },
       },
@@ -167,15 +164,12 @@ export const getTeam = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     logger.error('Get team error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch team.',
-    });
+    next(error);
   }
 };
 
 // Create new team
-export const createTeam = async (req: Request, res: Response): Promise<void> => {
+export const createTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       name,
@@ -265,15 +259,12 @@ export const createTeam = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Create team error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create team.',
-    });
+    next(error);
   }
 };
 
 // Update team
-export const updateTeam = async (req: Request, res: Response): Promise<void> => {
+export const updateTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -345,15 +336,12 @@ export const updateTeam = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Update team error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update team.',
-    });
+    next(error);
   }
 };
 
 // Delete team
-export const deleteTeam = async (req: Request, res: Response): Promise<void> => {
+export const deleteTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -390,15 +378,12 @@ export const deleteTeam = async (req: Request, res: Response): Promise<void> => 
     });
   } catch (error) {
     logger.error('Delete team error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete team.',
-    });
+    next(error);
   }
 };
 
 // Get team members
-export const getTeamMembers = async (req: Request, res: Response): Promise<void> => {
+export const getTeamMembers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: teamId } = req.params;
 
@@ -465,15 +450,12 @@ export const getTeamMembers = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     logger.error('Get team members error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch team members.',
-    });
+    next(error);
   }
 };
 
 // Add team member
-export const addTeamMember = async (req: Request, res: Response): Promise<void> => {
+export const addTeamMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: teamId } = req.params;
 
@@ -560,15 +542,12 @@ export const addTeamMember = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Add team member error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add member.',
-    });
+    next(error);
   }
 };
 
 // Update team member
-export const updateTeamMember = async (req: Request, res: Response): Promise<void> => {
+export const updateTeamMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { teamId, userId } = req.params;
 
@@ -636,15 +615,12 @@ export const updateTeamMember = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Update team member error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update member.',
-    });
+    next(error);
   }
 };
 
 // Remove team member
-export const removeTeamMember = async (req: Request, res: Response): Promise<void> => {
+export const removeTeamMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { teamId, userId } = req.params;
 
@@ -690,9 +666,6 @@ export const removeTeamMember = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Remove team member error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove member.',
-    });
+    next(error);
   }
 };

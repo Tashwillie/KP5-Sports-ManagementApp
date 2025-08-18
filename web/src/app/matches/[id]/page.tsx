@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { useParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/layout/Navigation';
 import Link from 'next/link';
@@ -31,7 +31,7 @@ interface Team {
 export default function MatchDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, loading  } = useAuth();
+  const { user, loading  } = useEnhancedAuthContext();
   const [match, setMatch] = useState<Match | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);

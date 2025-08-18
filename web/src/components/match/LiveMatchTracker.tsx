@@ -566,3 +566,5 @@ export const LiveMatchTracker: React.FC<LiveMatchTrackerProps> = ({
     </div>
   );
 };
+
+export default LiveMatchTracker;

@@ -25,11 +25,11 @@ import {
   Bell,
   Search
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout } = useEnhancedAuthContext();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Trophy },
@@ -53,10 +53,18 @@ export const Header: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">KP5</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Academy</span>
+              <Link href="/" className="flex items-center space-x-3">
+                <div className="w-10 h-10 relative">
+                  <Image
+                    src="/images/logo.png"
+                    alt="KP5 Academy Logo"
+                    width={40}
+                    height={40}
+                    className="rounded-lg"
+                  />
+                </div>
+                <span className="text-xl font-bold text-gray-900">Academy</span>
+              </Link>
             </div>
             <div className="animate-pulse bg-gray-200 h-8 w-32 rounded"></div>
           </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Mail, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import enhancedApiClient from "@/lib/enhancedApiClient";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -23,11 +24,15 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      // TODO: Implement password reset API call
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
-      setSubmitted(true);
-      toast.success("Password reset email sent successfully!");
+      // Call the backend password reset API via enhanced API client
+      const response = await enhancedApiClient.forgotPassword(email);
+
+      if (response.success) {
+        setSubmitted(true);
+        toast.success("Password reset email sent successfully!");
+      } else {
+        throw new Error(response.message || "Failed to send password reset email");
+      }
     } catch (error: any) {
       console.error("Password reset error:", error);
       setError(error.message || "Failed to send password reset email. Please try again.");

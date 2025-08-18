@@ -9,8 +9,8 @@ datasource db {
 }
 
 model User {
-  id                    String             @id @default(cuid())
-  email                 String             @unique
+  id                    String               @id @default(cuid())
+  email                 String               @unique
   password              String?
   displayName           String?
   firstName             String?
@@ -18,36 +18,37 @@ model User {
   phone                 String?
   dateOfBirth           DateTime?
   avatar                String?
-  role                  UserRole           @default(PLAYER)
-  isActive              Boolean            @default(true)
-  emailVerified         Boolean            @default(false)
-  phoneVerified         Boolean            @default(false)
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  role                  UserRole             @default(PLAYER)
+  isActive              Boolean              @default(true)
+  emailVerified         Boolean              @default(false)
+  phoneVerified         Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   clubs                 ClubMember[]
-  createdClubs          Club[]             @relation("ClubCreator")
+  createdClubs          Club[]               @relation("ClubCreator")
   events                EventParticipant[]
-  createdEvents         Event[]            @relation("EventCreator")
+  createdEvents         Event[]              @relation("EventCreator")
   matches               MatchParticipant[]
-  createdMatches        Match[]            @relation("MatchCreator")
+  createdMatches        Match[]              @relation("MatchCreator")
   messageRecipients     MessageRecipient[]
   messages              Message[]
-  receivedNotifications Notification[]     @relation("NotificationRecipient")
-  sentNotifications     Notification[]     @relation("NotificationSender")
+  receivedNotifications Notification[]       @relation("NotificationRecipient")
+  sentNotifications     Notification[]       @relation("NotificationSender")
   payments              Payment[]
   registrations         Registration[]
   teams                 TeamMember[]
-  createdTeams          Team[]             @relation("TeamCreator")
+  createdTeams          Team[]               @relation("TeamCreator")
   profile               UserProfile?
   // New relations for enhanced functionality
-  tournaments           Tournament[]       @relation("TournamentCreator")
+  tournaments           Tournament[]         @relation("TournamentCreator")
   matchEvents           MatchEvent[]
   // OAuth and phone authentication
-  oauthAccounts        OAuthAccount[]
-  phoneVerifications   PhoneVerification[]
+  oauthAccounts         OAuthAccount[]
+  phoneVerifications    PhoneVerification[]
   passwordResetTokens   PasswordResetToken[]
-  playerMatchStats     PlayerMatchStats[]
-  playerSeasonStats    PlayerSeasonStats[]
+  playerMatchStats      PlayerMatchStats[]
+  playerSeasonStats     PlayerSeasonStats[]
+  refreshTokens         RefreshToken[]
 
   @@map("users")
 }
@@ -121,55 +122,56 @@ model ClubMember {
 }
 
 model Team {
-  id              String           @id @default(cuid())
-  name            String
-  description     String?
-  logo            String?
-  ageGroup        String?
-  gender          Gender?
-  level           TeamLevel        @default(BEGINNER)
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  logo        String?
+  ageGroup    String?
+  gender      Gender?
+  level       TeamLevel @default(BEGINNER)
   // New fields for enhanced team management
-  website         String?
-  address         String?
-  city            String?
-  state           String?
-  country         String?
-  postalCode      String?
-  phone           String?
-  email           String?
-  isActive        Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  website     String?
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  postalCode  String?
+  phone       String?
+  email       String?
+  color       String? // Team color for UI identification
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Team statistics (new fields)
-  wins            Int              @default(0)
-  losses          Int              @default(0)
-  draws           Int              @default(0)
-  goalsFor        Int              @default(0)
-  goalsAgainst    Int              @default(0)
-  points          Int              @default(0)
+  wins         Int @default(0)
+  losses       Int @default(0)
+  draws        Int @default(0)
+  goalsFor     Int @default(0)
+  goalsAgainst Int @default(0)
+  points       Int @default(0)
 
   // Relations
-  clubId          String?
-  creatorId       String
-  events          Event[]
-  awayMatches     Match[]          @relation("AwayTeam")
-  homeMatches     Match[]          @relation("HomeTeam")
-  messages        Message[]
-  notifications   Notification[]
-  members         TeamMember[]
-  club            Club?            @relation(fields: [clubId], references: [id])
-  creator         User             @relation("TeamCreator", fields: [creatorId], references: [id])
-  tournamentTeams TournamentTeam[]
+  clubId            String?
+  creatorId         String
+  events            Event[]
+  awayMatches       Match[]             @relation("AwayTeam")
+  homeMatches       Match[]             @relation("HomeTeam")
+  messages          Message[]
+  notifications     Notification[]
+  members           TeamMember[]
+  club              Club?               @relation(fields: [clubId], references: [id])
+  creator           User                @relation("TeamCreator", fields: [creatorId], references: [id])
+  tournamentTeams   TournamentTeam[]
   // New relations for match data
   matchParticipants MatchParticipant[]
-  matchEvents     MatchEvent[]
-  teamMatchStats  TeamMatchStats[]
-  teamSeasonStats TeamSeasonStats[]
-  playerMatchStats PlayerMatchStats[]
+  matchEvents       MatchEvent[]
+  teamMatchStats    TeamMatchStats[]
+  teamSeasonStats   TeamSeasonStats[]
+  playerMatchStats  PlayerMatchStats[]
   playerSeasonStats PlayerSeasonStats[]
-  homeTeamStats MatchStatistics[] @relation("HomeTeamStats")
-  awayTeamStats MatchStatistics[] @relation("AwayTeamStats")
+  homeTeamStats     MatchStatistics[]   @relation("HomeTeamStats")
+  awayTeamStats     MatchStatistics[]   @relation("AwayTeamStats")
 
   @@map("teams")
 }
@@ -299,129 +301,129 @@ model MatchEvent {
 
 // New Statistics Models
 model PlayerMatchStats {
-  id                 String   @id @default(cuid())
-  playerId           String
-  matchId            String
-  teamId             String
-  minutesPlayed      Int      @default(0)
-  goals              Int      @default(0)
-  assists            Int      @default(0)
-  shots              Int      @default(0)
-  shotsOnTarget      Int      @default(0)
-  yellowCards        Int      @default(0)
-  redCards           Int      @default(0)
-  fouls              Int      @default(0)
-  foulsSuffered      Int      @default(0)
-  offsides           Int      @default(0)
-  passes             Int      @default(0)
-  passesCompleted    Int      @default(0)
-  tackles            Int      @default(0)
-  tacklesWon         Int      @default(0)
-  interceptions      Int      @default(0)
-  clearances         Int      @default(0)
-  saves              Int?     // For goalkeepers
-  goalsConceded      Int?     // For goalkeepers
-  cleanSheet         Boolean? // For goalkeepers
-  rating             Float    @default(6.0)
-  distance           Int      @default(0) // Distance covered in meters
-  sprints            Int      @default(0) // Number of sprints
-  notes              String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id              String   @id @default(cuid())
+  playerId        String
+  matchId         String
+  teamId          String
+  minutesPlayed   Int      @default(0)
+  goals           Int      @default(0)
+  assists         Int      @default(0)
+  shots           Int      @default(0)
+  shotsOnTarget   Int      @default(0)
+  yellowCards     Int      @default(0)
+  redCards        Int      @default(0)
+  fouls           Int      @default(0)
+  foulsSuffered   Int      @default(0)
+  offsides        Int      @default(0)
+  passes          Int      @default(0)
+  passesCompleted Int      @default(0)
+  tackles         Int      @default(0)
+  tacklesWon      Int      @default(0)
+  interceptions   Int      @default(0)
+  clearances      Int      @default(0)
+  saves           Int? // For goalkeepers
+  goalsConceded   Int? // For goalkeepers
+  cleanSheet      Boolean? // For goalkeepers
+  rating          Float    @default(6.0)
+  distance        Int      @default(0) // Distance covered in meters
+  sprints         Int      @default(0) // Number of sprints
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  player             User     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  match              Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team               Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team   Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, matchId])
   @@map("player_match_stats")
 }
 
 model TeamMatchStats {
-  id                 String   @id @default(cuid())
-  teamId             String
-  matchId            String
-  goals              Int      @default(0)
-  assists            Int      @default(0)
-  shots              Int      @default(0)
-  shotsOnTarget      Int      @default(0)
-  corners            Int      @default(0)
-  fouls              Int      @default(0)
-  yellowCards        Int      @default(0)
-  redCards           Int      @default(0)
-  possession         Int      @default(50)
-  passes             Int      @default(0)
-  passesCompleted    Int      @default(0)
-  tackles            Int      @default(0)
-  interceptions      Int      @default(0)
-  offsides           Int      @default(0)
-  saves              Int      @default(0)
-  clearances         Int      @default(0)
-  blocks             Int      @default(0)
-  distance           Int      @default(0)
-  sprints            Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id              String   @id @default(cuid())
+  teamId          String
+  matchId         String
+  goals           Int      @default(0)
+  assists         Int      @default(0)
+  shots           Int      @default(0)
+  shotsOnTarget   Int      @default(0)
+  corners         Int      @default(0)
+  fouls           Int      @default(0)
+  yellowCards     Int      @default(0)
+  redCards        Int      @default(0)
+  possession      Int      @default(50)
+  passes          Int      @default(0)
+  passesCompleted Int      @default(0)
+  tackles         Int      @default(0)
+  interceptions   Int      @default(0)
+  offsides        Int      @default(0)
+  saves           Int      @default(0)
+  clearances      Int      @default(0)
+  blocks          Int      @default(0)
+  distance        Int      @default(0)
+  sprints         Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  team               Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  match              Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, matchId])
   @@map("team_match_stats")
 }
 
 model PlayerSeasonStats {
-  id                 String   @id @default(cuid())
-  playerId           String
-  season             String
-  teamId             String
-  matchesPlayed      Int      @default(0)
-  matchesStarted     Int      @default(0)
-  minutesPlayed      Int      @default(0)
-  goals              Int      @default(0)
-  assists            Int      @default(0)
-  yellowCards        Int      @default(0)
-  redCards           Int      @default(0)
-  cleanSheets        Int?     // For goalkeepers
-  goalsConceded      Int?     // For goalkeepers
-  saves              Int?     // For goalkeepers
-  averageRating      Float    @default(6.0)
-  totalDistance      Int      @default(0)
-  totalSprints       Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id             String   @id @default(cuid())
+  playerId       String
+  season         String
+  teamId         String
+  matchesPlayed  Int      @default(0)
+  matchesStarted Int      @default(0)
+  minutesPlayed  Int      @default(0)
+  goals          Int      @default(0)
+  assists        Int      @default(0)
+  yellowCards    Int      @default(0)
+  redCards       Int      @default(0)
+  cleanSheets    Int? // For goalkeepers
+  goalsConceded  Int? // For goalkeepers
+  saves          Int? // For goalkeepers
+  averageRating  Float    @default(6.0)
+  totalDistance  Int      @default(0)
+  totalSprints   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
-  player             User     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  team               Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, season])
   @@map("player_season_stats")
 }
 
 model TeamSeasonStats {
-  id                           String   @id @default(cuid())
-  teamId                       String
-  season                       String
-  matchesPlayed                Int      @default(0)
-  matchesWon                   Int      @default(0)
-  matchesDrawn                 Int      @default(0)
-  matchesLost                  Int      @default(0)
-  goalsFor                     Int      @default(0)
-  goalsAgainst                 Int      @default(0)
-  points                       Int      @default(0)
-  cleanSheets                  Int      @default(0)
-  goalsConceded                Int      @default(0)
-  averageGoalsPerGame          Float    @default(0)
-  averageGoalsAgainstPerGame   Float    @default(0)
-  winPercentage                Float    @default(0)
-  createdAt                    DateTime @default(now())
-  updatedAt                    DateTime @updatedAt
+  id                         String   @id @default(cuid())
+  teamId                     String
+  season                     String
+  matchesPlayed              Int      @default(0)
+  matchesWon                 Int      @default(0)
+  matchesDrawn               Int      @default(0)
+  matchesLost                Int      @default(0)
+  goalsFor                   Int      @default(0)
+  goalsAgainst               Int      @default(0)
+  points                     Int      @default(0)
+  cleanSheets                Int      @default(0)
+  goalsConceded              Int      @default(0)
+  averageGoalsPerGame        Float    @default(0)
+  averageGoalsAgainstPerGame Float    @default(0)
+  winPercentage              Float    @default(0)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 
   // Relations
-  team                         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, season])
   @@map("team_season_stats")
@@ -432,8 +434,8 @@ model MatchStatistics {
   matchId            String   @unique
   homeTeamId         String
   awayTeamId         String
-  homeTeamStats      Json     // TeamMatchStats as JSON
-  awayTeamStats      Json     // TeamMatchStats as JSON
+  homeTeamStats      Json // TeamMatchStats as JSON
+  awayTeamStats      Json // TeamMatchStats as JSON
   playerStats        Json     @default("[]") // PlayerMatchStats[] as JSON
   totalEvents        Int      @default(0)
   totalGoals         Int      @default(0)
@@ -445,9 +447,9 @@ model MatchStatistics {
   updatedAt          DateTime @updatedAt
 
   // Relations
-  match              Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  homeTeam           Team     @relation("HomeTeamStats", fields: [homeTeamId], references: [id], onDelete: Cascade)
-  awayTeam           Team     @relation("AwayTeamStats", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  match    Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  homeTeam Team  @relation("HomeTeamStats", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam Team  @relation("AwayTeamStats", fields: [awayTeamId], references: [id], onDelete: Cascade)
 
   @@map("match_statistics")
 }
@@ -472,7 +474,7 @@ model Tournament {
   teams                TournamentTeam[]
   club                 Club?             @relation(fields: [clubId], references: [id])
   // New relation for enhanced functionality
-  creator               User?             @relation("TournamentCreator", fields: [creatorId], references: [id])
+  creator              User?             @relation("TournamentCreator", fields: [creatorId], references: [id])
 
   @@map("tournaments")
 }
@@ -599,20 +601,20 @@ model Registration {
 
 // OAuth Account model for social login
 model OAuthAccount {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
-  provider          String   // google, facebook, apple, etc.
-  providerAccountId String   // ID from the OAuth provider
+  provider          String // google, facebook, apple, etc.
+  providerAccountId String // ID from the OAuth provider
   accessToken       String?
   refreshToken      String?
   expiresAt         DateTime?
   scope             String?
   tokenType         String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
   @@map("oauth_accounts")
 }
@@ -621,14 +623,14 @@ model OAuthAccount {
 model PhoneVerification {
   id        String   @id @default(cuid())
   phone     String
-  code      String   // OTP code
+  code      String // OTP code
   expiresAt DateTime
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
-  
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String?
-  
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String?
+
   @@map("phone_verifications")
 }
 
@@ -640,10 +642,26 @@ model PasswordResetToken {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("password_reset_tokens")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  device    String? // Optional: device identifier (user-agent, etc.)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 enum UserRole {

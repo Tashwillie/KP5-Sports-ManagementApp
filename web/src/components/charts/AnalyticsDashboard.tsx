@@ -12,10 +12,10 @@ import {
   RefreshCw,
   Settings
 } from 'lucide-react';
-import RealTimeChart from './RealTimeChart';
-import MatchPerformanceChart from './MatchPerformanceChart';
-import PlayerPerformanceChart from './PlayerPerformanceChart';
-import TournamentStandingsChart from './TournamentStandingsChart';
+import RealTimeChart from '@web/components/charts/RealTimeChart';
+import MatchPerformanceChart from '@web/components/charts/MatchPerformanceChart';
+import PlayerPerformanceChart from '@web/components/charts/PlayerPerformanceChart';
+import TournamentStandingsChart from '@web/components/charts/TournamentStandingsChart';
 
 interface AnalyticsDashboardProps {
   className?: string;

@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Event, EventType, EventRecurrence } from '../../../../shared/src/types';
 import { EventService } from '../../lib/services/eventService';
-import { useAuth } from '../providers/AuthProvider';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 const createEventSchema = z.object({
   title: z.string().min(2, 'Event title must be at least 2 characters'),
@@ -44,7 +44,7 @@ interface CreateEventFormProps {
 }
 
 export function CreateEventForm({ teamId, clubId, onSuccess, onCancel }: CreateEventFormProps) {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
 

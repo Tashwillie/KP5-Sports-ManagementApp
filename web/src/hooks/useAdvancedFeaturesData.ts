@@ -318,6 +318,7 @@ export const useDemoData = () => {
       error: null,
       tournaments: [],
       matches: [],
+      refetch: () => {},
     };
   }
   
@@ -329,6 +330,7 @@ export const useDemoData = () => {
       error: tournamentsError || matchesError,
       tournaments: [],
       matches: [],
+      refetch: () => {},
     };
   }
   
@@ -340,6 +342,7 @@ export const useDemoData = () => {
       error: null,
       tournaments: realTournaments,
       matches: realMatches,
+      refetch: () => {},
     };
   }
   
@@ -350,5 +353,6 @@ export const useDemoData = () => {
     error: null,
     tournaments: [],
     matches: [],
+    refetch: () => {},
   };
 };

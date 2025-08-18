@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PermissionService } from '../services/permissionService';
 import { logger } from '../utils/logger';
 
 // Get current user's permissions
-export const getCurrentUserPermissions = async (req: Request, res: Response): Promise<void> => {
+export const getCurrentUserPermissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -24,15 +24,12 @@ export const getCurrentUserPermissions = async (req: Request, res: Response): Pr
     });
   } catch (error) {
     logger.error('Get current user permissions error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user permissions.',
-    });
+    next(error);
   }
 };
 
 // Get permissions for a specific user (admin only)
-export const getUserPermissions = async (req: Request, res: Response): Promise<void> => {
+export const getUserPermissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -81,15 +78,12 @@ export const getUserPermissions = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Get user permissions error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user permissions.',
-    });
+    next(error);
   }
 };
 
 // Check if current user has a specific permission
-export const checkPermission = async (req: Request, res: Response): Promise<void> => {
+export const checkPermission = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -120,15 +114,12 @@ export const checkPermission = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     logger.error('Check permission error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to check permission.',
-    });
+    next(error);
   }
 };
 
 // Get role hierarchy information
-export const getRoleHierarchy = async (req: Request, res: Response): Promise<void> => {
+export const getRoleHierarchy = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -155,15 +146,12 @@ export const getRoleHierarchy = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Get role hierarchy error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch role hierarchy.',
-    });
+    next(error);
   }
 };
 
 // Get available roles for current user to manage
-export const getAvailableRoles = async (req: Request, res: Response): Promise<void> => {
+export const getAvailableRoles = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -184,15 +172,12 @@ export const getAvailableRoles = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.error('Get available roles error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch available roles.',
-    });
+    next(error);
   }
 };
 
 // Validate multiple permissions for current user
-export const validatePermissions = async (req: Request, res: Response): Promise<void> => {
+export const validatePermissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -223,15 +208,12 @@ export const validatePermissions = async (req: Request, res: Response): Promise<
     });
   } catch (error) {
     logger.error('Validate permissions error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to validate permissions.',
-    });
+    next(error);
   }
 };
 
 // Get permission summary for current user
-export const getPermissionSummary = async (req: Request, res: Response): Promise<void> => {
+export const getPermissionSummary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -249,9 +231,6 @@ export const getPermissionSummary = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     logger.error('Get permission summary error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch permission summary.',
-    });
+    next(error);
   }
 };

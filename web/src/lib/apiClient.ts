@@ -88,7 +88,8 @@ class ApiClient {
         errorData,
         responseText,
         url: url,
-        headers: Object.fromEntries(response.headers.entries())
+        headers: Object.fromEntries(response.headers.entries()),
+        token: this.token ? 'Present' : 'Missing'
       });
       
       // If we get a 401 (Unauthorized), clear the invalid token
@@ -122,6 +123,36 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  // Generic HTTP methods for external services
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async put<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async patch<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 
   // Authentication methods
@@ -567,7 +598,16 @@ class ApiClient {
   // Utility methods
   isAuthenticated(): boolean {
     this.loadToken(); // Load token before checking
-    return !!this.token;
+    if (!this.token) return false;
+    
+    // Check if token has valid JWT format
+    if (!this.hasValidTokenFormat()) {
+      this.clearToken(); // Clear invalid token
+      return false;
+    }
+    
+    // TODO: Could add token expiration check here if needed
+    return true;
   }
 
   // Test backend connection (no authentication required)

@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from './usePermissions';
-import { useCurrentUserPermissions, usePermissionAudit, useSyncPermissions } from './usePermissionsApi';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
+import { usePermissions } from '@web/hooks/usePermissions';
+import { useCurrentUserPermissions, usePermissionAudit, useSyncPermissions } from '@web/hooks/usePermissionsApi';
 import { Permission, UserRole } from '@/types/permissions';
 import { toast } from 'sonner';
 
@@ -41,7 +41,7 @@ export interface UseEnhancedPermissionsReturn {
 }
 
 export const useEnhancedPermissions = (): UseEnhancedPermissionsReturn => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useEnhancedAuthContext();
   const frontendPermissions = usePermissions();
   
   // Backend permission hooks - only enable when user is authenticated

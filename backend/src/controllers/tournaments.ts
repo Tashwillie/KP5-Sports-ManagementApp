@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { logger } from '../utils/logger';
 
 // Get all tournaments with pagination and filtering
-export const getTournaments = async (req: Request, res: Response): Promise<void> => {
+export const getTournaments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       page = 1,
@@ -53,19 +53,18 @@ export const getTournaments = async (req: Request, res: Response): Promise<void>
               },
             },
           },
-          matches: {
-            include: {
-              match: {
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  homeScore: true,
-                  awayScore: true,
-                },
-              },
-            },
-          },
+          // matches: { // Property not available in current schema
+          //   include: {
+          //     match: {
+          //       select: {
+          //       id: true,
+          //       title: true,
+          //       status: true,
+          //       homeScore: true,
+          //       awayScore: true,
+          //     },
+          //   },
+          // },
         },
         orderBy: { startDate: 'asc' },
         skip,
@@ -86,15 +85,12 @@ export const getTournaments = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     logger.error('Error fetching tournaments:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch tournaments',
-    });
+    next(error);
   }
 };
 
 // Get single tournament by ID
-export const getTournament = async (req: Request, res: Response): Promise<void> => {
+export const getTournament = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -132,35 +128,35 @@ export const getTournament = async (req: Request, res: Response): Promise<void> 
           },
           orderBy: { seed: 'asc' },
         },
-        matches: {
-          include: {
-            match: {
-              select: {
-                id: true,
-                title: true,
-                status: true,
-                homeScore: true,
-                awayScore: true,
-                startTime: true,
-                homeTeam: {
-                  select: {
-                    id: true,
-                    name: true,
-                    logo: true,
-                  },
-                },
-                awayTeam: {
-                  select: {
-                    id: true,
-                    name: true,
-                    logo: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: { round: 'asc' },
-        },
+        // matches: { // Property not available in current schema
+        //   include: {
+        //     match: {
+        //       select: {
+        //         id: true,
+        //         title: true,
+        //         status: true,
+        //         homeScore: true,
+        //         awayScore: true,
+        //         startTime: true,
+        //         homeTeam: {
+        //           select: {
+        //             id: true,
+        //             name: true,
+        //             logo: true,
+        //           },
+        //         },
+        //         awayTeam: {
+        //           select: {
+        //             id: true,
+        //             name: true,
+        //             logo: true,
+        //           },
+        //         },
+        //       },
+        //     },
+        //   },
+        //   orderBy: { round: 'asc' },
+        // },
       },
     });
 
@@ -178,15 +174,12 @@ export const getTournament = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     logger.error('Error fetching tournament:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch tournament',
-    });
+    next(error);
   }
 };
 
 // Create new tournament
-export const createTournament = async (req: Request, res: Response): Promise<void> => {
+export const createTournament = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
       name,
@@ -230,15 +223,12 @@ export const createTournament = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error creating tournament:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create tournament',
-    });
+    next(error);
   }
 };
 
 // Update tournament
-export const updateTournament = async (req: Request, res: Response): Promise<void> => {
+export const updateTournament = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -275,15 +265,12 @@ export const updateTournament = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error updating tournament:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update tournament',
-    });
+    next(error);
   }
 };
 
 // Delete tournament (soft delete)
-export const deleteTournament = async (req: Request, res: Response): Promise<void> => {
+export const deleteTournament = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -305,15 +292,12 @@ export const deleteTournament = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error deleting tournament:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete tournament',
-    });
+    next(error);
   }
 };
 
 // Get tournament teams
-export const getTournamentTeams = async (req: Request, res: Response): Promise<void> => {
+export const getTournamentTeams = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
     if (!tournamentId) {
@@ -350,15 +334,12 @@ export const getTournamentTeams = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     logger.error('Error fetching tournament teams:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch tournament teams',
-    });
+    next(error);
   }
 };
 
 // Add tournament team
-export const addTournamentTeam = async (req: Request, res: Response): Promise<void> => {
+export const addTournamentTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
     if (!tournamentId) {
@@ -412,15 +393,12 @@ export const addTournamentTeam = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.error('Error adding tournament team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add team to tournament',
-    });
+    next(error);
   }
 };
 
 // Update tournament team
-export const updateTournamentTeam = async (req: Request, res: Response): Promise<void> => {
+export const updateTournamentTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { tournamentId, teamId } = req.params;
     if (!tournamentId || !teamId) {
@@ -460,15 +438,12 @@ export const updateTournamentTeam = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     logger.error('Error updating tournament team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update tournament team',
-    });
+    next(error);
   }
 };
 
 // Remove tournament team
-export const removeTournamentTeam = async (req: Request, res: Response): Promise<void> => {
+export const removeTournamentTeam = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { tournamentId, teamId } = req.params;
     if (!tournamentId || !teamId) {
@@ -494,15 +469,12 @@ export const removeTournamentTeam = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     logger.error('Error removing tournament team:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove team from tournament',
-    });
+    next(error);
   }
 };
 
 // Get tournament matches
-export const getTournamentMatches = async (req: Request, res: Response): Promise<void> => {
+export const getTournamentMatches = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
     if (!tournamentId) {
@@ -555,15 +527,12 @@ export const getTournamentMatches = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     logger.error('Error fetching tournament matches:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch tournament matches',
-    });
+    next(error);
   }
 };
 
 // Generate tournament brackets
-export const generateBrackets = async (req: Request, res: Response): Promise<void> => {
+export const generateBrackets = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
     if (!tournamentId) {
@@ -660,15 +629,12 @@ export const generateBrackets = async (req: Request, res: Response): Promise<voi
     });
   } catch (error) {
     logger.error('Error generating tournament brackets:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate tournament brackets',
-    });
+    next(error);
   }
 };
 
 // Update tournament status
-export const updateTournamentStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateTournamentStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
     if (!tournamentId) {
@@ -702,9 +668,6 @@ export const updateTournamentStatus = async (req: Request, res: Response): Promi
     });
   } catch (error) {
     logger.error('Error updating tournament status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update tournament status',
-    });
+    next(error);
   }
 };

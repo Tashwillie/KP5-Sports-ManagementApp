@@ -1,33 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useEnhancedAuthContext } from "@/contexts/EnhancedAuthContext";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ConnectionStatus } from "@/components/debug/ConnectionStatus";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lastAttempt, setLastAttempt] = useState<number | null>(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   
-  const { login, loading } = useAuth();
+  const { login, loading, error: authError, clearError } = useEnhancedAuthContext();
   const router = useRouter();
+
+  // Handle cooldown countdown
+  useEffect(() => {
+    if (loginAttempts >= 3 && lastAttempt) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const timeSinceLastAttempt = now - lastAttempt;
+        const requiredCooldown = Math.min(Math.pow(2, loginAttempts) * 1000, 30000);
+        
+        if (timeSinceLastAttempt >= requiredCooldown) {
+          setCooldownRemaining(0);
+          clearInterval(interval);
+        } else {
+          setCooldownRemaining(Math.ceil((requiredCooldown - timeSinceLastAttempt) / 1000));
+        }
+      }, 100);
+      
+      return () => clearInterval(interval);
+    }
+  }, [loginAttempts, lastAttempt]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    clearError(); // Clear any previous auth errors
+
+    // Check for rate limiting
+    const now = Date.now();
+    const timeSinceLastAttempt = lastAttempt ? now - lastAttempt : Infinity;
+    const requiredCooldown = Math.min(Math.pow(2, loginAttempts) * 1000, 30000); // Exponential backoff, max 30 seconds
+
+    if (loginAttempts >= 3 && timeSinceLastAttempt < requiredCooldown) {
+      const remainingTime = Math.ceil((requiredCooldown - timeSinceLastAttempt) / 1000);
+      setError(`Too many login attempts. Please wait ${remainingTime} seconds before trying again.`);
+      return;
+    }
+
+    console.log('🔐 Attempting login with:', { email, password: password ? '***' : 'empty' });
 
     try {
-      await login(email, password);
-      toast.success("Welcome back!");
-      router.push("/dashboard");
+      const result = await login(email, password);
+      console.log('✅ Login result:', result);
+      
+      if (result?.success) {
+        // Reset attempts on successful login
+        setLoginAttempts(0);
+        setLastAttempt(null);
+        toast.success("Welcome back!");
+        router.push("/dashboard");
+      } else {
+        const errorMsg = result?.message || "Login failed. Please check your credentials.";
+        console.error('❌ Login failed:', errorMsg);
+        setError(errorMsg);
+        toast.error("Sign in failed. Please check your credentials.");
+      }
     } catch (error: any) {
-      console.error("Sign in error:", error);
-      setError(error.message || "Failed to sign in. Please check your credentials.");
-      toast.error("Sign in failed. Please check your credentials.");
+      console.error("❌ Sign in error:", error);
+      
+      // Increment login attempts on failure
+      const newAttempts = loginAttempts + 1;
+      setLoginAttempts(newAttempts);
+      setLastAttempt(Date.now());
+      
+      let errorMessage = error.message || "Failed to sign in. Please check your credentials.";
+      
+      // Add rate limiting warning for multiple attempts
+      if (newAttempts >= 3) {
+        const nextCooldown = Math.min(Math.pow(2, newAttempts) * 1000, 30000);
+        errorMessage += ` After ${newAttempts} failed attempts, future attempts will have a ${Math.ceil(nextCooldown / 1000)} second cooldown.`;
+      }
+      
+      setError(errorMessage);
+      toast.error(newAttempts >= 3 ? "Too many failed attempts. Please wait before trying again." : "Sign in failed. Please check your credentials.");
     }
   };
 
@@ -71,10 +135,13 @@ export default function SignInPage() {
             </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
+          {/* Connection Status */}
+          <ConnectionStatus show={!!(error || authError)} />
+
+          {/* Error Messages */}
+          {(error || authError) && (
             <div className="alert alert-danger mb-4">
-              {error}
+              {error || authError}
             </div>
           )}
 
@@ -125,11 +192,13 @@ export default function SignInPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || cooldownRemaining > 0}
               className="btn w-100 fw-semibold mb-4 text-white"
               style={{ 
                 height: '56px', 
-                background: 'linear-gradient(135deg, #9333ea, #7c3aed)',
+                background: cooldownRemaining > 0 
+                  ? '#6c757d' 
+                  : 'linear-gradient(135deg, #9333ea, #7c3aed)',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '1.1rem'
@@ -140,6 +209,8 @@ export default function SignInPage() {
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   Signing in...
                 </>
+              ) : cooldownRemaining > 0 ? (
+                `Please wait ${cooldownRemaining}s`
               ) : (
                 "Continue"
               )}

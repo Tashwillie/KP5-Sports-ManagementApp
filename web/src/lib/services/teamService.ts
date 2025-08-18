@@ -1,4 +1,4 @@
-import { Team, Player, TeamMember, TeamInvitation, TeamRole, TeamStats } from '../../../../shared/src/types';
+import { Team, Player, TeamMember, TeamInvitation, TeamRole, TeamStats } from '@shared/types';
 import { apiClient } from '../apiClient';
 
 export class TeamService {

@@ -1,10 +1,11 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import Sidebar from '@/components/layout/Sidebar';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { RoleBasedDashboard } from '@/components/dashboard/RoleBasedDashboard';
+import { EnhancedDashboard } from '@/components/dashboard/EnhancedDashboard';
+import { SportsDashboard } from '@/components/dashboard/SportsDashboard';
 
 export default function DashboardPage() {
   return (
@@ -15,7 +16,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const { data, loading, error, refetch } = useDashboard();
 
   return (
@@ -23,23 +24,6 @@ function DashboardContent() {
       <Sidebar activeTab="dashboard" />
       <div className="flex-grow-1 bg-light">
         <div className="container-fluid p-4">
-          {/* Header */}
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h1 className="h3 mb-1">Dashboard</h1>
-              <small className="text-muted">
-                Welcome back, {user?.displayName || user?.firstName || 'User'}! Here's what's happening today.
-              </small>
-            </div>
-            <button 
-              onClick={refetch} 
-              className="btn btn-outline-primary btn-sm"
-              disabled={loading}
-            >
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-
           {/* Error State */}
           {error && (
             <div className="alert alert-danger" role="alert">
@@ -57,9 +41,23 @@ function DashboardContent() {
             </div>
           )}
 
-          {/* Dashboard Content */}
-          {data && (
-            <RoleBasedDashboard user={user} />
+          {/* Sports Dashboard Content */}
+          {data && user && (
+            <SportsDashboard 
+              user={user} 
+              data={data} 
+              onRefresh={refetch} 
+            />
+          )}
+
+          {/* Fallback to Enhanced Dashboard if needed */}
+          {!data && user && !loading && !error && (
+            <EnhancedDashboard 
+              user={user} 
+              data={data || { stats: { totalUsers: 0, totalTeams: 0, totalMatches: 0, totalClubs: 0, totalTournaments: 0, activeMatches: 0, upcomingMatches: 0, completedMatches: 0 }, recentActivities: [], upcomingMatches: [], recentMatches: [] }} 
+              loading={loading} 
+              onRefresh={refetch} 
+            />
           )}
         </div>
       </div>

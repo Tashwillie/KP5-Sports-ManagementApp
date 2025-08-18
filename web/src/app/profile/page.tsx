@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useLocalAuth } from '@/hooks/useLocalApi';
-import { UserRole } from '../../../../shared/src/types';
+import { UserRole } from '@shared/types';
 import { 
   User, 
   Mail, 
@@ -48,7 +48,7 @@ function ProfileContent() {
       await updateProfile(formData);
       setIsEditing(false);
     } catch (err) {
-      // Error is handled by the AuthProvider
+      // Error is handled by the EnhancedAuthProvider
     }
   };
 

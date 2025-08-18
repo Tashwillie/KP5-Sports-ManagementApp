@@ -1,16 +1,16 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User } from '../../../../../shared/src/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User } from '../../shared/src/types';
+import { authService } from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string, firstName?: string, lastName?: string, phone?: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signInWithPhone: (phoneNumber: string) => Promise<string>;
+  signInWithPhone: (phoneNumber: string) => Promise<void>;
   verifyOTP: (verificationId: string, code: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -21,128 +21,55 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
-
-class AuthService {
-  private token: string | null = null;
-
-  async getToken(): Promise<string | null> {
-    if (!this.token) {
-      this.token = await AsyncStorage.getItem('authToken');
-    }
-    return this.token;
-  }
-
-  async setToken(token: string): Promise<void> {
-    this.token = token;
-    await AsyncStorage.setItem('authToken', token);
-  }
-
-  async removeToken(): Promise<void> {
-    this.token = null;
-    await AsyncStorage.removeItem('authToken');
-  }
-
-  async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const token = await this.getToken();
-    const url = `${API_BASE_URL}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  async signIn(email: string, password: string): Promise<{ user: User; token: string }> {
-          const response = await this.makeRequest('/auth/signin', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-    
-    await this.setToken(response.data.token);
-    return response.data;
-  }
-
-  async signUp(email: string, password: string, displayName: string): Promise<{ user: User; token: string }> {
-    const response = await this.makeRequest('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
-    });
-    
-    await this.setToken(response.data.token);
-    return response.data;
-  }
-
-  async getCurrentUser(): Promise<User> {
-    const response = await this.makeRequest('/auth/me');
-    return response.data;
-  }
-
-  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
-    const response = await this.makeRequest(`/users/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
-    return response.data;
-  }
-
-  async resetPassword(email: string): Promise<void> {
-    await this.makeRequest('/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  }
+interface AuthProviderProps {
+  children: ReactNode;
 }
 
-const authService = new AuthService();
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const token = await authService.getToken();
-        if (token) {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        await authService.removeToken();
-      } finally {
-        setLoading(false);
-      }
-    };
-
     initializeAuth();
   }, []);
 
+  const initializeAuth = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Check if user is already authenticated
+      const isAuthenticated = await authService.isAuthenticated();
+      if (isAuthenticated) {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      }
+    } catch (error: any) {
+      console.error('Error initializing auth:', error);
+      setError('Failed to initialize authentication');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
-      setError(null);
       setLoading(true);
-      const { user: userData } = await authService.signIn(email, password);
-      setUser(userData);
+      setError(null);
+
+      const response = await authService.signIn(email, password);
+      if (response.success && response.data?.user) {
+        setUser(response.data.user);
+      } else {
+        throw new Error(response.message || 'Sign in failed');
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to sign in');
       throw error;
@@ -151,12 +78,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, displayName: string) => {
+  const signUp = async (email: string, password: string, displayName: string, firstName?: string, lastName?: string, phone?: string, role?: string) => {
     try {
-      setError(null);
       setLoading(true);
-      const { user: userData } = await authService.signUp(email, password, displayName);
-      setUser(userData);
+      setError(null);
+
+      const response = await authService.signUp(email, password, displayName, firstName, lastName, phone, role);
+      if (response.success && response.data?.user) {
+        setUser(response.data.user);
+      } else {
+        throw new Error(response.message || 'Sign up failed');
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to sign up');
       throw error;
@@ -167,19 +99,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      setLoading(true);
       setError(null);
-      await authService.removeToken();
+      await authService.signOut();
       setUser(null);
     } catch (error: any) {
       setError(error.message || 'Failed to sign out');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signInWithGoogle = async () => {
     try {
       setError(null);
-      // TODO: Implement Google OAuth with backend API
+      // TODO: Implement Google OAuth with PostgreSQL backend API
       throw new Error('Google sign-in not implemented yet');
     } catch (error: any) {
       setError(error.message || 'Failed to sign in with Google');
@@ -190,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithPhone = async (phoneNumber: string) => {
     try {
       setError(null);
-      // TODO: Implement phone authentication with backend API
+      // TODO: Implement phone authentication with PostgreSQL backend API
       throw new Error('Phone sign-in not implemented yet');
     } catch (error: any) {
       setError(error.message || 'Failed to sign in with phone');
@@ -198,14 +133,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyOTP = async (verificationId: string, code: string) => {
+  const verifyOTP = async (phone: string, code: string) => {
     try {
       setError(null);
-      // TODO: Implement OTP verification with backend API
-      throw new Error('OTP verification not implemented yet');
+      setLoading(true);
+      
+      // Call backend OTP verification endpoint
+      const result = await authService.verifyPhoneOTP(phone, code);
+      
+      if (result.success && result.user) {
+        setUser(result.user);
+        return result;
+      } else {
+        throw new Error(result.error || 'OTP verification failed');
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to verify OTP');
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

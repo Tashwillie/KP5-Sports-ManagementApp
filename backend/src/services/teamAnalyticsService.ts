@@ -449,7 +449,7 @@ export class TeamAnalyticsService {
         goalsAgainst: stat.goalsAgainst,
         goalDifference: stat.goalsFor - stat.goalsAgainst,
         winPercentage: stat.matchesPlayed > 0 ? (stat.matchesWon / stat.matchesPlayed) * 100 : 0,
-        form: form.form,
+        form: form, // Use form directly instead of form.form
         lastMatch,
         nextMatch
       });

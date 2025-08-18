@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Club } from '../../../../shared/src/types';
+import { Club } from '@shared/types';
 
 interface ClubCardProps {
   club: Club;

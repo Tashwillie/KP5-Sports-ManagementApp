@@ -163,65 +163,72 @@ export const ClubForm: React.FC<ClubFormProps> = ({
   const watchedValues = watch();
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)}>
       {/* Logo Upload Section */}
-      <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">
+      <div className="mb-4">
+        <h5 className="fw-medium text-dark d-flex align-items-center mb-3">
+          <Upload size={20} className="me-2" />
           Club Logo
-        </label>
+        </h5>
 
-        <div className="flex items-center space-x-4">
+        <div className="d-flex align-items-center gap-3">
           {/* Logo Preview */}
-          <div className="relative">
+          <div className="position-relative">
             {logoPreview ? (
-              <div className="relative">
+              <div className="position-relative">
                 <img
                   src={logoPreview}
                   alt="Club logo preview"
-                  className="w-24 h-24 rounded-lg object-cover border-2 border-gray-200"
+                  className="rounded"
+                  style={{ width: '96px', height: '96px', objectFit: 'cover', border: '2px solid #dee2e6' }}
                 />
                 <button
                   type="button"
                   onClick={removeLogo}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  className="btn btn-danger btn-sm position-absolute rounded-circle p-1"
+                  style={{ top: '-8px', right: '-8px', width: '24px', height: '24px' }}
                 >
-                  <X size={16} />
+                  <X size={12} />
                 </button>
               </div>
             ) : (
-              <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-                <Upload size={24} className="text-gray-400" />
+              <div 
+                className="rounded border border-2 border-dashed d-flex align-items-center justify-content-center bg-light"
+                style={{ width: '96px', height: '96px', borderColor: '#dee2e6' }}
+              >
+                <Upload size={24} className="text-muted" />
               </div>
             )}
           </div>
 
           {/* Upload Button */}
-          <div className="flex-1">
+          <div className="flex-grow-1">
             <input
               type="file"
               id="logo"
               accept="image/*"
               onChange={handleLogoChange}
-              className="hidden"
+              className="d-none"
             />
             <label
               htmlFor="logo"
-              className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="btn btn-outline-secondary d-flex align-items-center"
+              style={{ cursor: 'pointer' }}
             >
-              <Upload size={16} className="mr-2" />
+              <Upload size={16} className="me-2" />
               {logoPreview ? 'Change Logo' : 'Upload Logo'}
             </label>
-            <p className="mt-1 text-xs text-gray-500">
+            <small className="text-muted">
               PNG, JPG, GIF up to 5MB
-            </p>
+            </small>
           </div>
         </div>
 
         {/* Upload Progress */}
         {uploadProgress > 0 && uploadProgress < 100 && (
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="progress mt-2" style={{ height: '8px' }}>
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="progress-bar bg-primary"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -229,17 +236,17 @@ export const ClubForm: React.FC<ClubFormProps> = ({
       </div>
 
       {/* Basic Information */}
-      <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900 flex items-center">
-          <Building className="h-5 w-5 mr-2" />
+      <div className="mb-4">
+        <h5 className="fw-medium text-dark d-flex align-items-center mb-3">
+          <Building size={20} className="me-2" />
           Basic Information
-        </h3>
+        </h5>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="row g-3">
           {/* Club Name */}
-          <div className="col-span-2">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Club Name *
+          <div className="col-12">
+            <label htmlFor="name" className="form-label">
+              Club Name <span className="text-danger">*</span>
             </label>
             <Controller
               name="name"
@@ -249,21 +256,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="text"
                   id="name"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.name ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                   placeholder="Enter club name"
                 />
               )}
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              <div className="invalid-feedback">{errors.name.message}</div>
             )}
           </div>
 
           {/* Description */}
-          <div className="col-span-2">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          <div className="col-12">
+            <label htmlFor="description" className="form-label">
               Description
             </label>
             <Controller
@@ -274,24 +279,22 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   id="description"
                   rows={3}
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.description ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.description ? 'is-invalid' : ''}`}
                   placeholder="Enter club description"
                 />
               )}
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+              <div className="invalid-feedback">{errors.description.message}</div>
             )}
-            <p className="mt-1 text-xs text-gray-500">
+            <small className="text-muted">
               {watchedValues.description?.length || 0}/1000 characters
-            </p>
+            </small>
           </div>
 
           {/* Founded Year */}
-          <div>
-            <label htmlFor="foundedYear" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="foundedYear" className="form-label">
               Founded Year
             </label>
             <Controller
@@ -303,9 +306,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   type="number"
                   id="foundedYear"
                   onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.foundedYear ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.foundedYear ? 'is-invalid' : ''}`}
                   placeholder="e.g., 1990"
                   min="1800"
                   max={new Date().getFullYear()}
@@ -313,25 +314,23 @@ export const ClubForm: React.FC<ClubFormProps> = ({
               )}
             />
             {errors.foundedYear && (
-              <p className="mt-1 text-sm text-red-600">{errors.foundedYear.message}</p>
+              <div className="invalid-feedback">{errors.foundedYear.message}</div>
             )}
           </div>
-
-
         </div>
       </div>
 
       {/* Contact Information */}
-      <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900 flex items-center">
-          <Phone className="h-5 w-5 mr-2" />
+      <div className="mb-4">
+        <h5 className="fw-medium text-dark d-flex align-items-center mb-3">
+          <Phone size={20} className="me-2" />
           Contact Information
-        </h3>
+        </h5>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="row g-3">
           {/* Phone */}
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="phone" className="form-label">
               Phone Number
             </label>
             <Controller
@@ -342,21 +341,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="tel"
                   id="phone"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.phone ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                   placeholder="e.g., +1 (555) 123-4567"
                 />
               )}
             />
             {errors.phone && (
-              <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              <div className="invalid-feedback">{errors.phone.message}</div>
             )}
           </div>
 
           {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="email" className="form-label">
               Email
             </label>
             <Controller
@@ -367,21 +364,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="email"
                   id="email"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.email ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                   placeholder="e.g., info@club.com"
                 />
               )}
             />
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              <div className="invalid-feedback">{errors.email.message}</div>
             )}
           </div>
 
           {/* Website */}
-          <div className="col-span-2">
-            <label htmlFor="website" className="block text-sm font-medium text-gray-700">
+          <div className="col-12">
+            <label htmlFor="website" className="form-label">
               Website
             </label>
             <Controller
@@ -392,31 +387,29 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="url"
                   id="website"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.website ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.website ? 'is-invalid' : ''}`}
                   placeholder="e.g., https://www.club.com"
                 />
               )}
             />
             {errors.website && (
-              <p className="mt-1 text-sm text-red-600">{errors.website.message}</p>
+              <div className="invalid-feedback">{errors.website.message}</div>
             )}
           </div>
         </div>
       </div>
 
       {/* Address Information */}
-      <div className="space-y-6">
-        <h3 className="text-lg font-medium text-gray-900 flex items-center">
-          <MapPin className="h-5 w-5 mr-2" />
+      <div className="mb-4">
+        <h5 className="fw-medium text-dark d-flex align-items-center mb-3">
+          <MapPin size={20} className="me-2" />
           Address Information
-        </h3>
+        </h5>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="row g-3">
           {/* Address */}
-          <div className="col-span-2">
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+          <div className="col-12">
+            <label htmlFor="address" className="form-label">
               Street Address
             </label>
             <Controller
@@ -427,21 +420,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="text"
                   id="address"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.address ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.address ? 'is-invalid' : ''}`}
                   placeholder="e.g., 123 Main Street"
                 />
               )}
             />
             {errors.address && (
-              <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+              <div className="invalid-feedback">{errors.address.message}</div>
             )}
           </div>
 
           {/* City */}
-          <div>
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="city" className="form-label">
               City
             </label>
             <Controller
@@ -452,21 +443,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="text"
                   id="city"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.city ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.city ? 'is-invalid' : ''}`}
                   placeholder="e.g., New York"
                 />
               )}
             />
             {errors.city && (
-              <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
+              <div className="invalid-feedback">{errors.city.message}</div>
             )}
           </div>
 
           {/* State */}
-          <div>
-            <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="state" className="form-label">
               State/Province
             </label>
             <Controller
@@ -477,21 +466,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="text"
                   id="state"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.state ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.state ? 'is-invalid' : ''}`}
                   placeholder="e.g., NY"
                 />
               )}
             />
             {errors.state && (
-              <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
+              <div className="invalid-feedback">{errors.state.message}</div>
             )}
           </div>
 
           {/* Postal Code */}
-          <div>
-            <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="postalCode" className="form-label">
               Zip/Postal Code
             </label>
             <Controller
@@ -502,21 +489,19 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="text"
                   id="postalCode"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.postalCode ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.postalCode ? 'is-invalid' : ''}`}
                   placeholder="e.g., 10001"
                 />
               )}
             />
             {errors.postalCode && (
-              <p className="mt-1 text-sm text-red-600">{errors.postalCode.message}</p>
+              <div className="invalid-feedback">{errors.postalCode.message}</div>
             )}
           </div>
 
           {/* Country */}
-          <div>
-            <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+          <div className="col-md-6">
+            <label htmlFor="country" className="form-label">
               Country
             </label>
             <Controller
@@ -527,26 +512,24 @@ export const ClubForm: React.FC<ClubFormProps> = ({
                   {...field}
                   type="text"
                   id="country"
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                    errors.country ? 'border-red-300' : ''
-                  }`}
+                  className={`form-control ${errors.country ? 'is-invalid' : ''}`}
                   placeholder="e.g., United States"
                 />
               )}
             />
             {errors.country && (
-              <p className="mt-1 text-sm text-red-600">{errors.country.message}</p>
+              <div className="invalid-feedback">{errors.country.message}</div>
             )}
           </div>
         </div>
       </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+      <div className="d-flex justify-content-end gap-2 pt-4 border-top">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          className="btn btn-outline-secondary"
         >
           Cancel
         </button>
@@ -554,11 +537,13 @@ export const ClubForm: React.FC<ClubFormProps> = ({
         <button
           type="submit"
           disabled={isSubmitting || createClub.isPending || updateClub.isPending}
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="btn btn-primary"
         >
           {isSubmitting || createClub.isPending || updateClub.isPending ? (
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <div className="d-flex align-items-center">
+              <div className="spinner-border spinner-border-sm me-2" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
               {mode === 'create' ? 'Creating...' : 'Updating...'}
             </div>
           ) : (
@@ -569,16 +554,16 @@ export const ClubForm: React.FC<ClubFormProps> = ({
 
       {/* Error Display */}
       {(createClub.error || updateClub.error) && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex">
+        <div className="alert alert-danger mt-3" role="alert">
+          <div className="d-flex">
             <div className="flex-shrink-0">
-              <X size={20} className="text-red-400" />
+              <X size={20} className="text-danger" />
             </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
+            <div className="ms-3">
+              <h6 className="alert-heading mb-1">
                 Error occurred while saving club
-              </h3>
-              <div className="mt-2 text-sm text-red-700">
+              </h6>
+              <div className="mb-0">
                 {createClub.error?.message || updateClub.error?.message}
               </div>
             </div>

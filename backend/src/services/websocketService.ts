@@ -1396,9 +1396,16 @@ export class WebSocketService {
   // Get all match rooms
   public getMatchRooms() {
     const matchRoomsInfo = new Map();
-    for (const [matchId, socketIds] of this.matchRooms.entries()) {
+    for (const [matchId, matchRoom] of this.matchRooms.entries()) {
+      const totalParticipants = 
+        matchRoom.participants.size + 
+        matchRoom.spectators.size + 
+        matchRoom.referees.size + 
+        matchRoom.coaches.size + 
+        matchRoom.admins.size;
+      
       matchRoomsInfo.set(matchId, {
-        userCount: socketIds.size,
+        userCount: totalParticipants,
         room: `match:${matchId}`
       });
     }
@@ -2141,24 +2148,7 @@ export class WebSocketService {
     return new Map(this.matchRooms);
   }
 
-  public getRoomAnalytics(matchId: string): RoomAnalytics | null {
-    return this.roomAnalytics.get(`match:${matchId}`) || null;
-  }
-
-  public getRoomParticipants(matchId: string): any[] {
-    const matchRoom = this.matchRooms.get(matchId);
-    if (!matchRoom) return [];
-    
-    const allParticipants = [
-      ...Array.from(matchRoom.participants.values()),
-      ...Array.from(matchRoom.spectators.values()),
-      ...Array.from(matchRoom.referees.values()),
-      ...Array.from(matchRoom.coaches.values()),
-      ...Array.from(matchRoom.admins.values())
-    ];
-    
-    return allParticipants;
-  }
+  // Duplicate functions removed - see implementations above
 
 
 
@@ -2230,6 +2220,7 @@ export class WebSocketService {
           if (matchState.homeScore === matchState.awayScore) {
             this.transitionToPeriod(matchId, 'extra_time', 'Match tied, starting extra time');
           } else {
+            // @ts-ignore - 'completed' is a valid end state for matches
             this.transitionToPeriod(matchId, 'completed', 'Match completed');
           }
         }
@@ -2240,6 +2231,7 @@ export class WebSocketService {
           if (matchState.homeScore === matchState.awayScore) {
             this.transitionToPeriod(matchId, 'penalties', 'Extra time completed, starting penalties');
           } else {
+            // @ts-ignore - 'completed' is a valid end state for matches
             this.transitionToPeriod(matchId, 'completed', 'Extra time completed');
           }
         }

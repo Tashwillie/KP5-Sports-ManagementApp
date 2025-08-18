@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '@/hooks/useAuth';
+import { User } from '@/context/AuthContext';
 
 interface RoleBasedDashboardProps {
   user: User;

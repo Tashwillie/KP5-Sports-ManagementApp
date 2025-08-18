@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import mediaService, { UiMediaItem } from '@/lib/services/mediaService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedAuthContext } from '@/contexts/EnhancedAuthContext';
 
 export default function useMedia() {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuthContext();
   const [items, setItems] = useState<UiMediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
